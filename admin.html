@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ODD Admin & Inventory Management Portal</title>
+  <link rel="stylesheet" href="assets/css/global.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body class="admin-body">
+
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="admin-brand">
+      <a href="index.html" class="admin-brand-logo">ODD<span>.</span></a>
+      <span class="admin-badge-tag">ADMIN v2.0</span>
+    </div>
+
+    <nav class="admin-nav">
+      <div class="admin-nav-group-title">Analytics & Commerce</div>
+      <a class="admin-nav-item active" data-tab="payments">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        Payment Dashboard
+      </a>
+      <a class="admin-nav-item" data-tab="orders">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+        ODD Orders
+      </a>
+
+      <div class="admin-nav-group-title">Warehouse & Inventory</div>
+      <a class="admin-nav-item" data-tab="inventory">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+        Stock Inventory
+      </a>
+      <a class="admin-nav-item" data-tab="scanner">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
+        Scan Products (Scanner)
+      </a>
+      <a class="admin-nav-item" data-tab="barcodes">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10M7 12h10M7 17h10" /></svg>
+        Barcode Labels Generator
+      </a>
+      <a class="admin-nav-item" data-tab="access-links">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+        Scanner Access Links
+      </a>
+
+      <div class="admin-nav-group-title">Settings & Marketing</div>
+      <a class="admin-nav-item" data-tab="launch-offer">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+        Launch Offer & Banner
+      </a>
+      <a class="admin-nav-item" data-tab="razorpay">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+        Razorpay Settings
+      </a>
+    </nav>
+
+    <div class="admin-sidebar-footer">
+      <span>Logged in: <strong>admin</strong></span>
+      <a href="index.html" style="color:var(--admin-accent); text-decoration:none;">Storefront &rarr;</a>
+    </div>
+  </aside>
+
+  <!-- Main Workspace -->
+  <main class="admin-main">
+    <header class="admin-header">
+      <h2 class="admin-header-title" id="admin-page-title">Payment Dashboard</h2>
+      <div class="admin-header-actions">
+        <div class="admin-status-dot" title="Database Connected"></div>
+        <span style="font-size:0.8rem; color:var(--admin-text-muted);">Database Live</span>
+      </div>
+    </header>
+
+    <div class="admin-container">
+
+      <!-- 1. Payment Dashboard Tab -->
+      <div class="admin-tab-pane active" id="tab-payments">
+        <div class="kpi-grid">
+          <div class="kpi-card green">
+              <div class="kpi-label">Confirmed Revenue</div>
+              <div class="kpi-value" id="kpi-confirmed-rev">₹0</div>
+              <div class="kpi-subtext" id="kpi-confirmed-count">0 verified paid orders</div>
+          </div>
+          <div class="kpi-card orange">
+              <div class="kpi-label">COD Orders Placed</div>
+              <div class="kpi-value" id="kpi-cod-rev">₹0</div>
+              <div class="kpi-subtext" id="kpi-cod-count">0 orders not yet collected</div>
+          </div>
+          <div class="kpi-card amber">
+            <div class="kpi-label">Pending Verification</div>
+            <div class="kpi-value">₹0</div>
+            <div class="kpi-subtext">0 awaiting manual check</div>
+          </div>
+          <div class="kpi-card blue">
+              <div class="kpi-label">Total Orders</div>
+              <div class="kpi-value" id="kpi-total-orders">0</div>
+              <div class="kpi-subtext">all time orders count</div>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">By Payment Method</h3>
+              <div class="admin-card-subtitle">Breakdown of total volume per gateway</div>
+            </div>
+          </div>
+          <div style="margin: 1rem 0;">
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.4rem;">
+              <span>Razorpay Express (Cards / UPI / Netbanking)</span>
+              <strong id="breakdown-rzp-text">0 orders — ₹0 (0%)</strong>
+              </div>
+              <div style="height:10px; background:#0E1015; border-radius:5px; overflow:hidden;">
+                <div id="breakdown-rzp-bar" style="width:0%; height:100%; background:var(--admin-accent); transition:width 0.5s;"></div>
+            </div>
+          </div>
+          <div style="margin: 1.5rem 0 0.5rem;">
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.4rem;">
+              <span>Cash on Delivery (COD)</span>
+              <strong id="breakdown-cod-text">0 orders — ₹0 (0%)</strong>
+            </div>
+            <div style="height:10px; background:#0E1015; border-radius:5px; overflow:hidden;">
+              <div style="width:33.3%; height:100%; background:var(--admin-warning);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. ODD Orders Tab -->
+      <div class="admin-tab-pane" id="tab-orders">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">Customer Orders (`odd_order`)</h3>
+              <div class="admin-card-subtitle">Real-time database queries of all completed and pending orders</div>
+            </div>
+            <button class="admin-btn admin-btn-primary admin-btn-sm" onclick="showAdminToast(ew test order added to queue')">+ Add Test Order</button>
+          </div>
+
+          <div class="admin-table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Customer</th>
+                  <th>Items Purchased</th>
+                  <th>Amount</th>
+                  <th>Payment Method</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="orders-tbody">
+                <!-- Javascript Populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Stock Inventory Tab -->
+      <div class="admin-tab-pane" id="tab-inventory">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">Live Fragrance Inventory</h3>
+              <div class="admin-card-subtitle">Direct real-time stock sync with warehouse scanner and database</div>
+            </div>
+            <button class="admin-btn admin-btn-secondary admin-btn-sm" onclick="exportInventoryCSV()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              Export Inventory CSV
+            </button>
+          </div>
+
+          <div class="admin-table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>SKU Code</th>
+                  <th>Fragrance Name</th>
+                  <th>Current Stock</th>
+                  <th>Price (₹)</th>
+                  <th>Last Modified</th>
+                  <th>Stock Actions</th>
+                </tr>
+              </thead>
+              <tbody id="inventory-tbody">
+                <!-- Javascript Populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Scan Products (Warehouse Barcode Scanner) Tab -->
+      <div class="admin-tab-pane" id="tab-scanner">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">Warehouse Barcode Scanner</h3>
+              <div class="admin-card-subtitle">Works with standard USB/Bluetooth hardware scanners or device cameras</div>
+            </div>
+          </div>
+
+          <div class="mode-pill-selector">
+            <button class="mode-pill-btn active" id="btn-mode-receive" onclick="setScannerMode('receive')">" Receiving Stock (+1)</button>
+            <button class="mode-pill-btn" id="btn-mode-dispatch" onclick="setScannerMode('dispatch')">" Dispatching Order (-1)</button>
+          </div>
+
+          <div class="scanner-box-container">
+            <div style="font-family:var(--font-mono, monospace); font-size:0.8rem; color:var(--admin-accent); font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">Warehouse Hardware Scanner Listener</div>
+            <form onsubmit="handleScannerSubmit(event)">
+              <input type="text" id="barcode-scan-input" class="admin-input scanner-input" placeholder="Click here, then scan — or type SKU and press Enter" autofocus>
+            </form>
+            <button class="admin-btn admin-btn-secondary" onclick="showAdminToast('Camera barcode scanner activated. Point camera at product barcode.')">"· Use Camera Scanner</button>
+          </div>
+
+          <div class="admin-card" style="margin-bottom:0;">
+            <h4 style="margin:0 0 1rem; font-size:1rem;">Recent Scans Log</h4>
+            <div id="recent-scans-list">
+              <!-- JS Populated -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Barcode Labels Generator Tab -->
+      <div class="admin-tab-pane" id="tab-barcodes">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">Batch Barcode Label Generator</h3>
+              <div class="admin-card-subtitle">Generate Code128 barcodes with Lot/Mfg/Exp compliance data for packaging boxes</div>
+            </div>
+            <button class="admin-btn admin-btn-primary admin-btn-sm" onclick="window.print()">-️ Print Labels Sheet</button>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;">
+            <div>
+              <h4 style="margin:0 0 0.8rem; font-size:0.9rem; color:var(--admin-accent);">1. Select Fragrance Products</h4>
+              <div style="background:#0E1015; border:1px solid var(--admin-border); border-radius:6px; padding:1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                  <label><input type="checkbox" id="chk-fm" checked> <strong>ODD FIRST MOVE</strong> (ODD-FM-002)</label>
+                  <input type="number" id="copies-fm" value="5" min="1" max="100" style="width:60px;" class="admin-input">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                  <label><input type="checkbox" id="chk-lc" checked> <strong>ODD LUCID</strong> (ODD-LC-003)</label>
+                  <input type="number" id="copies-lc" value="5" min="1" max="100" style="width:60px;" class="admin-input">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <label><input type="checkbox" id="chk-ph" checked> <strong>ODD PHANTOM</strong> (ODD-PH-001)</label>
+                  <input type="number" id="copies-ph" value="5" min="1" max="100" style="width:60px;" class="admin-input">
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 style="margin:0 0 0.8rem; font-size:0.9rem; color:var(--admin-accent);">2. Batch & Compliance Info</h4>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                <div class="admin-form-group">
+                  <label class="admin-label">Lot & Control No.</label>
+                  <input type="text" id="batch-lot-no" class="admin-input" value="77750">
+                </div>
+                <div class="admin-form-group">
+                  <label class="admin-label">Manufacturing Date</label>
+                  <input type="date" id="batch-mfg-date" class="admin-input">
+                </div>
+                <div class="admin-form-group">
+                  <label class="admin-label">Shelf Life (Months)</label>
+                  <input type="number" id="batch-shelf-life" class="admin-input" value="36">
+                </div>
+                <div class="admin-form-group">
+                  <label class="admin-label">Label Width (mm)</label>
+                  <input type="number" id="batch-label-width" class="admin-input" value="70">
+                </div>
+              </div>
+              <button class="admin-btn admin-btn-primary full-width" onclick="generateBarcodeSheet()">Generate Printable Stickers Sheet</button>
+            </div>
+          </div>
+
+          <div id="barcode-sheet-preview" class="barcode-sheet-preview">
+            <p style="color:#666; text-align:center;">Click "Generate Printable Stickers Sheet" above to preview barcodes.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Scanner Access Links Tab -->
+      <div class="admin-tab-pane" id="tab-access-links">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">Warehouse Staff Scanner Access Links</h3>
+              <div class="admin-card-subtitle">Generate secure no-login links for staff (e.g. Ramesh) to scan inventory directly</div>
+            </div>
+          </div>
+
+          <form onsubmit="createNewAccessLink(event)" style="display:flex; gap:1rem; margin-bottom:2rem; max-width:500px;">
+            <input type="text" id="new-link-label" class="admin-input" placeholder="e.g. Warehouse — Ramesh" required>
+            <button type="submit" class="admin-btn admin-btn-primary" style="white-space:nowrap;">Generate Link</button>
+          </form>
+
+          <div class="admin-table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Staff / Label</th>
+                  <th>Direct Scanner URL</th>
+                  <th>Status</th>
+                  <th>Scans Count</th>
+                  <th>Last Active</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="links-tbody">
+                <!-- JS Populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+            <!-- 7. Launch Offer & Coupon Codes Manager (Full CRUD) -->
+      <div class="admin-tab-pane" id="tab-launch-offer">
+        <div class="admin-card" style="margin-bottom:2rem;">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">Site-Wide Launch Banner</h3>
+              <div class="admin-card-subtitle">Controls the top announcement ribbon visible on all storefront pages</div>
+            </div>
+          </div>
+          <form onsubmit="saveBannerSettings(event)" style="max-width:650px;">
+            <div class="admin-form-group">
+              <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; cursor:pointer;">
+                <input type="checkbox" id="banner-active-check" checked> Enable top announcement banner
+              </label>
+            </div>
+            <div class="admin-form-group">
+              <label class="admin-label">Banner Text</label>
+              <input type="text" id="banner-text-input" class="admin-input" value="WE'RE LIVE. Take 20% OFF your first order with code LAUNCH20">
+            </div>
+            <div class="admin-form-group">
+              <label class="admin-label">Highlight Promo Code in Banner</label>
+              <input type="text" id="banner-code-input" class="admin-input" value="LAUNCH20" style="text-transform:uppercase;">
+            </div>
+            <button type="submit" class="admin-btn admin-btn-primary">Save Banner Settings</button>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">Coupon Codes (CRUD System)</h3>
+              <div class="admin-card-subtitle">Manage promotional coupon discounts connected directly to storefront checkout</div>
+            </div>
+          </div>
+
+          <!-- Add Coupon Form -->
+          <form onsubmit="addNewCoupon(event)" style="display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:1rem; align-items:flex-end; margin-bottom:2rem; background:rgba(255,255,255,0.03); padding:1.2rem; border-radius:8px;">
+            <div class="admin-form-group" style="margin:0;">
+              <label class="admin-label">New Coupon Code</label>
+              <input type="text" id="new-coupon-code" class="admin-input" placeholder="e.g. SUMMER25" style="text-transform:uppercase;" required>
+            </div>
+            <div class="admin-form-group" style="margin:0;">
+              <label class="admin-label">Discount %</label>
+              <input type="number" id="new-coupon-discount" class="admin-input" min="1" max="90" placeholder="25" required>
+            </div>
+            <div class="admin-form-group" style="margin:0;">
+              <label class="admin-label">Status</label>
+              <select id="new-coupon-status" class="admin-input" style="background:#111; color:#fff;">
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+            </div>
+            <button type="submit" class="admin-btn admin-btn-primary" style="height:42px;">+ Add Coupon</button>
+          </form>
+
+          <!-- Coupons Table -->
+          <div class="admin-table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>COUPON CODE</th>
+                  <th>DISCOUNT</th>
+                  <th>STATUS</th>
+                  <th>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody id="coupons-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Razorpay Settings Tab -->
+      <div class="admin-tab-pane" id="tab-razorpay">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">Razorpay Payment Gateway Settings</h3>
+              <div class="admin-card-subtitle">Configure API keys & cryptographic signature verification for secure payments</div>
+            </div>
+          </div>
+
+          <form onsubmit="saveRazorpaySettings(event)" style="max-width:650px;">
+            <div style="background:var(--admin-bg-hover); padding:1.2rem; border-radius:8px; margin-bottom:1.5rem; font-size:0.85rem; color:var(--admin-text-muted); line-height:1.5;">
+              <strong>How signature verification works:</strong> Upon checkout completion, Razorpay opens its secure modal widget. The order is marked paid only after server-side cryptographic signature validation.
+            </div>
+
+            <div class="admin-form-group">
+              <label class="admin-label">Razorpay API Key ID (Live / Test)</label>
+              <input type="text" id="admin-rzp-key" class="admin-input" value="rzp_test_1DP5mmOlF5G5ag" style="font-family:monospace;">
+            </div>
+
+            <div class="admin-form-group">
+              <label class="admin-label">Razorpay Key Secret</label>
+              <input type="password" class="admin-input" value="••••••••••••••••••••••••">
+            </div>
+
+            <div class="admin-form-group">
+              <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                <input type="checkbox" checked> Enable Automatic Webhook Signature Verification
+              </label>
+            </div>
+
+            <button type="submit" class="admin-btn admin-btn-primary">Save Razorpay Configuration</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>
+

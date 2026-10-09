@@ -1,0 +1,532 @@
+/* ==========================================================================
+   ODD Perfume — Admin & Inventory Management Portal CSS
+   ========================================================================== */
+
+:root {
+  --admin-sidebar-width: 260px;
+  --admin-bg-body: #0C0D10;
+  --admin-bg-card: #14161D;
+  --admin-bg-hover: #1E212B;
+  --admin-border: #232733;
+  --admin-text-main: #F1F3F9;
+  --admin-text-muted: #8E95A5;
+  --admin-accent: #E86B32;
+  --admin-accent-glow: rgba(232, 107, 50, 0.15);
+  --admin-success: #10B981;
+  --admin-warning: #F59E0B;
+  --admin-danger: #EF4444;
+  --admin-info: #3B82F6;
+}
+
+body.admin-body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--admin-bg-body);
+  color: var(--admin-text-main);
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  display: flex;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Sidebar Styling */
+.admin-sidebar {
+  width: var(--admin-sidebar-width);
+  background: #101116;
+  border-right: 1px solid var(--admin-border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+
+.admin-brand {
+  padding: 1.5rem 1.5rem 1.2rem;
+  border-bottom: 1px solid var(--admin-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-brand-logo {
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 1.6rem;
+  color: #FFF;
+  text-decoration: none;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.admin-brand-logo span {
+  color: var(--admin-accent);
+}
+
+.admin-badge-tag {
+  background: var(--admin-accent-glow);
+  color: var(--admin-accent);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.65rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.admin-nav {
+  flex: 1;
+  padding: 1rem 0;
+  overflow-y: auto;
+}
+
+.admin-nav-group-title {
+  padding: 0.8rem 1.5rem 0.4rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  color: var(--admin-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+}
+
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  color: var(--admin-text-muted);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+}
+
+.admin-nav-item:hover {
+  background: var(--admin-bg-hover);
+  color: #FFF;
+}
+
+.admin-nav-item.active {
+  background: var(--admin-accent-glow);
+  color: var(--admin-accent);
+  border-left-color: var(--admin-accent);
+  font-weight: 600;
+}
+
+.admin-nav-item svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+.admin-sidebar-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--admin-border);
+  font-size: 0.78rem;
+  color: var(--admin-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Main Layout Content */
+.admin-main {
+  margin-left: var(--admin-sidebar-width);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-header {
+  height: 64px;
+  background: #101116;
+  border-bottom: 1px solid var(--admin-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  position: sticky;
+  top: 0;
+  z-index: 90;
+}
+
+.admin-header-title {
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: #FFF;
+  margin: 0;
+}
+
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--admin-success);
+  box-shadow: 0 0 8px var(--admin-success);
+}
+
+.admin-container {
+  padding: 2rem;
+  max-width: 1300px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+/* Tab Sections */
+.admin-tab-pane {
+  display: none;
+}
+
+.admin-tab-pane.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Cards & Grid Layouts */
+.admin-card {
+  background: var(--admin-bg-card);
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-card-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #FFF;
+  margin: 0;
+}
+
+.admin-card-subtitle {
+  font-size: 0.82rem;
+  color: var(--admin-text-muted);
+  margin-top: 0.25rem;
+}
+
+/* KPI Cards Grid */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.kpi-card {
+  background: var(--admin-bg-card);
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+  border-top: 4px solid var(--kpi-color, var(--admin-accent));
+}
+
+.kpi-card.green { --kpi-color: var(--admin-success); }
+.kpi-card.orange { --kpi-color: var(--admin-accent); }
+.kpi-card.amber { --kpi-color: var(--admin-warning); }
+.kpi-card.blue { --kpi-color: var(--admin-info); }
+
+.kpi-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  color: var(--admin-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+.kpi-value {
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 2.2rem;
+  color: #FFF;
+  margin: 0.4rem 0 0.2rem;
+  font-weight: 400;
+}
+
+.kpi-subtext {
+  font-size: 0.78rem;
+  color: var(--admin-text-muted);
+}
+
+/* Tables */
+.admin-table-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--admin-border);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.admin-table th {
+  background: #181A23;
+  color: var(--admin-text-muted);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.9rem 1.2rem;
+  border-bottom: 1px solid var(--admin-border);
+  font-weight: 600;
+}
+
+.admin-table td {
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid var(--admin-border);
+  color: var(--admin-text-main);
+  vertical-align: middle;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tbody tr:hover {
+  background: var(--admin-bg-hover);
+}
+
+/* Status Badges */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-status.success { background: rgba(16, 185, 129, 0.15); color: #34D399; }
+.badge-status.warning { background: rgba(245, 158, 11, 0.15); color: #FBBF24; }
+.badge-status.danger { background: rgba(239, 68, 68, 0.15); color: #F87171; }
+.badge-status.info { background: rgba(59, 130, 246, 0.15); color: #60A5FA; }
+
+/* Form Elements */
+.admin-form-group {
+  margin-bottom: 1.25rem;
+}
+
+.admin-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.admin-input, .admin-select, .admin-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #0E1015;
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  color: #FFF;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.admin-input:focus, .admin-select:focus, .admin-textarea:focus {
+  outline: none;
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px var(--admin-accent-glow);
+}
+
+/* Buttons */
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.admin-btn-primary {
+  background: var(--admin-accent);
+  color: #FFF;
+}
+
+.admin-btn-primary:hover {
+  background: #D05A28;
+}
+
+.admin-btn-secondary {
+  background: #232733;
+  color: #FFF;
+}
+
+.admin-btn-secondary:hover {
+  background: #2D3242;
+}
+
+.admin-btn-outline {
+  background: transparent;
+  border: 1px solid var(--admin-border);
+  color: var(--admin-text-main);
+}
+
+.admin-btn-outline:hover {
+  border-color: var(--admin-accent);
+  color: var(--admin-accent);
+}
+
+.admin-btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.78rem;
+}
+
+/* Scanner Interface */
+.scanner-box-container {
+  background: #090A0D;
+  border: 2px dashed var(--admin-accent);
+  border-radius: 12px;
+  padding: 2.5rem;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.scanner-input {
+  max-width: 500px;
+  font-size: 1.1rem;
+  padding: 0.9rem 1.2rem;
+  text-align: center;
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.08em;
+  margin: 1rem auto;
+}
+
+/* Mode Switcher Pills */
+.mode-pill-selector {
+  display: flex;
+  gap: 0.5rem;
+  background: #0E1015;
+  padding: 0.35rem;
+  border-radius: 8px;
+  width: fit-content;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--admin-border);
+}
+
+.mode-pill-btn {
+  padding: 0.55rem 1.2rem;
+  border: none;
+  background: transparent;
+  color: var(--admin-text-muted);
+  font-weight: 600;
+  font-size: 0.82rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-pill-btn.active {
+  background: var(--admin-accent);
+  color: #FFF;
+}
+
+/* Barcode Label Sheet Printable Preview */
+.barcode-sheet-preview {
+  background: #FFF;
+  color: #000;
+  padding: 20px;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 15px;
+  margin-top: 1.5rem;
+}
+
+.barcode-sticker {
+  border: 1px dashed #999;
+  padding: 10px;
+  text-align: center;
+  font-family: monospace;
+  background: #FFF;
+  border-radius: 4px;
+}
+
+.barcode-sticker-brand {
+  font-weight: bold;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+}
+
+.barcode-sticker-title {
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin: 3px 0;
+}
+
+.barcode-svg-container svg {
+  max-width: 100%;
+  height: 40px;
+}
+
+.barcode-meta {
+  font-size: 0.65rem;
+  color: #444;
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .barcode-sheet-preview, .barcode-sheet-preview * {
+    visibility: visible;
+  }
+  .barcode-sheet-preview {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none;
+  }
+}

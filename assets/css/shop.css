@@ -1,0 +1,204 @@
+/* Catalog / Shop Page Stylesheet (Luxury Dark Elevation) */
+.shop-hero {
+  padding: 5.5rem 0 3.5rem;
+  background: #121318;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
+  color: #FFFFFF;
+}
+
+.shop-hero .section-subtitle {
+  color: var(--brand-orange);
+  letter-spacing: 0.16em;
+}
+
+.shop-hero .section-title {
+  color: #FFFFFF;
+  font-size: 3.2rem;
+  margin-top: 0.4rem;
+}
+
+.shop-hero .section-desc {
+  color: #9E968F;
+  font-size: 1.05rem;
+  max-width: 520px;
+  margin: 0.6rem auto 0;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5rem;
+  margin-top: 3.5rem;
+  margin-bottom: 6rem;
+}
+
+@media (max-width: 1024px) {
+  .shop-grid {
+    grid-template-columns: 1fr;
+    max-width: 440px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .shop-hero {
+    padding: 3.5rem 1rem 2.5rem;
+  }
+  .shop-hero .section-title {
+    font-size: 2.4rem;
+  }
+  .shop-grid {
+    gap: 2rem;
+    padding: 0 0.5rem;
+  }
+}
+/* --- Shop Page Product Card Styles (Overrides) --- */
+.product-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+}
+
+.product-card:hover {
+  box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+  transform: translateY(-4px);
+}
+
+.product-door-container {
+  background: var(--bg-subtle);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  min-height: 320px;
+}
+
+.phantom-door { background: linear-gradient(180deg, #F9F4EE 0%, #FFFFFF 100%); }
+.lucid-door { background: linear-gradient(180deg, #EAF3EF 0%, #FFFFFF 100%); }
+.move-door { background: linear-gradient(180deg, #F5EEF0 0%, #FFFFFF 100%); }
+
+.badge-tag {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: rgba(0,0,0,0.05);
+  color: var(--text-muted);
+}
+
+.door-product-img {
+  max-height: 240px;
+  width: auto;
+  object-fit: contain;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.product-card:hover .door-product-img {
+  transform: scale(1.08);
+}
+
+.product-details {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.product-name {
+  font-family: var(--font-serif);
+  font-size: 1.8rem;
+  font-weight: 400;
+  margin: 0 0 0.3rem;
+  color: var(--text-main);
+}
+
+.product-tagline {
+  font-size: 0.95rem;
+  color: var(--brand-orange);
+  font-style: italic;
+  margin-bottom: 1rem;
+  margin-top: 0;
+}
+
+.scent-notes-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.2rem;
+}
+
+.scent-notes-pills span {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+}
+
+.product-body {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+  margin-top: 0;
+  flex: 1;
+}
+
+.product-price-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.price-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.current-price {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.old-price {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.save-tag {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  background: var(--brand-orange);
+  color: #FFF;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}

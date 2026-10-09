@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>window.location.replace('shop.html');</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Find Your ODD — Five-Question Scent Quiz</title>
+  <meta name="description" content="Five quick questions about how you like to spend your time. Find your ideal ODD fragrance match.">
+  <link rel="stylesheet" href="assets/css/global.css">
+  <link rel="stylesheet" href="assets/css/quiz.css">
+</head>
+<body>
+
+    <!-- Site Header (CR7 Luxury Navbar Edition) -->
+  <header class="site-header" id="site-header">
+    <div class="header-top-bar">
+      <div class="top-left">
+        <button class="mobile-menu-toggle" onclick="toggleMobileNav()" aria-label="Toggle menu">
+          <span></span><span></span><span></span>
+        </button>
+        
+      </div>
+
+      <div class="top-center">
+        <a href="index.html" class="brand-logo-cr7">
+          ODD<span class="logo-dot">.</span>
+        </a>
+      </div>
+
+              <div class="top-right">
+          <a href="admin.html" class="top-nav-btn" style="color:var(--text-main);" aria-label="Admin Portal" title="Admin Portal">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+          </a>
+          <a href="my-account.html" class="top-nav-btn" aria-label="Account" title="Account">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </a>
+          <button class="top-nav-btn" onclick="openSearchModal()" aria-label="Search" title="Search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </button>
+          <button class="cart-trigger-btn" onclick="toggleCartDrawer()" aria-label="Cart" title="Cart">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+            <span class="cart-badge" id="cart-count">0</span>
+          </button>
+        </div>
+    </div>
+
+    <div class="header-bottom-bar">
+            <nav class="main-desktop-nav">
+        <a href="index.html" class="main-nav-link active">Home</a>
+        <a href="shop.html" class="main-nav-link">Shop The Three</a>
+        <a href="index.html#showcase" class="main-nav-link">Collections</a>
+        <a href="index.html#comparison" class="main-nav-link">Compare</a>
+        <a href="index.html#story" class="main-nav-link">Our Story</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="quiz-page-container">
+    <div class="container">
+      <div class="quiz-card">
+        <div class="quiz-header">
+          <span class="section-subtitle">QUIZ · 5 QUESTIONS</span>
+          <h1 class="section-title">Not sure which one?</h1>
+          <p style="color:var(--text-muted); margin-bottom:2rem;">Five quick questions about how you like to spend your time. No right answers. At the end we’ll suggest one of the three.</p>
+        </div>
+
+        <div class="quiz-container" id="quiz-box">
+          <div class="quiz-progress">
+            <div class="progress-bar" id="quiz-progress-bar" style="width: 20%;"></div>
+          </div>
+
+          <div class="quiz-step active" data-step="1">
+            <span class="step-num">Question 01 / 05</span>
+            <h3 class="question-title">What is your primary mood or energy?</h3>
+            <div class="quiz-options">
+              <button class="quiz-opt" onclick="answerQuiz(1, 'lucid')">
+                <span class="opt-title">Sharp, Crisp & Focused</span>
+                <span class="opt-desc">Clean energy for work, meetings, and getting stuff done.</span>
+              </button>
+              <button class="quiz-opt" onclick="answerQuiz(1, 'first-move')">
+                <span class="opt-title">Charming, Playful & Magnetic</span>
+                <span class="opt-desc">Confident vibe for dates, social hangs, and making moves.</span>
+              </button>
+              <button class="quiz-opt" onclick="answerQuiz(1, 'phantom')">
+                <span class="opt-title">Mysterious, Dominant & Deep</span>
+                <span class="opt-desc">Bold presence for evening events and unshakeable authority.</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="quiz-step" data-step="2">
+            <span class="step-num">Question 02 / 05</span>
+            <h3 class="question-title">When do you usually wear perfume most often?</h3>
+            <div class="quiz-options">
+              <button class="quiz-opt" onclick="answerQuiz(2, 'lucid')">
+                <span class="opt-title">Early Morning & Daytime Office</span>
+              </button>
+              <button class="quiz-opt" onclick="answerQuiz(2, 'first-move')">
+                <span class="opt-title">Golden Hour & Evening Dinners</span>
+              </button>
+              <button class="quiz-opt" onclick="answerQuiz(2, 'phantom')">
+                <span class="opt-title">Late Night Outings & Midnight Hours</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="quiz-step" data-step="3">
+            <span class="step-num">Question 03 / 05</span>
+            <h3 class="question-title">Which scent breakdown appeals to your nose?</h3>
+            <div class="quiz-options">
+              <button class="quiz-opt" onclick="answerQuiz(3, 'lucid')">
+                <span class="opt-title">Zesty Bergamot, Fresh Lemon Tea & Cedarwood</span>
+              </button>
+              <button class="quiz-opt" onclick="answerQuiz(3, 'first-move')">
+                <span class="opt-title">Juicy Pineapple, Crisp Amber & Smoky Musk</span>
+              </button>
+              <button class="quiz-opt" onclick="answerQuiz(3, 'phantom')">
+                <span class="opt-title">Dark Cambodian Oud, Warm Resin & Birch Smoke</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="quiz-step" data-step="4">
+            <span class="step-num">Question 04 / 05</span>
+            <h3 class="question-title">How do you want your scent trail to be noticed?</h3>
+            <div class="quiz-options">
+              <button class="quiz-opt" onclick="answerQuiz(4, 'lucid')">
+                <span class="opt-title">Clean personal aura when people lean in.</span>
+              </button>
+              <button class="quiz-opt" onclick="answerQuiz(4, 'first-move')">
+                <span class="opt-title">Noticeable scent trail that gathers compliments.</span>
+              </button>
+              <button class="quiz-opt" onclick="answerQuiz(4, 'phantom')">
+                <span class="opt-title">Dominant projection that fills the space.</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="quiz-step" data-step="5">
+            <span class="step-num">Question 05 / 05</span>
+            <h3 class="question-title">What is your go-to weekend activity?</h3>
+            <div class="quiz-options">
+              <button class="quiz-opt" onclick="answerQuiz(5, 'lucid')">
+                <span class="opt-title">Café visits, outdoor walks, gym, or errands.</span>
+              </button>
+              <button class="quiz-opt" onclick="answerQuiz(5, 'first-move')">
+                <span class="opt-title">Cocktail lounges, date nights, or house parties.</span>
+              </button>
+              <button class="quiz-opt" onclick="answerQuiz(5, 'phantom')">
+                <span class="opt-title">VIP clubs, private dinners, or late rooftop sessions.</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="quiz-result" id="quiz-result" style="display: none;">
+            <div class="result-badge">YOUR RECOMMENDED FRAGRANCE</div>
+            <h3 class="result-name" id="quiz-res-title">First Move</h3>
+            <p class="result-desc" id="quiz-res-desc">Based on your answers, your signature match is First Move.</p>
+            <div class="result-actions" style="display:flex; gap:1rem; justify-content:center;">
+              <button class="btn btn-primary" id="quiz-add-btn" onclick="addQuizMatchToCart()">Add Match To Bag — ₹ 899</button>
+              <button class="btn btn-outline" onclick="resetQuiz()">Retake Quiz</button>
+            </div>
+          </div>
+
+          </div>
+      </div>
+    </div>
+  </main>
+
+    <!-- Global Footer (media_1791442638385.png) -->
+  <footer class="site-footer-luxury">
+    <div class="container">
+      <!-- Top Email Signup -->
+      <div class="footer-top-signup">
+        <div class="footer-signup-left">
+          <div class="footer-signup-header">
+            <span class="orange-dot-lg"></span>
+            <h2 class="footer-signup-title">Get our emails.</h2>
+          </div>
+          <p class="footer-signup-sub">New scents, the odd offer, and nothing else. About once a month.</p>
+        </div>
+        <form class="footer-signup-form" onsubmit="handleEmailSignup(event)">
+          <input type="email" placeholder="your@email.com" class="footer-email-input" required>
+          <button type="submit" class="footer-email-btn btn-water-float">Join</button>
+        </form>
+      </div>
+
+      <!-- 4 Columns Navigation -->
+      <div class="footer-nav-columns">
+        <div class="footer-col">
+          <div class="footer-col-title">Shop</div>
+          <ul class="footer-links-list">
+            <li><a href="shop.html">All perfumes</a></li>
+            <li></li>
+            <li><a href="story.html">Our story</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Help</div>
+          <ul class="footer-links-list">
+            <li><a href="order-tracking.html">Track order</a></li>
+            <li><a href="my-account.html">My account</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="contact.html">Contact</a></li>
+            <li><a href="admin.html">Admin & Inventory</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Say Hi</div>
+          <a href="mailto:hello@oddperfume.com" class="footer-contact-link">hello@oddperfume.com</a>
+          <p class="footer-contact-hours">Mon—Sat · 10am—7pm IST</p>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Pay Your Way</div>
+          <div class="payment-pills-row">
+            <span class="pay-pill-badge">UPI</span>
+            <span class="pay-pill-badge">Cards</span>
+            <span class="pay-pill-badge">Netbanking</span>
+            <span class="pay-pill-badge">Cash on delivery</span>
+          </div>
+          <div class="pay-razorpay-secure">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <span>Secure payments by Razorpay</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Massive Statement: It's good to be ODD. -->
+      <div class="footer-massive-odd-container">
+        <span class="massive-odd-lead-text">It's good to be</span>
+        <div class="massive-odd-display-text">ODD<span class="massive-odd-dot-orange"></span></div>
+      </div>
+
+      <!-- Legal Bar -->
+      <div class="footer-legal-bar">
+        <div class="legal-left">&copy; 2026 ODD Perfume &middot; Mumbai, India</div>
+        <div class="footer-legal-links">
+          <a href="shipping-policy.html">Shipping policy</a>
+          <a href="refund-policy.html">Returns & refunds</a>
+          <a href="privacy-policy.html">Privacy policy</a>
+          <a href="terms.html">Terms of service</a>
+        </div>
+        <div class="legal-right">Based in Mumbai.</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Quick View Modal (media_1791443891864.png) -->
+  <div class="quick-view-modal-backdrop" id="quick-view-modal" onclick="if(event.target===this) closeQuickView()">
+    <div class="quick-view-card">
+      <button class="quick-view-close-btn" onclick="closeQuickView()">&times;</button>
+      <div class="quick-view-visual">
+        <img src="assets/images/Phantom.jpeg" id="qv-img" alt="ODD Perfume" class="quick-view-bottle-img">
+      </div>
+      <div class="quick-view-details">
+        <span class="qv-brand">ODD PARFUMS</span>
+        <h3 class="qv-title" id="qv-title">Phantom</h3>
+        <div class="qv-price" id="qv-price">&#8377; 899</div>
+        <div class="qv-size-row">
+          <span class="qv-size-label">Size: 100ml</span>
+          <span class="qv-size-pill">100ml</span>
+        </div>
+        <div class="qv-stock-badge">
+          <span class="qv-stock-dot"></span> In stock, ready to ship
+        </div>
+        <div class="qv-actions-row">
+          <div class="qv-qty-stepper">
+            <button onclick="updateQvQty(-1)">&minus;</button>
+            <span id="qv-qty">1</span>
+            <button onclick="updateQvQty(1)">&plus;</button>
+          </div>
+          <button class="qv-add-btn btn-water-float" onclick="addQvToCart()">Add to cart</button>
+        </div>
+        <button class="qv-buy-btn btn-water-float" onclick="buyNowQv()">Buy now</button>
+        <a href="products-odd-phantom.html" id="qv-link" class="qv-full-details-link">View full details &rarr;</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="cart-drawer-backdrop" id="cart-backdrop" onclick="toggleCartDrawer()"></div>
+  <div class="cart-drawer" id="cart-drawer">
+    <div class="cart-header">
+      <h3>YOUR BAG (<span id="cart-drawer-count">0</span>)</h3>
+      <button class="close-drawer" onclick="toggleCartDrawer()">&times;</button>
+    </div>
+    <div class="cart-items-list" id="cart-items"></div>
+    <div class="cart-footer" id="cart-footer" style="display: none;">
+      <a href="checkout.html" class="btn btn-primary btn-lg full-width">Checkout</a>
+    </div>
+  </div>
+
+  <script src="assets/js/global.js"></script>
+  <script src="assets/js/quiz.js"></script>
+
+  <!-- Global Mobile Navigation Drawer -->
+  <div class="mobile-nav-drawer" id="mobile-nav">
+    <div class="drawer-header">
+      <span class="brand-logo-cr7" style="font-size: 1.8rem;">ODD<span class="logo-dot" style="color: var(--brand-orange);">.</span></span>
+      <button class="close-drawer" onclick="toggleMobileNav()">&times;</button>
+    </div>
+    <div class="drawer-content">
+      <a href="index.html">Home</a>
+      <a href="shop.html">Shop The Three</a>
+      <a href="index.html#showcase" onclick="toggleMobileNav()">Collections</a>
+      <a href="index.html#comparison" onclick="toggleMobileNav()">Compare</a>
+      <a href="story.html">Our Story</a>
+      <a href="order-tracking.html">Track Order</a>
+      <a href="my-account.html">My Account</a>
+      <a href="faq.html">FAQ & Support</a>
+      <a href="contact.html">Contact Us</a>
+      <div class="drawer-footer">
+        <p>hello@oddperfume.com</p>
+        <p>Mon—Sat &middot; 10am—7pm IST &middot; Mumbai</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Slide-Out Cart Drawer -->
+  <div class="cart-drawer-backdrop" id="cart-backdrop" onclick="toggleCartDrawer()"></div>
+  <div class="cart-drawer" id="cart-drawer">
+    <div class="cart-header">
+      <h3>YOUR BAG (<span id="cart-drawer-count">0</span>)</h3>
+      <button class="close-drawer" onclick="toggleCartDrawer()">&times;</button>
+    </div>
+    <div class="free-shipping-banner">
+      <span>Free Express Shipping Unlocked Across India</span>
+      <div class="shipping-progress"><div class="fill" style="width: 100%;"></div></div>
+    </div>
+    <div class="cart-items-list" id="cart-items"></div>
+    <div class="cart-footer" id="cart-footer" style="display: none;">
+      <div class="coupon-box">
+        <input type="text" id="cart-coupon-input" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;">
+        <button class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
+      </div>
+      <div class="coupon-applied-tag" id="coupon-tag-applied" style="display: none;">
+        <span>Code <strong id="applied-code-name">LAUNCH20</strong> applied</span>
+        <button onclick="removeCartCoupon()" class="remove-coupon">&times;</button>
+      </div>
+      <div class="cart-totals">
+        <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹ 0</span></div>
+        <div class="total-row grand-total"><span>Total:</span><span id="cart-total">₹ 0</span></div>
+      </div>
+      <a href="checkout.html" class="btn btn-primary btn-lg full-width btn-water-float">Proceed to Checkout</a>
+    </div>
+  </div>
+
+  <!-- Global Search Modal -->
+  <div class="search-modal-backdrop" id="search-modal" onclick="if(event.target===this) closeSearchModal()">
+    <div class="search-modal-card">
+      <div class="search-modal-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" class="search-modal-input" placeholder="Search by name, notes, or occasion..." oninput="handleSearchInput(this.value)">
+        <button class="search-modal-close" onclick="closeSearchModal()">&times;</button>
+      </div>
+      <div class="search-modal-results" id="search-modal-results"></div>
+    </div>
+  </div>
+
+</body>
+</html>
+
+
+

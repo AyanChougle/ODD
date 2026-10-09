@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ODD Phantom</title>
+  <link rel="stylesheet" href="assets/css/global.css">
+  <link rel="stylesheet" href="assets/css/product.css">
+</head>
+<body>
+
+  <!-- Site Header -->
+  <div id="launch-banner" class="launch-banner">
+    <div class="banner-container">
+      <span class="status-bullet"></span>
+      <span class="banner-text"><strong>WE'RE LIVE.</strong> Take 20% OFF your first order with code <code class="coupon-tag" id="banner-code">LAUNCH20</code></span>
+      <button class="banner-btn" onclick="applyCouponFromBanner()">Apply</button>
+      <button class="banner-close" onclick="document.getElementById('launch-banner').style.display='none'">&times;</button>
+    </div>
+  </div>
+
+  <header class="site-header" id="site-header">
+    <div class="header-top-bar">
+      <div class="top-left">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Open menu">
+          <span></span><span></span><span></span>
+        </button>
+        
+      </div>
+      <div class="top-center">
+        <a href="index.html" class="brand-logo-cr7">ODD<span class="logo-dot">.</span></a>
+      </div>
+              <div class="top-right">
+          <a href="admin.html" class="top-nav-btn" style="color:var(--text-main);" aria-label="Admin Portal" title="Admin Portal">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+          </a>
+          <a href="my-account.html" class="top-nav-btn" aria-label="Account" title="Account">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </a>
+          <button class="top-nav-btn" onclick="openSearchModal()" aria-label="Search" title="Search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </button>
+          <button class="cart-trigger-btn" onclick="toggleCartDrawer()" aria-label="Cart" title="Cart">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+            <span class="cart-badge" id="cart-count">0</span>
+          </button>
+        </div>
+    </div>
+    <div class="header-bottom-bar">
+      <nav class="main-desktop-nav">
+        <a href="index.html" class="main-nav-link">Home</a>
+        <a href="shop.html" class="main-nav-link">Shop The Three</a>
+        <a href="index.html#showcase" class="main-nav-link">Collections</a>
+        <a href="index.html#comparison" class="main-nav-link">Compare</a>
+        <a href="index.html#story" class="main-nav-link">Our Story</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Product Detail -->
+  <main>
+    <section class="product-detail-section">
+      <div class="container product-detail-grid">
+
+        <!-- LEFT: Image -->
+        <div class="product-gallery-box">
+          <img src="assets/images/Phantom.jpeg" alt="ODD Phantom" class="product-lifestyle-img">
+        </div>
+
+        <!-- RIGHT: Info -->
+        <div class="product-info-col">
+          
+
+          <h1 class="product-detail-title" style="font-family: 'Phantom Font', serif;">Phantom</h1>
+          <p class="product-tagline-italic">"Unseen. Unforgotten. Dominant."</p>
+
+          <!-- Price -->
+          <div class="product-detail-price" data-product="phantom" style="margin: 1.5rem 0;">
+            <span class="price-current">&#8377; 899</span>
+            <span class="price-original">&#8377; 1,199</span>
+            <span class="price-discount-pill">-25%</span>
+          </div>
+
+          <p class="product-desc-text">A dark, rich blend designed for nightouts, late dinners, and making an unshakeable impression. Loaded with 20-25% pure perfume oil for an 8-10 hour wear time.</p>
+
+          <!-- Notes -->
+          <div class="notes-breakdown-box">
+            <div class="notes-label">KEY SCENT NOTES</div>
+            <div class="notes-pills">
+              <span class="note-pill">Oud</span>
+              <span class="note-pill">Saffron</span>
+              <span class="note-pill">Amberwood</span>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div class="product-cta-row">
+            <button class="product-add-btn" onclick="addToCart('phantom')">
+              Add to Bag &mdash; &#8377;899
+            </button>
+          </div>
+
+          <div class="product-trust-row">
+            <span style="display:inline-flex;align-items:center;justify-content:center;gap:0.4rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Free shipping across India &middot; COD Available &middot; Formulated in Mumbai</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Cart Drawer -->
+  <div class="cart-drawer-backdrop" id="cart-backdrop" onclick="closeCartDrawer()"></div>
+  <aside class="cart-drawer" id="cart-drawer">
+    <div class="cart-header">
+      <h3>Your Bag</h3>
+      <button onclick="closeCartDrawer()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+    <div class="cart-items-list" id="cart-items-list"></div>
+    <div class="cart-footer">
+      <div class="coupon-box">
+        <input type="text" id="coupon-input-drawer" placeholder="Coupon code" style="flex:1;padding:0.6rem 0.8rem;border:1px solid var(--border-color);border-radius:var(--radius-sm);font-size:0.8rem;">
+        <button onclick="applyCoupon()" class="btn btn-dark btn-sm">Apply</button>
+      </div>
+      <div class="cart-totals">
+        <div class="total-row"><span>Subtotal</span><span id="cart-subtotal">&#8377;0</span></div>
+        <div class="total-row grand-total"><span>Total</span><span id="cart-total">&#8377;0</span></div>
+      </div>
+      <a href="checkout.html" class="btn btn-primary full-width">Checkout</a>
+    </div>
+  </aside>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="assets/js/global.js"></script>
+  <!-- Global Search Modal -->
+  <div class="search-modal-backdrop" id="search-modal" onclick="if(event.target===this) closeSearchModal()">
+    <div class="search-modal-card">
+      <div class="search-modal-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" class="search-modal-input" placeholder="Search by name, notes, or occasion..." oninput="handleSearchInput(this.value)">
+        <button class="search-modal-close" onclick="closeSearchModal()">&times;</button>
+      </div>
+      <div class="search-modal-results" id="search-modal-results"></div>
+    </div>
+  </div>
+</body>
+</html>

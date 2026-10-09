@@ -1,0 +1,216 @@
+/* ============================================================
+   ODD Perfume — Product Detail Page CSS
+   Clean, Premium, Luxury Fragrance Brand
+   ============================================================ */
+
+/* --- Layout --- */
+.product-detail-section {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 5rem 0;
+  background: var(--bg-primary);
+}
+
+.product-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 5rem;
+  align-items: start;
+}
+
+/* --- Image Panel --- */
+.product-gallery-box {
+  position: sticky;
+  top: 120px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--bg-subtle);
+}
+
+.product-lifestyle-img {
+  width: 100%;
+  height: 600px;
+  object-fit: cover;
+  display: block;
+}
+
+/* --- Info Column --- */
+.product-info-col {
+  display: flex;
+  flex-direction: column;
+  padding-top: 1rem;
+}
+
+.product-breadcrumb {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background-color: #EFEFEF;
+  color: #555;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.product-detail-title {
+  font-size: clamp(3rem, 6vw, 4.5rem);
+  font-weight: 400;
+  line-height: 1;
+  margin: 0 0 0.5rem;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.product-tagline-italic {
+  font-family: var(--font-sans);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin: 0 0 2rem;
+}
+
+/* --- Price Block --- */
+.product-detail-price {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.price-current {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--text-main);
+  line-height: 1;
+}
+
+.price-original {
+  font-size: 1rem;
+  color: #aaa;
+  text-decoration: line-through;
+  font-family: var(--font-sans);
+}
+
+.price-discount-pill {
+  background: #F0E9E4;
+  color: #A0401B;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.3rem 0.7rem;
+  border-radius: 99px;
+  letter-spacing: 0.05em;
+}
+
+/* --- Description --- */
+.product-desc-text {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.8;
+  margin-bottom: 2rem;
+}
+
+/* --- Notes Box --- */
+.notes-breakdown-box {
+  background: #F8F8F8;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.notes-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.8rem;
+}
+
+.notes-pills {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.note-pill {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: var(--radius-full);
+}
+
+/* --- CTA Button --- */
+.product-cta-row {
+  margin-bottom: 1.2rem;
+}
+
+.product-add-btn {
+  width: 100%;
+  padding: 1.1rem 2rem;
+  background: var(--brand-orange);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 0.95rem;
+  letter-spacing: 0.1em;
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: block;
+}
+
+.product-add-btn:hover {
+  background: #d05a28;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(232,107,50,0.3);
+}
+
+/* --- Trust Line --- */
+.product-trust-row {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* --- Responsive --- */
+@media (max-width: 900px) {
+  .product-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+  .product-gallery-box {
+    position: static;
+  }
+  .product-lifestyle-img {
+    height: 380px;
+  }
+  .product-detail-section {
+    padding: 3rem 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .product-lifestyle-img {
+    height: 280px;
+  }
+  .product-detail-title {
+    font-size: 2.8rem;
+  }
+  .price-current {
+    font-size: 2rem;
+  }
+}
