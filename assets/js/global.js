@@ -10,6 +10,7 @@ function closeCartDrawer() {
   const drawer = document.getElementById('cart-drawer');
   if (backdrop) backdrop.classList.remove('open');
   if (drawer) drawer.classList.remove('open');
+  document.body.classList.remove('drawer-open');
 }
 
 /* ==========================================================================
@@ -77,8 +78,19 @@ const PRODUCTS = {
   }
 };
 
-let cartState = JSON.parse(localStorage.getItem('odd_cart') || '[]');
+function readStorageJSON(key, fallback) {
+  try { const value = JSON.parse(localStorage.getItem(key)); return value == null ? fallback : value; }
+  catch { return fallback; }
+}
+let cartState = readStorageJSON('odd_cart', []).filter(item => item && PRODUCTS[item.id] && Number.isInteger(Number(item.qty)) && Number(item.qty) > 0).map(item => ({ id: item.id, qty: Number(item.qty) }));
 let appliedCoupon = localStorage.getItem('odd_coupon') || null;
+let STORE_INVENTORY = {
+  phantom: { sku: 'ODD-PH-001', stock: 330, price: 899 },
+  lucid: { sku: 'ODD-LC-003', stock: 326, price: 899 },
+  'first-move': { sku: 'ODD-FM-002', stock: 0, price: 899 }
+};
+let ACTIVE_COUPONS = [{ code: 'LAUNCH20', discount: 20 }, { code: 'ODDSPOT10', discount: 10 }];
+let STORE_STATE_FROM_SERVER = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof initScrollSpy === 'function') initScrollSpy();
@@ -128,35 +140,42 @@ function toggleCartDrawer() {
   const backdrop = document.getElementById('cart-backdrop');
   const drawer = document.getElementById('cart-drawer');
   if (backdrop && drawer) {
-    backdrop.classList.toggle('open');
-    drawer.classList.toggle('open');
+    const willOpen = !drawer.classList.contains('open');
+    backdrop.classList.toggle('open', willOpen);
+    drawer.classList.toggle('open', willOpen);
+    document.body.classList.toggle('drawer-open', willOpen);
+    if (willOpen) updateCartUI();
   }
+}
+
+function getProductAvailability(productId) {
+  const state = STORE_INVENTORY[productId];
+  if (!state) return { stock: 0, price: PRODUCTS[productId]?.price || 0 };
+  return { stock: Math.max(0, Number(state.stock) || 0), price: Math.max(0, Number(state.price) || 0) };
 }
 
 function addToCart(productId) {
     const prod = PRODUCTS[productId];
     if (!prod) return;
-
-    // Check stock from Admin Inventory
-    const inv = JSON.parse(localStorage.getItem('odd_admin_inventory'));
-    const skuMap = { 'phantom': 'ODD-PH-001', 'lucid': 'ODD-LC-003', 'first-move': 'ODD-FM-002' };
-    const sku = skuMap[productId];
-    if (inv && sku && inv[sku]) {
-      const stock = inv[sku].stock;
-      if (stock <= 0) {
-        showToast(`${prod.name} is currently OUT OF STOCK.`);
-        return;
-      }
-      const existing = cartState.find(item => item.id === productId);
-      if (existing && existing.qty >= stock) {
-        showToast(`Only ${stock} unit(s) of ${prod.name} available in stock.`);
-        return;
-      }
-    }
-
+    const availability = getProductAvailability(productId);
+    const stock = availability.stock;
     const existing = cartState.find(item => item.id === productId);
-    if (existing) {
-      existing.qty += 1;
+    if (stock <= 0) {
+      showToast(`${prod.name} is currently out of stock. It cannot be added to your bag.`);
+      syncStockStatusUI();
+      return;
+    }
+    if (existing && existing.qty >= stock) {
+      showToast(`Only ${stock} unit(s) of ${prod.name} are available.`);
+      return;
+    }
+    prod.price = availability.price;
+
+    /* Stock is authoritative on the server when the server is running; the client
+       check is immediate UX, while checkout validates stock again atomically. */
+    const existingItem = cartState.find(item => item.id === productId);
+    if (existingItem) {
+      existingItem.qty += 1;
     } else {
       cartState.push({ id: productId, qty: 1 });
     }
@@ -174,13 +193,12 @@ function addToCart(productId) {
 function updateCartQty(productId, delta) {
   const item = cartState.find(i => i.id === productId);
   if (!item) return;
-
-  item.qty += delta;
-  if (item.qty <= 0) {
-    cartState = cartState.filter(i => i.id !== productId);
-  }
-  saveCart();
-  updateCartUI();
+  const nextQty = item.qty + Number(delta);
+  const stock = getProductAvailability(productId).stock;
+  if (nextQty > stock) { showToast(stock ? `Only ${stock} unit(s) are available.` : 'This perfume is currently out of stock.'); return; }
+  item.qty = nextQty;
+  if (item.qty <= 0) cartState = cartState.filter(i => i.id !== productId);
+  saveCart(); updateCartUI();
 }
 
 function removeFromCart(productId) {
@@ -194,14 +212,22 @@ function saveCart() {
   localStorage.setItem('odd_cart', JSON.stringify(cartState));
   if (appliedCoupon) localStorage.setItem('odd_coupon', appliedCoupon);
   else localStorage.removeItem('odd_coupon');
+  document.dispatchEvent(new CustomEvent('odd:cart-updated', { detail: { items: cartState.length } }));
 }
 
 function updateCartUI() {
+  renderCartPage();
   const countBadge = document.getElementById('cart-count');
   const drawerCount = document.getElementById('cart-drawer-count');
-  const cartItemsList = document.getElementById('cart-items');
+  const cartItemsList = document.getElementById('cart-items') || document.getElementById('cart-items-list');
   const cartEmpty = document.getElementById('cart-empty');
-  const cartFooter = document.getElementById('cart-footer');
+  const cartDrawer = document.getElementById('cart-drawer');
+  const cartFooter = document.getElementById('cart-footer') || cartDrawer?.querySelector('.cart-footer');
+  let emptyState = cartEmpty;
+  if (!emptyState && cartItemsList) {
+    emptyState = cartItemsList.querySelector('.cart-empty-state');
+    if (!emptyState) { emptyState = document.createElement('div'); emptyState.className = 'cart-empty-state'; emptyState.innerHTML = '<span class="cart-empty-mark">ODD.</span><p>Your bag is taking a breather.</p><span>Add a fragrance and it will show up here.</span><a href="shop.html">Explore the three fragrances</a>'; cartItemsList.appendChild(emptyState); }
+  }
   
   const totalItems = cartState.reduce((sum, i) => sum + i.qty, 0);
   if (countBadge) countBadge.innerText = totalItems;
@@ -210,14 +236,15 @@ function updateCartUI() {
   if (!cartItemsList) return;
 
   if (cartState.length === 0) {
-    if (cartEmpty) cartEmpty.style.display = 'block';
+    if (emptyState) emptyState.style.display = 'flex';
     if (cartFooter) cartFooter.style.display = 'none';
-    const renderedItems = cartItemsList.querySelectorAll('.cart-item-single');
-    renderedItems.forEach(el => el.remove());
+    cartItemsList.querySelectorAll('.cart-item-single').forEach(el => el.remove());
+    const subtotalEl = document.getElementById('cart-subtotal'); if (subtotalEl) subtotalEl.textContent = '₹0';
+    const totalEl = document.getElementById('cart-total'); if (totalEl) totalEl.textContent = '₹0';
     return;
   }
 
-  if (cartEmpty) cartEmpty.style.display = 'none';
+  if (emptyState) emptyState.style.display = 'none';
   if (cartFooter) cartFooter.style.display = 'block';
 
   let subtotal = 0;
@@ -226,24 +253,29 @@ function updateCartUI() {
   cartState.forEach(item => {
     const prod = PRODUCTS[item.id];
     if (!prod) return;
-    const itemTotal = prod.price * item.qty;
+    const availability = getProductAvailability(item.id);
+    const price = Number(availability.price ?? prod.price);
+    const stock = Number(availability.stock) || 0;
+    const unavailable = stock <= 0 || item.qty > stock;
+    const itemTotal = price * item.qty;
     subtotal += itemTotal;
 
     itemsHtml += `
-      <div class="cart-item-single">
+      <div class="cart-item-single${unavailable ? ' cart-item-unavailable' : ''}">
         <div class="cart-item-img">
-          <img src="assets/images/${prod.bottleImage || 'Final-Logo-768x768.png'}" alt="${prod.name}">
+          <img src="assets/images/${prod.bottleImage || 'Final-Logo-768x768.png'}" alt="${prod.name} perfume bottle">
         </div>
         <div class="cart-item-details">
           <h4>${prod.name}</h4>
-          <div class="cart-item-price">₹${prod.price} <span style="font-size:0.75rem; text-decoration:line-through; color:var(--text-muted);">₹${prod.originalPrice}</span></div>
+          <div class="cart-item-price">₹${price.toLocaleString('en-IN')} <span style="font-size:0.75rem; text-decoration:line-through; color:var(--text-muted);">₹${prod.originalPrice.toLocaleString('en-IN')}</span></div>
           <div class="qty-controls">
-            <button onclick="updateCartQty('${item.id}', -1)">-</button>
+            <button type="button" aria-label="Remove one ${prod.name}" onclick="updateCartQty('${item.id}', -1)">−</button>
             <span>${item.qty}</span>
-            <button onclick="updateCartQty('${item.id}', 1)">+</button>
+            <button type="button" aria-label="Add one ${prod.name}" onclick="updateCartQty('${item.id}', 1)" ${unavailable || item.qty >= stock ? 'disabled' : ''}>+</button>
           </div>
+          ${unavailable ? `<small class="cart-item-stock-warning">${stock <= 0 ? 'Out of stock. Remove this item before checkout.' : `Only ${stock} available. Reduce the quantity to continue.`}</small>` : ''}
         </div>
-        <button class="cart-item-remove" onclick="removeFromCart('${item.id}')">&times;</button>
+        <button type="button" class="cart-item-remove" aria-label="Remove ${prod.name}" onclick="removeFromCart('${item.id}')">&times;</button>
       </div>
     `;
   });
@@ -253,15 +285,22 @@ function updateCartUI() {
   cartItemsList.insertAdjacentHTML('beforeend', itemsHtml);
 
   let discountAmount = 0;
-    if (appliedCoupon) {
-      const discountPct = Number(localStorage.getItem('odd_coupon_discount')) || (appliedCoupon === 'LAUNCH20' ? 20 : 10);
-      discountAmount = Math.round(subtotal * (discountPct / 100));
-    }
+  const appliedCouponRecord = appliedCoupon ? ACTIVE_COUPONS.find(coupon => coupon.code === appliedCoupon && coupon.active !== false) : null;
+  const appliedTag = document.getElementById('coupon-tag-applied');
+  const appliedName = document.getElementById('applied-code-name');
+  if (appliedCouponRecord) {
+    discountAmount = Math.round(subtotal * (Number(appliedCouponRecord.discount) / 100));
+    if (appliedTag) appliedTag.style.display = 'flex';
+    if (appliedName) appliedName.textContent = `${appliedCouponRecord.code} (${appliedCouponRecord.discount}% OFF)`;
+  } else if (appliedCoupon) {
+    appliedCoupon = null; localStorage.removeItem('odd_coupon'); localStorage.removeItem('odd_coupon_discount');
+    if (appliedTag) appliedTag.style.display = 'none';
+  }
 
   const grandTotal = subtotal - discountAmount;
 
   const subElem = document.getElementById('cart-subtotal');
-  if (subElem) subElem.innerText = `₹${subtotal.toLocaleString('en-IN')}`;
+  if (subElem) subElem.textContent = `₹${subtotal.toLocaleString('en-IN')}`;
   
   const discountRow = document.getElementById('cart-discount-row');
   if (discountRow) {
@@ -275,22 +314,75 @@ function updateCartUI() {
   }
 
   const totElem = document.getElementById('cart-total');
-  if (totElem) totElem.innerText = `₹${grandTotal.toLocaleString('en-IN')}`;
+  if (totElem) totElem.textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
+}
+
+
+function renderCartPage() {
+  const container = document.getElementById('cart-page-items');
+  if (!container) return;
+  const subtotalEl = document.getElementById('cart-page-subtotal');
+  const discountRow = document.getElementById('cart-page-discount-row');
+  const discountEl = document.getElementById('cart-page-discount');
+  const totalEl = document.getElementById('cart-page-total');
+  const checkoutLink = document.getElementById('cart-page-checkout');
+  const items = Array.isArray(cartState) ? cartState.filter(item => PRODUCTS[item.id] && Number(item.qty) > 0) : [];
+  if (!items.length) {
+    container.innerHTML = '<div class="cart-page-empty"><span class="cart-empty-mark">ODD.</span><h2>Your bag is taking a breather.</h2><p>Add a fragrance and it will appear here.</p><a class="btn btn-primary" href="shop.html">Explore the three fragrances</a></div>';
+    if (subtotalEl) subtotalEl.textContent = '₹0';
+    if (discountRow) discountRow.hidden = true;
+    if (totalEl) totalEl.textContent = '₹0';
+    if (checkoutLink) { checkoutLink.setAttribute('aria-disabled', 'true'); checkoutLink.classList.add('is-disabled'); }
+  } else {
+    let subtotal = 0;
+    let unavailable = false;
+    container.innerHTML = items.map(item => {
+      const product = PRODUCTS[item.id]; const stockState = getProductAvailability(item.id);
+      const price = Number(stockState.price ?? product.price); const stock = Number(stockState.stock) || 0;
+      const qty = Math.min(25, Number(item.qty)); const lineTotal = price * qty; subtotal += lineTotal;
+      const out = stock <= 0 || qty > stock; if (out) unavailable = true;
+      return `<article class="cart-page-line${out ? ' is-unavailable' : ''}">
+        <div class="cart-page-product-image"><img src="assets/images/${product.bottleImage}" alt="ODD ${product.name}" loading="lazy"></div>
+        <div class="cart-page-product-copy"><a href="${item.id === 'first-move' ? 'products-odd-first-move.html' : `products-odd-${item.id}.html`}">${product.name}</a><span>100 ml · ${price.toLocaleString('en-IN')} each</span>
+          <div class="cart-page-qty"><button type="button" data-cart-page-qty="-1" data-product-id="${item.id}" aria-label="Remove one ${product.name}">−</button><span>Qty ${qty}</span><button type="button" data-cart-page-qty="1" data-product-id="${item.id}" aria-label="Add one ${product.name}" ${out || qty >= stock ? 'disabled' : ''}>+</button><button type="button" class="cart-page-remove" data-cart-page-remove="${item.id}">Remove</button></div>
+          ${out ? `<small class="cart-page-stock-warning">${stock <= 0 ? 'Currently out of stock. Remove this item to continue.' : `Only ${stock} available. Reduce the quantity to continue.`}</small>` : ''}</div>
+        <strong class="cart-page-line-total">₹${lineTotal.toLocaleString('en-IN')}</strong>
+      </article>`;
+    }).join('');
+    const coupon = appliedCoupon ? ACTIVE_COUPONS.find(item => item.code === appliedCoupon && item.active !== false) : null;
+    const discount = coupon ? Math.round(subtotal * Number(coupon.discount) / 100) : 0;
+    if (subtotalEl) subtotalEl.textContent = `₹${subtotal.toLocaleString('en-IN')}`;
+    if (discountRow) discountRow.hidden = discount <= 0;
+    if (discountEl) discountEl.textContent = `−₹${discount.toLocaleString('en-IN')}`;
+    if (totalEl) totalEl.textContent = `₹${Math.max(0, subtotal - discount).toLocaleString('en-IN')}`;
+    if (checkoutLink) { checkoutLink.setAttribute('aria-disabled', String(unavailable)); checkoutLink.classList.toggle('is-disabled', unavailable); }
+  }
+  if (!container.dataset.cartActionsBound) {
+    container.dataset.cartActionsBound = 'true';
+    container.addEventListener('click', event => {
+      const qtyButton = event.target.closest('[data-cart-page-qty]');
+      const removeButton = event.target.closest('[data-cart-page-remove]');
+      if (qtyButton) { event.preventDefault(); updateCartQty(qtyButton.dataset.productId, Number(qtyButton.dataset.cartPageQty)); }
+      if (removeButton) { event.preventDefault(); removeFromCart(removeButton.dataset.cartPageRemove); }
+    });
+  }
+  if (checkoutLink && !checkoutLink.dataset.guardBound) {
+    checkoutLink.dataset.guardBound = 'true';
+    checkoutLink.addEventListener('click', event => {
+      if (checkoutLink.getAttribute('aria-disabled') === 'true') { event.preventDefault(); showToast('Remove unavailable items or adjust their quantities before checkout.'); }
+    });
+  }
 }
 
 function applyCartCoupon() {
-    const input = document.getElementById('cart-coupon-input');
+    const input = document.getElementById('cart-coupon-input') || document.getElementById('coupon-input-drawer');
     if (!input) return;
     const code = input.value.trim().toUpperCase();
     if (!code) return;
 
     // Read active coupons from Admin
-    const defaultCoupons = [
-      { code: 'LAUNCH20', discount: 20, active: true },
-      { code: 'ODDSPOT10', discount: 10, active: true }
-    ];
-    const coupons = JSON.parse(localStorage.getItem('odd_admin_coupons')) || defaultCoupons;
-    const found = coupons.find(c => c.code === code && c.active);
+    const coupons = ACTIVE_COUPONS;
+    const found = coupons.find(c => c.code === code && c.active !== false);
 
     if (found) {
       appliedCoupon = found.code;
@@ -317,6 +409,16 @@ function removeCartCoupon() {
   showToast('Coupon removed.');
 }
 
+function applyCoupon() { applyCartCoupon(); }
+function applyCouponFromBanner() {
+  const code = (document.getElementById('banner-code')?.textContent || 'LAUNCH20').trim().toUpperCase();
+  const coupons = ACTIVE_COUPONS;
+  const found = coupons.find(item => item.code === code && item.active !== false);
+  if (!found) { showToast('This offer is no longer active.'); return; }
+  appliedCoupon = found.code; localStorage.setItem('odd_coupon_discount', String(found.discount)); saveCart(); updateCartUI();
+  showToast(`${found.code} is ready. Add a fragrance to apply it at checkout.`);
+}
+
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) modal.classList.add('open');
@@ -327,204 +429,6 @@ function closeModal(modalId) {
   if (modal) modal.classList.remove('open');
 }
 
-function openSearchModal() {
-  openModal('search-modal');
-  performSearch('');
-}
-
-function performSearch(query) {
-  const container = document.getElementById('search-results');
-  if (!container) return;
-  const q = query.toLowerCase().trim();
-
-  const results = Object.values(PRODUCTS).filter(p => 
-    p.name.toLowerCase().includes(q) ||
-    p.notes.toLowerCase().includes(q) ||
-    p.occasion.toLowerCase().includes(q)
-  );
-
-  if (results.length === 0) {
-    container.innerHTML = `<p style="padding: 1rem; color: var(--text-muted);">No matching fragrances found for "${query}".</p>`;
-    return;
-  }
-
-  container.innerHTML = results.map(p => `
-    <div style="display: flex; gap: 1rem; align-items: center; padding: 0.8rem 0; border-bottom: 1px solid var(--border-color);">
-      <div style="flex:1;">
-        <h4 style="font-family: var(--font-serif); font-size: 1.1rem;">${p.name}</h4>
-        <p style="font-size: 0.82rem; color: var(--text-muted);">${p.notes}</p>
-        <strong>₹${p.price}</strong>
-      </div>
-      <button class="btn btn-sm btn-dark" onclick="closeModal('search-modal'); addToCart('${p.id}');">Add to Bag</button>
-    </div>
-  `).join('');
-}
-
-function showToast(message) {
-  let container = document.getElementById('toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toast-container';
-    container.className = 'toast-container';
-    document.body.appendChild(container);
-  }
-
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.innerText = message;
-
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(8px)';
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
-}
-
-
-// --- Magnetic Buttons Effect ---
-function initMagneticButtons() {
-  const magnetics = document.querySelectorAll('.magnetic-btn, .btn-pill-orange, .btn-pill-glass, .cart-trigger-btn');
-  magnetics.forEach(btn => {
-    btn.addEventListener('mousemove', (e) => {
-      const rect = btn.getBoundingClientRect();
-      const x = e.clientX - rect.left - rect.width / 2;
-      const y = e.clientY - rect.top - rect.height / 2;
-      btn.style.transform = `translate(${x * 0.25}px, ${y * 0.25}px)`;
-    });
-    btn.addEventListener('mouseleave', () => {
-      btn.style.transform = 'translate(0px, 0px)';
-    });
-  });
-}
-document.addEventListener('DOMContentLoaded', initMagneticButtons);
-
-
-// --- Floating Water Button Ripple Effect ---
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('.btn-water-float, .btn-pill-orange, .btn-primary, .footer-email-btn');
-  if (!btn) return;
-
-  const circle = document.createElement('span');
-  const diameter = Math.max(btn.clientWidth, btn.clientHeight);
-  const radius = diameter / 2;
-  const rect = btn.getBoundingClientRect();
-
-  circle.style.width = circle.style.height = `${diameter}px`;
-  circle.style.left = `${e.clientX - rect.left - radius}px`;
-  circle.style.top = `${e.clientY - rect.top - radius}px`;
-  circle.classList.add('water-ripple-circle');
-
-  const ripple = btn.getElementsByClassName('water-ripple-circle')[0];
-  if (ripple) ripple.remove();
-
-  btn.appendChild(circle);
-});
-
-// --- Quick View Luxury Modal Engine ---
-let currentQvQty = 1;
-let currentQvId = 'phantom';
-
-function openQuickView(productId) {
-  const prod = PRODUCTS[productId];
-  if (!prod) return;
-
-  currentQvId = productId;
-  currentQvQty = 1;
-
-  const modal = document.getElementById('quick-view-modal');
-  const imgElem = document.getElementById('qv-img');
-  const titleElem = document.getElementById('qv-title');
-  const priceElem = document.getElementById('qv-price');
-  const qtyElem = document.getElementById('qv-qty');
-  const linkElem = document.getElementById('qv-link');
-
-  if (imgElem) imgElem.src = `assets/images/${prod.packageImage || prod.bottleImage}`;
-  if (titleElem) {
-    titleElem.innerText = prod.name;
-    if (prod.id === 'phantom') titleElem.style.fontFamily = '"Phantom Font", serif';
-    else if (prod.id === 'lucid') titleElem.style.fontFamily = '"Lucid Font", serif';
-    else if (prod.id === 'first-move') titleElem.style.fontFamily = '"First Move Font", serif';
-  }
-  if (priceElem) {
-    const discount = Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100);
-    priceElem.classList.add('product-detail-price');
-    priceElem.style.fontSize = '1.4rem';
-    priceElem.innerHTML = `
-      <span class="price-current">&#8377; ${prod.price}</span>
-      <span class="price-original" style="font-size: 0.9rem;">&#8377; ${prod.originalPrice}</span>
-      <span class="price-discount-pill" style="font-size: 0.7rem;">-${discount}%</span>
-    `;
-  }
-  if (qtyElem) qtyElem.innerText = currentQvQty;
-  if (linkElem) linkElem.href = `products-odd-${productId}.html`;
-
-  if (modal) modal.classList.add('open');
-}
-
-function closeQuickView() {
-  const modal = document.getElementById('quick-view-modal');
-  if (modal) modal.classList.remove('open');
-}
-
-function updateQvQty(delta) {
-  currentQvQty = Math.max(1, currentQvQty + delta);
-  const qtyElem = document.getElementById('qv-qty');
-  if (qtyElem) qtyElem.innerText = currentQvQty;
-}
-
-function addQvToCart() {
-  for (let i = 0; i < currentQvQty; i++) {
-    addToCart(currentQvId);
-  }
-  closeQuickView();
-}
-
-function buyNowQv() {
-  for (let i = 0; i < currentQvQty; i++) {
-    addToCart(currentQvId);
-  }
-  window.location.href = 'checkout.html';
-}
-
-function handleEmailSignup(e) {
-  e.preventDefault();
-  const input = e.target.querySelector('input[type="email"]');
-  if (input && input.value) {
-    showToast(`Welcome! You're on the list with ${input.value}.`);
-    input.value = '';
-  }
-}
-
-
-// --- Scroll-Driven Reveal Observer ---
-function initScrollReveals() {
-  const revealElements = document.querySelectorAll('.reveal-on-scroll, .product-card, .carousel-slide, .story-landing-grid, .comparison-table, .shop-hero, .page-hero, .footer-col, .footer-top-signup, .checkout-page-grid');
-  if (!('IntersectionObserver' in window)) {
-    revealElements.forEach(el => el.classList.add('is-visible'));
-    return;
-  }
-
-  const observer = new IntersectionObserver((entries, obs) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('is-visible');
-        obs.unobserve(entry.target);
-      }
-    });
-  }, {
-    rootMargin: '0px 0px -40px 0px',
-    threshold: 0.1
-  });
-
-  revealElements.forEach(el => {
-    el.classList.add('reveal-on-scroll');
-    observer.observe(el);
-  });
-}
-
-// --- Global Search Modal Logic ---
 function openSearchModal() {
   const modal = document.getElementById('search-modal');
   if (modal) {
@@ -545,35 +449,32 @@ function closeSearchModal() {
 function handleSearchInput(query) {
   const resultsContainer = document.getElementById('search-modal-results');
   if (!resultsContainer) return;
-
   const q = (query || '').toLowerCase().trim();
-  const matches = Object.values(PRODUCTS).filter(p => 
-    p.name.toLowerCase().includes(q) ||
-    p.notes.toLowerCase().includes(q) ||
-    p.tagline.toLowerCase().includes(q)
+  const matches = Object.values(PRODUCTS).filter(p =>
+    p.name.toLowerCase().includes(q) || p.notes.toLowerCase().includes(q) ||
+    p.tagline.toLowerCase().includes(q) || p.occasion.toLowerCase().includes(q)
   );
-
-  if (matches.length === 0) {
-    resultsContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem; padding: 1rem 0;">No matching fragrances found.</p>';
+  if (!matches.length) {
+    resultsContainer.innerHTML = `<div class="search-empty-state"><span>NO MATCHES</span><p>No fragrance found for “${escapeHTML(query)}”. Try a note like oud, citrus, tea or woods.</p></div>`;
     return;
   }
-
-  resultsContainer.innerHTML = matches.map(p => `
-    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); gap: 1rem;">
-      <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <img src="assets/images/${p.bottleImage}" alt="${p.name}" style="height: 48px; width: auto; object-fit: contain;">
-        <div>
-          <h4 style="font-family: var(--font-serif); font-size: 1.15rem; margin: 0; color: var(--text-main);">${p.name}</h4>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">${p.notes}</p>
-        </div>
-      </div>
-      <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <span style="font-weight: 700; font-size: 0.95rem;">₹ ${p.price}</span>
-        <button class="btn btn-sm btn-dark btn-water-float" onclick="closeSearchModal(); addToCart('${p.id}');">Add to Bag</button>
-      </div>
-    </div>
-  `).join('');
+  resultsContainer.innerHTML = matches.map(product => {
+    const stock = getProductAvailability(product.id).stock;
+    const detailLink = product.id === 'first-move' ? 'products-odd-first-move.html' : `products-odd-${product.id}.html`;
+    return `<article class="search-result-row"><a class="search-result-visual" href="${detailLink}"><img src="assets/images/${product.bottleImage}" alt="ODD ${product.name}"></a><div class="search-result-copy"><a href="${detailLink}" class="search-result-name">${product.name}</a><p>${product.notes}</p><span class="search-stock ${stock > 0 ? 'in-stock' : 'out-stock'}"><i></i>${stock > 0 ? 'In stock' : 'Currently unavailable'}</span></div><div class="search-result-action"><strong>₹${product.price.toLocaleString('en-IN')}</strong><button type="button" class="search-add-btn" data-search-add="${product.id}" ${stock <= 0 ? 'disabled' : ''}>${stock > 0 ? 'Add to bag' : 'Out of stock'}</button></div></article>`;
+  }).join('');
+  resultsContainer.querySelectorAll('[data-search-add]').forEach(button => button.addEventListener('click', () => { closeSearchModal(); addToCart(button.dataset.searchAdd); }));
 }
+function handleEmailSignup(event) {
+  event?.preventDefault();
+  const form = event?.currentTarget;
+  const email = form?.querySelector('input[type="email"]');
+  if (!email || !email.checkValidity()) { email?.reportValidity(); return; }
+  showToast('Email signup is not connected to a mailing-list service yet. No email was submitted.');
+}
+
+function escapeHTML(value) { return String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character])); }
+
 
 document.addEventListener('DOMContentLoaded', () => {
   initScrollReveals();
@@ -581,113 +482,89 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-// --- Dynamic Pricing Sync ---
-document.addEventListener('DOMContentLoaded', () => {
-  try {
-    const inv = JSON.parse(localStorage.getItem('odd_admin_inventory'));
-    if (inv) {
-      if (inv['ODD-PH-001']) PRODUCTS['phantom'].price = inv['ODD-PH-001'].price;
-      if (inv['ODD-LC-003']) PRODUCTS['lucid'].price = inv['ODD-LC-003'].price;
-      if (inv['ODD-FM-002']) PRODUCTS['first-move'].price = inv['ODD-FM-002'].price;
-    }
-  } catch (e) {}
-
-  document.querySelectorAll('.product-detail-price[data-product]').forEach(el => {
-    const pId = el.getAttribute('data-product');
-    const prod = PRODUCTS[pId];
-    if (prod) {
-      const discount = Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100);
-      el.innerHTML = `
-        <span class="price-current">&#8377; ${prod.price}</span>
-        <span class="price-original" style="font-size: 0.9rem;">&#8377; ${prod.originalPrice}</span>
-        <span class="price-discount-pill" style="font-size: 0.7rem;">-${discount}%</span>
-      `;
-    }
-  });
-});
-
-
 // --- Dynamic Stock UI Sync Across All Pages ---
 function syncStockStatusUI() {
-  let inv = null;
-  try {
-    inv = JSON.parse(localStorage.getItem('odd_admin_inventory'));
-  } catch(e) {}
-  if (!inv) return;
-
-  const skuMap = {
-    'phantom': 'ODD-PH-001',
-    'lucid': 'ODD-LC-003',
-    'first-move': 'ODD-FM-002'
-  };
-
-  Object.keys(skuMap).forEach(pId => {
-    const sku = skuMap[pId];
-    const item = inv[sku];
-    if (!item) return;
-
-    const isOutOfStock = item.stock <= 0;
-
-    // 1. Current Product Detail Page
-    if (window.location.pathname.toLowerCase().includes(pId)) {
-      const addBtn = document.querySelector('.product-add-btn');
-      const priceContainer = document.querySelector('.product-detail-price');
-      if (isOutOfStock) {
-        if (addBtn) {
-          addBtn.innerText = 'OUT OF STOCK';
-          addBtn.disabled = true;
-          addBtn.style.opacity = '0.5';
-          addBtn.style.cursor = 'not-allowed';
-          addBtn.style.background = '#222';
-        }
-        if (priceContainer && !document.getElementById('product-oos-pill')) {
-          const oosPill = document.createElement('span');
-          oosPill.id = 'product-oos-pill';
-          oosPill.style.cssText = 'background:#EF4444; color:#FFF; font-size:0.75rem; font-family:var(--font-mono); font-weight:700; padding:0.3rem 0.75rem; border-radius:20px; text-transform:uppercase; margin-left:0.5rem;';
-          oosPill.innerText = 'OUT OF STOCK';
-          priceContainer.appendChild(oosPill);
-        }
-      }
+  Object.keys(PRODUCTS).forEach(productId => {
+    const product = PRODUCTS[productId]; const stock = getProductAvailability(productId).stock;
+    const out = stock <= 0;
+    const addButtons = [...document.querySelectorAll('[onclick]')].filter(button => (button.getAttribute('onclick') || '').includes(`addToCart('${productId}')`));
+    addButtons.forEach(button => {
+      button.disabled = out;
+      button.setAttribute('aria-disabled', String(out));
+      button.classList.toggle('is-out-of-stock', out);
+      if (!button.dataset.originalText) button.dataset.originalText = button.textContent.trim();
+      button.textContent = out ? 'Out of stock' : button.dataset.originalText;
+    });
+    const file = productId === 'first-move' ? 'products-odd-first-move.html' : `products-odd-${productId}.html`;
+    const productPage = location.pathname.toLowerCase().endsWith(file);
+    if (productPage) {
+      const button = document.querySelector('.product-add-btn');
+      if (button) { button.disabled = out; button.textContent = out ? 'Out of stock' : `Add to Bag — ₹${product.price.toLocaleString('en-IN')}`; }
+      const priceBlock = document.querySelector('.product-detail-price');
+      let status = document.getElementById('product-stock-status');
+      if (!status && priceBlock) { status = document.createElement('span'); status.id = 'product-stock-status'; status.className = 'product-stock-status'; priceBlock.insertAdjacentElement('afterend', status); }
+      if (status) { status.textContent = out ? 'Currently out of stock' : `${stock} available · Ready to ship`; status.classList.toggle('out-stock', out); }
     }
-
-    // 2. Shop Page Cards
-    const shopCard = document.querySelector(`.product-card[data-product="${pId}"]`);
-    if (shopCard && isOutOfStock) {
-      const buyBtn = shopCard.querySelector('.btn-primary');
-      if (buyBtn) {
-        buyBtn.innerText = 'Out of Stock';
-        buyBtn.disabled = true;
-        buyBtn.style.opacity = '0.5';
-        buyBtn.style.cursor = 'not-allowed';
-        buyBtn.style.background = '#333';
-      }
-      if (!shopCard.querySelector('.shop-oos-pill')) {
-        const badge = document.createElement('div');
-        badge.className = 'shop-oos-pill';
-        badge.style.cssText = 'position:absolute; top:12px; left:12px; background:#EF4444; color:#fff; font-size:0.65rem; font-family:var(--font-mono); font-weight:700; padding:0.25rem 0.6rem; border-radius:4px; z-index:10;';
-        badge.innerText = 'OUT OF STOCK';
-        shopCard.appendChild(badge);
-      }
-    }
-
-    // 3. Compare Cards on index.html
-    const compareCard = document.querySelector(`.compare-card[data-product="${pId}"]`) || 
-      (pId === 'first-move' ? document.querySelectorAll('.compare-card')[2] : (pId === 'lucid' ? document.querySelectorAll('.compare-card')[1] : document.querySelectorAll('.compare-card')[0]));
-    if (compareCard && isOutOfStock) {
-      const cmpBtn = compareCard.querySelector('.compare-buy-btn');
-      if (cmpBtn) {
-        cmpBtn.innerText = 'Out of Stock';
-        cmpBtn.style.opacity = '0.5';
-        cmpBtn.style.pointerEvents = 'none';
-        cmpBtn.style.background = 'rgba(255,255,255,0.05)';
-      }
+    document.querySelectorAll(`.product-card[data-product="${productId}"]`).forEach(card => {
+      const button = card.querySelector('[onclick*="addToCart"]');
+      if (button) { button.disabled = out; button.textContent = out ? 'Out of stock' : (button.dataset.originalText || 'Add to bag'); }
+      let badge = card.querySelector('.stock-state-badge');
+      if (out && !badge) { badge = document.createElement('span'); badge.className = 'stock-state-badge'; badge.textContent = 'Out of stock'; card.querySelector('.product-door-container')?.appendChild(badge); }
+      if (!out) badge?.remove();
+    });
+    document.querySelectorAll(`.carousel-slide [onclick*="addToCart('${productId}')"]`).forEach(button => {
+      button.disabled = out; button.textContent = out ? 'Out of stock' : (button.dataset.originalText || 'Add to bag');
+      const slide = button.closest('.carousel-slide'); let badge = slide?.querySelector('.carousel-stock-badge');
+      if (slide && out && !badge) { badge = document.createElement('span'); badge.className = 'carousel-stock-badge'; badge.textContent = 'Currently unavailable'; slide.querySelector('.slide-image-box')?.appendChild(badge); }
+      if (!out) badge?.remove();
+    });
+    if (typeof currentQvId !== 'undefined' && currentQvId === productId) {
+      const add = document.querySelector('.qv-add-btn'); if (add) { add.disabled = out; add.textContent = out ? 'Out of stock' : 'Add to cart'; }
+      const buy = document.querySelector('.qv-buy-btn'); if (buy) { buy.disabled = out; buy.textContent = out ? 'Out of stock' : 'Buy now'; }
+      const stockBadge = document.querySelector('.qv-stock-badge'); if (stockBadge) stockBadge.textContent = out ? 'Currently out of stock' : `${stock} in stock, ready to ship`;
     }
   });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  syncStockStatusUI();
-});
+async function refreshStoreState() {
+  try {
+    const response = await fetch('/api/public/store-state', { cache: 'no-store' });
+    if (!response.ok) throw new Error('Store state unavailable');
+    const state = await response.json();
+    STORE_STATE_FROM_SERVER = true;
+    ACTIVE_COUPONS = (state.coupons || []).map(c => ({ ...c, active: true }));
+    const banner = document.getElementById('launch-banner');
+    if (banner && state.banner) {
+      const text = banner.querySelector('.banner-text');
+      const code = String(state.banner.code || '').trim().toUpperCase();
+      if (text && state.banner.text) {
+        text.textContent = '';
+        const plain = String(state.banner.text).replace(code ? new RegExp(code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig') : /$^/, '').trim();
+        text.append(document.createTextNode(plain + (code ? ' ' : '')));
+        if (code) { const codeNode = document.createElement('code'); codeNode.id = 'banner-code'; codeNode.className = 'coupon-tag'; codeNode.textContent = code; text.append(codeNode); }
+      }
+      banner.hidden = !state.banner.active || sessionStorage.getItem('odd_hide_banner') === 'true';
+      banner.style.display = banner.hidden ? 'none' : '';
+      if (banner.hidden) { document.documentElement.style.setProperty('--banner-height', '0px'); const header = document.getElementById('site-header'); if (header) header.style.top = '0'; }
+    }
+    Object.entries(state.inventory || {}).forEach(([productId, item]) => {
+      STORE_INVENTORY[productId] = { sku: item.sku, stock: Number(item.stock), price: Number(item.price) };
+      if (PRODUCTS[productId]) PRODUCTS[productId].price = Number(item.price);
+    });
+    document.querySelectorAll('.product-detail-price[data-product]').forEach(element => {
+      const product = PRODUCTS[element.dataset.product]; if (!product) return;
+      const original = product.originalPrice; const discount = Math.max(0, Math.round((original - product.price) / original * 100));
+      element.innerHTML = `<span class="price-current">₹ ${product.price.toLocaleString('en-IN')}</span><span class="price-original">₹ ${original.toLocaleString('en-IN')}</span><span class="price-discount-pill">-${discount}%</span>`;
+    });
+    updateCartUI(); syncStockStatusUI();
+    const search = document.querySelector('.search-modal-input'); if (search && document.getElementById('search-modal')?.classList.contains('open')) handleSearchInput(search.value);
+  } catch {
+    // Static preview uses conservative bundled stock defaults only. Never trust stale browser storage for stock or prices.
+    syncStockStatusUI();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => { syncStockStatusUI(); refreshStoreState(); });
 
 
 function initScrollSpy() {
@@ -728,4 +605,203 @@ function initScrollSpy() {
       });
     }
   });
+}
+
+
+/* ==========================================================================
+   QUICK VIEW & ACCOUNT MODAL JS ENGINE
+   ========================================================================== */
+
+let currentQvId = 'phantom';
+let currentQvQty = 1;
+
+function openQuickView(productId) {
+  const targetId = productId || 'phantom';
+  const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[targetId]) ? PRODUCTS[targetId] : {
+    id: targetId,
+    name: targetId.charAt(0).toUpperCase() + targetId.slice(1),
+    price: 899,
+    notes: 'Luxury Perfume',
+    bottleImage: targetId === 'lucid' ? 'Lucid single bottle.png' : targetId === 'first-move' ? 'First Move single bottle.png' : 'Phantom Single bottle.png'
+  };
+
+  currentQvId = targetId;
+  currentQvQty = 1;
+
+  const modal = document.getElementById('quick-view-modal');
+  if (!modal) {
+    if (typeof addToCart === 'function') addToCart(targetId);
+    return;
+  }
+
+  const title = modal.querySelector('.qv-title');
+  if (title) title.innerText = prod.name;
+  
+  const price = modal.querySelector('.qv-price');
+  if (price) price.innerHTML = '&#8377;' + prod.price;
+
+  const img = modal.querySelector('.quick-view-bottle-img');
+  if (img) img.src = 'assets/images/' + prod.bottleImage;
+
+  const brand = modal.querySelector('.qv-brand');
+  if (brand) brand.innerText = 'ODD PERFUME · ' + (prod.notes || '');
+
+  const link = modal.querySelector('.qv-full-details-link');
+  if (link) link.href = 'products-odd-' + targetId + '.html';
+
+  const qtyEl = document.getElementById('qv-qty');
+  if (qtyEl) qtyEl.innerText = '1';
+
+  modal.classList.add('open');
+  modal.style.display = 'flex';
+  modal.style.opacity = '1';
+  modal.style.visibility = 'visible';
+  document.body.classList.add('drawer-open');
+}
+
+function closeQuickView() {
+  const modal = document.getElementById('quick-view-modal');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+    modal.style.opacity = '0';
+    modal.style.visibility = 'hidden';
+  }
+  document.body.classList.remove('drawer-open');
+}
+
+function updateQvQty(delta) {
+  currentQvQty = Math.max(1, currentQvQty + delta);
+  const qtyEl = document.getElementById('qv-qty');
+  if (qtyEl) qtyEl.innerText = currentQvQty;
+}
+
+function addQvToCart() {
+  if (typeof addToCart === 'function') {
+    for (let i = 0; i < currentQvQty; i++) {
+      addToCart(currentQvId);
+    }
+  }
+  closeQuickView();
+  if (typeof toggleCartDrawer === 'function') toggleCartDrawer();
+}
+
+function buyNowQv() {
+  if (typeof addToCart === 'function') {
+    for (let i = 0; i < currentQvQty; i++) {
+      addToCart(currentQvId);
+    }
+  }
+  closeQuickView();
+  window.location.href = 'checkout.html';
+}
+
+function showAddAddressModal() {
+  const modal = document.getElementById('edit-address-modal');
+  if (modal) {
+    modal.classList.add('open');
+    modal.style.display = 'flex';
+  } else {
+    if (typeof showToast === 'function') showToast('Address manager ready.');
+  }
+}
+
+function hideAddAddressModal() {
+  const modal = document.getElementById('edit-address-modal');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
+}
+
+function hideEditAddressModal() {
+  hideAddAddressModal();
+}
+
+function setDefaultAddress(btn) {
+  if (typeof showToast === 'function') showToast('Default shipping address updated.');
+}
+
+function checkAdminAccountRole() {
+  const session = localStorage.getItem('odd_admin_session');
+  const role = localStorage.getItem('odd_role');
+  const isAdmin = session || role === 'admin';
+
+  if (isAdmin) {
+    const nav = document.querySelector('.acc-nav');
+    if (nav && !document.getElementById('acc-admin-btn')) {
+      const btn = document.createElement('a');
+      btn.id = 'acc-admin-btn';
+      btn.href = 'admin.html';
+      btn.className = 'acc-nav-link';
+      btn.style.background = 'var(--brand-orange, #E86B32)';
+      btn.style.color = '#FFFFFF';
+      btn.style.marginTop = '1rem';
+      btn.style.fontWeight = '700';
+      btn.innerHTML = '⚡ Go to Admin Portal';
+      nav.appendChild(btn);
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  checkAdminAccountRole();
+});
+
+
+/* ==========================================================================
+   SCENT QUIZ ENGINE (find-your-scent.html)
+   ========================================================================== */
+
+let quizAnswers = {};
+let matchedPerfumeId = 'phantom';
+
+function answerQuiz(step, perfumeId) {
+  quizAnswers[step] = perfumeId;
+  const counts = { 'phantom': 0, 'lucid': 0, 'first-move': 0 };
+  Object.values(quizAnswers).forEach(p => { if (counts[p] !== undefined) counts[p]++; });
+  
+  let best = 'phantom';
+  let max = -1;
+  Object.keys(counts).forEach(k => { if (counts[k] > max) { max = counts[k]; best = k; } });
+  matchedPerfumeId = best;
+
+  const currentStep = document.getElementById('quiz-step-' + step);
+  const nextStep = document.getElementById('quiz-step-' + (step + 1));
+  
+  if (currentStep) currentStep.style.display = 'none';
+
+  if (nextStep) {
+    nextStep.style.display = 'block';
+  } else {
+    const resultCard = document.getElementById('quiz-result-card');
+    if (resultCard) {
+      resultCard.style.display = 'block';
+      const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[matchedPerfumeId]) ? PRODUCTS[matchedPerfumeId] : null;
+      if (prod) {
+        const title = resultCard.querySelector('.quiz-result-title');
+        if (title) title.innerText = prod.fullName || prod.name;
+        const desc = resultCard.querySelector('.quiz-result-desc');
+        if (desc) desc.innerText = prod.tagline || '';
+        const img = resultCard.querySelector('.quiz-result-img');
+        if (img) img.src = 'assets/images/' + prod.bottleImage;
+      }
+    }
+  }
+}
+
+function addQuizMatchToCart() {
+  if (typeof addToCart === 'function') addToCart(matchedPerfumeId);
+  if (typeof toggleCartDrawer === 'function') toggleCartDrawer();
+}
+
+function resetQuiz() {
+  quizAnswers = {};
+  matchedPerfumeId = 'phantom';
+  for (let i = 1; i <= 5; i++) {
+    const s = document.getElementById('quiz-step-' + i);
+    if (s) s.style.display = (i === 1) ? 'block' : 'none';
+  }
+  const resultCard = document.getElementById('quiz-result-card');
+  if (resultCard) resultCard.style.display = 'none';
 }

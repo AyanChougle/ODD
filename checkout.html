@@ -27,9 +27,6 @@
       </div>
 
               <div class="top-right">
-          <a href="admin.html" class="top-nav-btn" style="color:var(--text-main);" aria-label="Admin Portal" title="Admin Portal">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
-          </a>
           <a href="my-account.html" class="top-nav-btn" aria-label="Account" title="Account">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           </a>
@@ -62,38 +59,37 @@
         <div class="checkout-page-grid">
           <div class="checkout-form-col">
             <h3 style="font-family:var(--font-serif); margin-bottom:1.5rem;">1. Shipping Details</h3>
-            <form onsubmit="processPageOrder(event)">
+            <form id="checkout-form" onsubmit="processPageOrder(event)" novalidate>
               <div class="form-group-row">
-                <input type="text" placeholder="First Name *" required class="form-control">
-                <input type="text" placeholder="Last Name *" required class="form-control">
+                <input id="chk-fname" name="firstName" type="text" autocomplete="given-name" placeholder="First Name *" required minlength="2" maxlength="70" class="form-control">
+                <input id="chk-lname" name="lastName" type="text" autocomplete="family-name" placeholder="Last Name *" required minlength="1" maxlength="70" class="form-control">
               </div>
-              <input type="tel" placeholder="Mobile Number (for SMS Tracking) *" required class="form-control">
-              <input type="email" placeholder="Email Address *" required class="form-control">
-              <input type="text" placeholder="Street Address / Flat / Building *" required class="form-control">
+              <input id="chk-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Mobile Number (for SMS Tracking) *" required pattern="[0-9+() -]{10,18}" maxlength="18" class="form-control">
+              <input id="chk-email" name="email" type="email" autocomplete="email" placeholder="Email Address *" required maxlength="160" class="form-control">
+              <input id="chk-address" name="address" type="text" autocomplete="street-address" placeholder="Street Address / Flat / Building *" required minlength="5" maxlength="240" class="form-control">
               <div class="form-group-row">
-                <input type="text" placeholder="City *" required class="form-control">
-                <input type="text" placeholder="Pincode *" required class="form-control">
+                <input id="chk-city" name="city" type="text" autocomplete="address-level2" placeholder="City *" required minlength="2" maxlength="80" class="form-control">
+                <input id="chk-pincode" name="pincode" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="Pincode *" required pattern="[0-9]{6}" maxlength="6" class="form-control">
               </div>
 
               <h3 style="font-family:var(--font-serif); margin:2rem 0 1.5rem;">2. Select Payment Method</h3>
-              
-              <label class="payment-select-card">
-                <input type="radio" name="payment" value="razorpay" checked style="margin-top:0.25rem;">
+              <label class="payment-select-card payment-unavailable" aria-disabled="true">
+                <input type="radio" name="payment" value="razorpay" disabled style="margin-top:0.25rem;">
                 <div>
-                  <strong>Razorpay Express (UPI, Cards, Netbanking)</strong>
-                  <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">Fastest delivery & 100% encrypted secure transaction</p>
+                  <strong>Online Payment (UPI, Cards, Netbanking)</strong>
+                  <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">Temporarily unavailable until secure server-side payment verification is implemented and tested.</p>
                 </div>
               </label>
 
               <label class="payment-select-card">
-                <input type="radio" name="payment" value="cod" style="margin-top:0.25rem;">
+                <input type="radio" name="payment" value="cod" checked style="margin-top:0.25rem;">
                 <div>
                   <strong>Cash on Delivery (COD)</strong>
-                  <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">Pay cash to courier upon delivery to your door</p>
+                  <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">Pay the courier when your order arrives.</p>
                 </div>
               </label>
-
-              <button type="submit" class="btn btn-primary btn-lg full-width" style="margin-top:2rem;">Confirm & Place Order</button>
+              <p id="checkout-preview-notice" class="checkout-mode-notice" hidden>Preview mode: checkout requires the ODD server. No order can be placed from a static file preview.</p>
+              <button id="checkout-submit" type="submit" class="btn btn-primary btn-lg full-width" style="margin-top:2rem;">Confirm & Place Order</button>
             </form>
           </div>
 
@@ -149,7 +145,7 @@
             <li><a href="my-account.html">My account</a></li>
             <li><a href="faq.html">FAQ</a></li>
             <li><a href="contact.html">Contact</a></li>
-            <li><a href="admin.html">Admin & Inventory</a></li>
+            
           </ul>
         </div>
 
@@ -227,7 +223,6 @@
   </div>
 
   <script src="assets/js/global.js"></script>
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script src="assets/js/checkout.js"></script>
 
   <!-- Global Mobile Navigation Drawer -->

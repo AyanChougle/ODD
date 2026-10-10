@@ -42,7 +42,7 @@
       </a>
       <a class="admin-nav-item" data-tab="access-links">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
-        Scanner Access Links
+        Staff Access
       </a>
 
       <div class="admin-nav-group-title">Settings & Marketing</div>
@@ -57,7 +57,8 @@
     </nav>
 
     <div class="admin-sidebar-footer">
-      <span>Logged in: <strong>admin</strong></span>
+      <span>Signed in: <strong id="admin-user-name">Loading…</strong></span>
+      <button type="button" id="admin-logout" class="admin-logout-btn">Sign out</button>
       <a href="index.html" style="color:var(--admin-accent); text-decoration:none;">Storefront &rarr;</a>
     </div>
   </aside>
@@ -68,7 +69,7 @@
       <h2 class="admin-header-title" id="admin-page-title">Payment Dashboard</h2>
       <div class="admin-header-actions">
         <div class="admin-status-dot" title="Database Connected"></div>
-        <span style="font-size:0.8rem; color:var(--admin-text-muted);">Database Live</span>
+        <span id="admin-connection-status" style="font-size:0.8rem; color:var(--admin-text-muted);">Checking server…</span>
       </div>
     </header>
 
@@ -89,8 +90,8 @@
           </div>
           <div class="kpi-card amber">
             <div class="kpi-label">Pending Verification</div>
-            <div class="kpi-value">₹0</div>
-            <div class="kpi-subtext">0 awaiting manual check</div>
+            <div class="kpi-value" id="kpi-pending-verify">₹0</div>
+            <div class="kpi-subtext" id="kpi-pending-count">0 pending order(s) requiring review</div>
           </div>
           <div class="kpi-card blue">
               <div class="kpi-label">Total Orders</div>
@@ -121,7 +122,7 @@
               <strong id="breakdown-cod-text">0 orders — ₹0 (0%)</strong>
             </div>
             <div style="height:10px; background:#0E1015; border-radius:5px; overflow:hidden;">
-              <div style="width:33.3%; height:100%; background:var(--admin-warning);"></div>
+              <div id="breakdown-cod-bar" style="width:0%; height:100%; background:var(--admin-warning); transition:width 0.5s;"></div>
             </div>
           </div>
         </div>
@@ -132,10 +133,10 @@
         <div class="admin-card">
           <div class="admin-card-header">
             <div>
-              <h3 class="admin-card-title">Customer Orders (`odd_order`)</h3>
+              <h3 class="admin-card-title">Customer Orders</h3>
               <div class="admin-card-subtitle">Real-time database queries of all completed and pending orders</div>
             </div>
-            <button class="admin-btn admin-btn-primary admin-btn-sm" onclick="showAdminToast(ew test order added to queue')">+ Add Test Order</button>
+            <span class="admin-card-subtitle" id="orders-last-updated">Live orders from the shared database</span>
           </div>
 
           <div class="admin-table-wrapper">
@@ -167,7 +168,7 @@
               <h3 class="admin-card-title">Live Fragrance Inventory</h3>
               <div class="admin-card-subtitle">Direct real-time stock sync with warehouse scanner and database</div>
             </div>
-            <button class="admin-btn admin-btn-secondary admin-btn-sm" onclick="exportInventoryCSV()">
+            <button class="admin-btn admin-btn-secondary admin-btn-sm" data-export-inventory>
               <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
               Export Inventory CSV
             </button>
@@ -204,16 +205,16 @@
           </div>
 
           <div class="mode-pill-selector">
-            <button class="mode-pill-btn active" id="btn-mode-receive" onclick="setScannerMode('receive')">" Receiving Stock (+1)</button>
-            <button class="mode-pill-btn" id="btn-mode-dispatch" onclick="setScannerMode('dispatch')">" Dispatching Order (-1)</button>
+            <button class="mode-pill-btn active" id="btn-mode-receive" type="button">Receive stock (+1)</button>
+            <button class="mode-pill-btn" id="btn-mode-dispatch" type="button">Dispatch stock (−1)</button>
           </div>
 
           <div class="scanner-box-container">
             <div style="font-family:var(--font-mono, monospace); font-size:0.8rem; color:var(--admin-accent); font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">Warehouse Hardware Scanner Listener</div>
-            <form onsubmit="handleScannerSubmit(event)">
+            <form id="barcode-scan-form">
               <input type="text" id="barcode-scan-input" class="admin-input scanner-input" placeholder="Click here, then scan — or type SKU and press Enter" autofocus>
             </form>
-            <button class="admin-btn admin-btn-secondary" onclick="showAdminToast('Camera barcode scanner activated. Point camera at product barcode.')">"· Use Camera Scanner</button>
+            <button class="admin-btn admin-btn-secondary" disabled title="Camera scanning is not enabled in this build">"· Use Camera Scanner</button>
           </div>
 
           <div class="admin-card" style="margin-bottom:0;">
@@ -233,7 +234,7 @@
               <h3 class="admin-card-title">Batch Barcode Label Generator</h3>
               <div class="admin-card-subtitle">Generate Code128 barcodes with Lot/Mfg/Exp compliance data for packaging boxes</div>
             </div>
-            <button class="admin-btn admin-btn-primary admin-btn-sm" onclick="window.print()">-️ Print Labels Sheet</button>
+            <button class="admin-btn admin-btn-primary admin-btn-sm" data-print-barcodes>Print label sheet</button>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;">
@@ -275,7 +276,7 @@
                   <input type="number" id="batch-label-width" class="admin-input" value="70">
                 </div>
               </div>
-              <button class="admin-btn admin-btn-primary full-width" onclick="generateBarcodeSheet()">Generate Printable Stickers Sheet</button>
+              <button class="admin-btn admin-btn-primary full-width" data-generate-barcode>Generate Printable Stickers Sheet</button>
             </div>
           </div>
 
@@ -285,38 +286,18 @@
         </div>
       </div>
 
-      <!-- 6. Scanner Access Links Tab -->
+      <!-- 6. Staff access: individual accounts with server-enforced roles -->
       <div class="admin-tab-pane" id="tab-access-links">
         <div class="admin-card">
-          <div class="admin-card-header">
-            <div>
-              <h3 class="admin-card-title">Warehouse Staff Scanner Access Links</h3>
-              <div class="admin-card-subtitle">Generate secure no-login links for staff (e.g. Ramesh) to scan inventory directly</div>
-            </div>
-          </div>
-
-          <form onsubmit="createNewAccessLink(event)" style="display:flex; gap:1rem; margin-bottom:2rem; max-width:500px;">
-            <input type="text" id="new-link-label" class="admin-input" placeholder="e.g. Warehouse — Ramesh" required>
-            <button type="submit" class="admin-btn admin-btn-primary" style="white-space:nowrap;">Generate Link</button>
+          <div class="admin-card-header"><div><h3 class="admin-card-title">Staff accounts & permissions</h3><div class="admin-card-subtitle">Each team member signs in individually. Disabling an account revokes existing sessions.</div></div></div>
+          <form id="staff-create-form" class="staff-create-form">
+            <div class="admin-form-group"><label class="admin-label" for="staff-name">Full name</label><input id="staff-name" class="admin-input" required minlength="2" autocomplete="name"></div>
+            <div class="admin-form-group"><label class="admin-label" for="staff-email">Work email</label><input id="staff-email" class="admin-input" type="email" required autocomplete="off"></div>
+            <div class="admin-form-group"><label class="admin-label" for="staff-role">Role</label><select id="staff-role" class="admin-input"><option value="warehouse">Warehouse</option><option value="orders">Orders</option><option value="finance">Finance</option><option value="marketing">Marketing</option><option value="admin">Administrator</option></select></div>
+            <div class="admin-form-group"><label class="admin-label" for="staff-password">Temporary password (12+ chars)</label><input id="staff-password" class="admin-input" type="password" minlength="12" autocomplete="new-password" required></div>
+            <button type="submit" class="admin-btn admin-btn-primary">Create account</button>
           </form>
-
-          <div class="admin-table-wrapper">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>Staff / Label</th>
-                  <th>Direct Scanner URL</th>
-                  <th>Status</th>
-                  <th>Scans Count</th>
-                  <th>Last Active</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="links-tbody">
-                <!-- JS Populated -->
-              </tbody>
-            </table>
-          </div>
+          <div class="admin-table-wrapper"><table class="admin-table"><thead><tr><th>Staff member</th><th>Role</th><th>Status</th><th>Last sign-in</th><th>Actions</th></tr></thead><tbody id="staff-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -329,7 +310,7 @@
               <div class="admin-card-subtitle">Controls the top announcement ribbon visible on all storefront pages</div>
             </div>
           </div>
-          <form onsubmit="saveBannerSettings(event)" style="max-width:650px;">
+          <form  style="max-width:650px;">
             <div class="admin-form-group">
               <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; cursor:pointer;">
                 <input type="checkbox" id="banner-active-check" checked> Enable top announcement banner
@@ -356,7 +337,7 @@
           </div>
 
           <!-- Add Coupon Form -->
-          <form onsubmit="addNewCoupon(event)" style="display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:1rem; align-items:flex-end; margin-bottom:2rem; background:rgba(255,255,255,0.03); padding:1.2rem; border-radius:8px;">
+          <form  style="display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:1rem; align-items:flex-end; margin-bottom:2rem; background:rgba(255,255,255,0.03); padding:1.2rem; border-radius:8px;">
             <div class="admin-form-group" style="margin:0;">
               <label class="admin-label">New Coupon Code</label>
               <input type="text" id="new-coupon-code" class="admin-input" placeholder="e.g. SUMMER25" style="text-transform:uppercase;" required>
@@ -392,42 +373,13 @@
         </div>
       </div>
 
-      <!-- 8. Razorpay Settings Tab -->
+      <!-- Gateway secrets are configured only in the server environment -->
       <div class="admin-tab-pane" id="tab-razorpay">
         <div class="admin-card">
-          <div class="admin-card-header">
-            <div>
-              <h3 class="admin-card-title">Razorpay Payment Gateway Settings</h3>
-              <div class="admin-card-subtitle">Configure API keys & cryptographic signature verification for secure payments</div>
-            </div>
-          </div>
-
-          <form onsubmit="saveRazorpaySettings(event)" style="max-width:650px;">
-            <div style="background:var(--admin-bg-hover); padding:1.2rem; border-radius:8px; margin-bottom:1.5rem; font-size:0.85rem; color:var(--admin-text-muted); line-height:1.5;">
-              <strong>How signature verification works:</strong> Upon checkout completion, Razorpay opens its secure modal widget. The order is marked paid only after server-side cryptographic signature validation.
-            </div>
-
-            <div class="admin-form-group">
-              <label class="admin-label">Razorpay API Key ID (Live / Test)</label>
-              <input type="text" id="admin-rzp-key" class="admin-input" value="rzp_test_1DP5mmOlF5G5ag" style="font-family:monospace;">
-            </div>
-
-            <div class="admin-form-group">
-              <label class="admin-label">Razorpay Key Secret</label>
-              <input type="password" class="admin-input" value="••••••••••••••••••••••••">
-            </div>
-
-            <div class="admin-form-group">
-              <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
-                <input type="checkbox" checked> Enable Automatic Webhook Signature Verification
-              </label>
-            </div>
-
-            <button type="submit" class="admin-btn admin-btn-primary">Save Razorpay Configuration</button>
-          </form>
+          <div class="admin-card-header"><div><h3 class="admin-card-title">Razorpay gateway status</h3><div class="admin-card-subtitle">Keys are server secrets and are never stored in browser storage.</div></div></div>
+          <div class="gateway-status-panel"><p id="razorpay-status-text">Checking server configuration…</p><p>Online payment is disabled in this build. Adding gateway keys alone will not enable checkout. Implement and verify server-side order creation, signature validation, webhook reconciliation, and failure handling before activating Razorpay.</p><p class="admin-card-subtitle">No gateway secrets are stored in the browser or admin database.</p></div>
         </div>
       </div>
-
     </div>
   </main>
 

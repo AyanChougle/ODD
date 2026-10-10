@@ -68,9 +68,6 @@
       </div>
 
               <div class="top-right">
-          <a href="admin.html" class="top-nav-btn" style="color:var(--text-main);" aria-label="Admin Portal" title="Admin Portal">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
-          </a>
           <a href="my-account.html" class="top-nav-btn" aria-label="Account" title="Account">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           </a>
@@ -251,11 +248,7 @@
             <div class="slide-image-box move-slide-box">
               <img src="assets/images/First Move single bottle.png" alt="ODD First Move Single Bottle" class="carousel-bottle-img" width="400" height="400">
             </div>
-        <div class="carousel-dots" style="display:flex; justify-content:center; gap:0.5rem; margin-top:2rem;">
-          <span class="carousel-dot active" onclick="selectShowcaseSlide(0)" style="width:10px; height:10px; border-radius:50%; background:var(--brand-orange); cursor:pointer;"></span>
-          <span class="carousel-dot" onclick="selectShowcaseSlide(1)" style="width:10px; height:10px; border-radius:50%; background:#ccc; cursor:pointer;"></span>
-          <span class="carousel-dot" onclick="selectShowcaseSlide(2)" style="width:10px; height:10px; border-radius:50%; background:#ccc; cursor:pointer;"></span>
-        </div>
+        
 
             <div class="slide-notes">Citrus &middot; Black Tea &middot; Smoky Musk</div>
             <h3 class="slide-title" style="font-family: 'First Move Font', serif;">FIRST MOVE</h3>
@@ -266,6 +259,12 @@
             </div>
           </div>
         </div>
+      </div>
+    
+      <div class="carousel-dots" style="display: flex; justify-content: center; align-items: center; gap: 0.6rem; margin-top: 1.5rem; z-index: 10; position: relative;">
+        <span class="carousel-dot active" onclick="selectShowcaseSlide(0)" aria-label="Slide 1" style="width: 10px; height: 10px; border-radius: 50%; background: var(--brand-orange); cursor: pointer; transition: all 0.3s;"></span>
+        <span class="carousel-dot" onclick="selectShowcaseSlide(1)" aria-label="Slide 2" style="width: 10px; height: 10px; border-radius: 50%; background: #ccc; cursor: pointer; transition: all 0.3s;"></span>
+        <span class="carousel-dot" onclick="selectShowcaseSlide(2)" aria-label="Slide 3" style="width: 10px; height: 10px; border-radius: 50%; background: #ccc; cursor: pointer; transition: all 0.3s;"></span>
       </div>
     </section>
 
@@ -461,7 +460,7 @@
             <li><a href="my-account.html">My account</a></li>
             <li><a href="faq.html">FAQ</a></li>
             <li><a href="contact.html">Contact</a></li>
-            <li><a href="admin.html">Admin & Inventory</a></li>
+            
           </ul>
         </div>
 
@@ -480,7 +479,7 @@
             <span class="pay-pill-badge">Cash on delivery</span>
           </div>
           <div class="pay-razorpay-secure">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8&ndash;10V5l-8-3-8 3v7c0 6 8&ndash;10 8&ndash;10z"></path></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8-10 8-10z"></path></svg>
             <span>Secure payments by Razorpay</span>
           </div>
         </div>

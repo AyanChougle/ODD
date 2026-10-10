@@ -1219,3 +1219,273 @@ html {
   flex-direction: column;
   justify-content: center;
 }
+
+
+/* Showcase Carousel Clean Layout Fix */
+.showcase-section {
+  padding: clamp(3.5rem, 7vw, 6rem) 0 !important;
+  height: auto !important;
+  min-height: auto !important;
+  position: relative !important;
+  background: var(--bg-subtle, #F6F6F6) !important;
+  overflow: hidden !important;
+}
+
+.carousel-viewport {
+  position: relative !important;
+  max-width: 960px !important;
+  margin: 2rem auto 0 !important;
+  padding: 0 1.5rem !important;
+  overflow: visible !important;
+}
+
+.carousel-track {
+  position: relative !important;
+  min-height: 520px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  perspective: 1200px !important;
+}
+
+.carousel-slide {
+  position: absolute !important;
+  width: 320px !important;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer !important;
+  text-align: center !important;
+}
+
+.carousel-slide.active {
+  opacity: 1 !important;
+  transform: scale(1) translateX(0) !important;
+  z-index: 5 !important;
+}
+
+.carousel-slide.prev {
+  opacity: 0.45 !important;
+  transform: scale(0.78) translateX(-110%) !important;
+  z-index: 3 !important;
+}
+
+.carousel-slide.next {
+  opacity: 0.45 !important;
+  transform: scale(0.78) translateX(110%) !important;
+  z-index: 3 !important;
+}
+
+.slide-image-box {
+  border-radius: var(--radius-md, 8px) !important;
+  padding: 1.5rem !important;
+  margin-bottom: 0.8rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 250px !important;
+}
+
+.carousel-bottle-img {
+  max-height: 210px !important;
+  object-fit: contain !important;
+  width: auto !important;
+  transition: transform 0.5s ease !important;
+}
+
+.carousel-slide.active .carousel-bottle-img {
+  transform: scale(1.05) !important;
+}
+
+.slide-notes {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  color: var(--text-muted, #777777) !important;
+  margin-bottom: 0.4rem !important;
+}
+
+.slide-title {
+  font-family: var(--font-serif, 'DM Serif Display', serif) !important;
+  font-size: 1.6rem !important;
+  font-weight: 400 !important;
+  margin: 0 0 0.2rem !important;
+  color: var(--text-main, #111111) !important;
+}
+
+.slide-tagline {
+  font-size: 0.85rem !important;
+  color: var(--text-muted, #777777) !important;
+  font-style: italic !important;
+  margin-bottom: 1rem !important;
+}
+
+.slide-actions {
+  display: flex !important;
+  gap: 0.6rem !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+/* Floating pick mobile hide */
+@media (max-width: 768px) {
+  .hero-floating-pick-wrapper, .hero-floating-pick {
+    display: none !important;
+  }
+}
+
+/* Showcase Carousel Normal Card Sizes */
+.showcase-section {
+  padding: 3rem 0 4rem 0 !important;
+  height: auto !important;
+  min-height: auto !important;
+  position: relative !important;
+  background: var(--bg-subtle, #F6F6F6) !important;
+}
+
+.carousel-viewport {
+  position: relative !important;
+  max-width: 1100px !important;
+  margin: 1.5rem auto 0 !important;
+  padding: 0 1.5rem !important;
+  overflow: visible !important;
+}
+
+.carousel-track {
+  position: relative !important;
+  min-height: 580px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  perspective: 1200px !important;
+}
+
+.carousel-slide {
+  position: absolute !important;
+  width: 380px !important;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer !important;
+  text-align: center !important;
+}
+
+.carousel-slide.active {
+  opacity: 1 !important;
+  transform: scale(1) translateX(0) !important;
+  z-index: 5 !important;
+}
+
+.carousel-slide.prev {
+  opacity: 0.55 !important;
+  transform: scale(0.82) translateX(-108%) !important;
+  z-index: 3 !important;
+}
+
+.carousel-slide.next {
+  opacity: 0.55 !important;
+  transform: scale(0.82) translateX(108%) !important;
+  z-index: 3 !important;
+}
+
+.slide-image-box {
+  border-radius: var(--radius-md, 12px) !important;
+  padding: 2rem 1.5rem !important;
+  margin-bottom: 1rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 330px !important;
+}
+
+.carousel-bottle-img {
+  max-height: 270px !important;
+  object-fit: contain !important;
+  width: auto !important;
+  transition: transform 0.5s ease !important;
+}
+
+.carousel-slide.active .carousel-bottle-img {
+  transform: scale(1.06) !important;
+}
+
+.slide-notes {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
+  font-size: 0.78rem !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  color: var(--text-muted, #777777) !important;
+  margin-bottom: 0.4rem !important;
+}
+
+.slide-title {
+  font-family: var(--font-serif, 'DM Serif Display', serif) !important;
+  font-size: 1.9rem !important;
+  font-weight: 400 !important;
+  margin: 0 0 0.2rem !important;
+  color: var(--text-main, #111111) !important;
+}
+
+.slide-tagline {
+  font-size: 0.9rem !important;
+  color: var(--text-muted, #777777) !important;
+  font-style: italic !important;
+  margin-bottom: 1.2rem !important;
+}
+
+.slide-actions {
+  display: flex !important;
+  gap: 0.8rem !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.carousel-dots {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .carousel-slide {
+    width: 290px !important;
+  }
+  .slide-image-box {
+    min-height: 260px !important;
+  }
+  .carousel-bottle-img {
+    max-height: 200px !important;
+  }
+  .carousel-track {
+    min-height: 480px !important;
+  }
+  .hero-floating-pick-wrapper, .hero-floating-pick {
+    display: none !important;
+  }
+}
+
+/* Exact 1-Screen Viewport Fit for Hero & Comparison */
+.hero-section {
+  position: relative !important;
+  width: 100% !important;
+  height: calc(100vh - var(--total-header-height)) !important;
+  min-height: calc(100vh - var(--total-header-height)) !important;
+  max-height: none !important;
+  display: flex !important;
+  align-items: center !important;
+  overflow: hidden !important;
+}
+
+#comparison, .comparison-section {
+  min-height: calc(100vh - var(--total-header-height)) !important;
+  height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  padding: 3rem 0 !important;
+  box-sizing: border-box !important;
+}
+
+.story-section-landing {
+  min-height: calc(100vh - var(--total-header-height)) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  padding: 3rem 0 !important;
+  box-sizing: border-box !important;
+}

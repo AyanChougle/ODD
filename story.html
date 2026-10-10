@@ -27,9 +27,6 @@
       </div>
 
               <div class="top-right">
-          <a href="admin.html" class="top-nav-btn" style="color:var(--text-main);" aria-label="Admin Portal" title="Admin Portal">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
-          </a>
           <a href="my-account.html" class="top-nav-btn" aria-label="Account" title="Account">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           </a>
@@ -119,7 +116,7 @@
             <li><a href="my-account.html">My account</a></li>
             <li><a href="faq.html">FAQ</a></li>
             <li><a href="contact.html">Contact</a></li>
-            <li><a href="admin.html">Admin & Inventory</a></li>
+            
           </ul>
         </div>
 
@@ -234,33 +231,8 @@
   </div>
 
   <!-- Global Slide-Out Cart Drawer -->
-  <div class="cart-drawer-backdrop" id="cart-backdrop" onclick="toggleCartDrawer()"></div>
-  <div class="cart-drawer" id="cart-drawer">
-    <div class="cart-header">
-      <h3>YOUR BAG (<span id="cart-drawer-count">0</span>)</h3>
-      <button class="close-drawer" onclick="toggleCartDrawer()">&times;</button>
-    </div>
-    <div class="free-shipping-banner">
-      <span>Free Express Shipping Unlocked Across India</span>
-      <div class="shipping-progress"><div class="fill" style="width: 100%;"></div></div>
-    </div>
-    <div class="cart-items-list" id="cart-items"></div>
-    <div class="cart-footer" id="cart-footer" style="display: none;">
-      <div class="coupon-box">
-        <input type="text" id="cart-coupon-input" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;">
-        <button class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
-      </div>
-      <div class="coupon-applied-tag" id="coupon-tag-applied" style="display: none;">
-        <span>Code <strong id="applied-code-name">LAUNCH20</strong> applied</span>
-        <button onclick="removeCartCoupon()" class="remove-coupon">&times;</button>
-      </div>
-      <div class="cart-totals">
-        <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹ 0</span></div>
-        <div class="total-row grand-total"><span>Total:</span><span id="cart-total">₹ 0</span></div>
-      </div>
-      <a href="checkout.html" class="btn btn-primary btn-lg full-width btn-water-float">Proceed to Checkout</a>
-    </div>
-  </div>
+  
+  
 
   <!-- Global Search Modal -->
   <div class="search-modal-backdrop" id="search-modal" onclick="if(event.target===this) closeSearchModal()">

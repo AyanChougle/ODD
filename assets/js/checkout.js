@@ -1,246 +1,234 @@
-/* Checkout Page JavaScript with Real Razorpay SDK Integration */
-document.addEventListener('DOMContentLoaded', () => {
-  renderCheckoutSummary();
-});
+'use strict';
 
-function getAppliedDiscountRate() {
-  if (!appliedCoupon) return 0;
-  const storedPct = Number(localStorage.getItem('odd_coupon_discount'));
-  if (storedPct && storedPct > 0) return storedPct / 100;
-  if (appliedCoupon === 'LAUNCH20') return 0.20;
-  if (appliedCoupon === 'ODDSPOT10') return 0.10;
-  return 0.10;
+/* ==========================================================================
+   ODD Perfume — Hostinger Static Checkout & Payment Engine
+   ========================================================================== */
+
+function checkoutMoney(value) {
+  return '₹' + Number(value || 0).toLocaleString('en-IN');
+}
+
+function checkoutEscape(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
+}
+
+function getProductAvailability(productId) {
+  const inv = JSON.parse(localStorage.getItem('odd_admin_inventory') || '{}');
+  const skuMap = { 'phantom': 'ODD-PH-001', 'lucid': 'ODD-LC-003', 'first-move': 'ODD-FM-002' };
+  const sku = skuMap[productId];
+  
+  if (inv && sku && inv[sku]) {
+    const item = inv[sku];
+    return { stock: Number(item.stock ?? 0), name: item.name };
+  }
+  return { stock: 999, name: productId };
 }
 
 function renderCheckoutSummary() {
   const container = document.getElementById('chk-page-summary');
   if (!container) return;
 
-  if (cartState.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">Your bag is currently empty.</p>';
+  const cart = (typeof cartState !== 'undefined' && Array.isArray(cartState)) ? cartState : JSON.parse(localStorage.getItem('odd_cart') || '[]');
+
+  if (!cart || cart.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding: 2rem 0;">Your bag is currently empty.</p>';
+    
+    const subtotalEl = document.getElementById('chk-page-subtotal');
+    if (subtotalEl) subtotalEl.innerText = '₹0';
+    const totalEl = document.getElementById('chk-page-total');
+    if (totalEl) totalEl.innerText = '₹0';
+
+    const submit = document.getElementById('checkout-submit');
+    if (submit) {
+      submit.disabled = true;
+      submit.textContent = 'Your bag is empty';
+    }
     return;
   }
 
   let subtotal = 0;
   let html = '';
-  const inv = JSON.parse(localStorage.getItem('odd_admin_inventory') || '{}');
-  let hasOutOfStock = false;
-  
+  let hasUnavailable = false;
 
-  cartState.forEach(item => {
-    const prod = PRODUCTS[item.id];
-    if (!prod) return;
-    const total = prod.price * item.qty;
+  cart.forEach(item => {
+    const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[item.id]) ? PRODUCTS[item.id] : null;
+    const name = prod ? prod.name : (item.name || item.id);
+    const price = prod ? prod.price : (item.price || 899);
+    const total = price * item.qty;
     subtotal += total;
+
+    const avail = getProductAvailability(item.id);
+    const isOutOfStock = avail.stock <= 0 || item.qty > avail.stock;
+    if (isOutOfStock) hasUnavailable = true;
+
     html += `
-      <div class="receipt-item-row" style="display:flex; justify-content:space-between; margin-bottom:0.75rem; font-size:0.9rem;">
-        <span>${prod.name} &times; ${item.qty}</span>
-        <strong>&#8377;${total.toLocaleString('en-IN')}</strong>
+      <div class="summary-item" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; font-size:0.9rem; ${isOutOfStock ? 'opacity:0.5;' : ''}">
+        <div>
+          <strong style="display:block; font-family:var(--font-serif); font-size:1rem;">${checkoutEscape(name)} ${isOutOfStock ? '<span style="color:#d32f2f; font-size:0.75rem; font-family:var(--font-sans);">(Out of stock)</span>' : ''}</strong>
+          <span style="color:var(--text-muted); font-size:0.8rem;">Qty: ${item.qty} &times; ₹${price}</span>
+        </div>
+        <strong style="font-family:var(--font-mono);">₹${total.toLocaleString('en-IN')}</strong>
       </div>
     `;
   });
 
-  const discountRate = getAppliedDiscountRate();
+  container.innerHTML = html;
+
+  // Coupon calculations
+  let discountRate = 0;
+  if (typeof getAppliedDiscountRate === 'function') {
+    discountRate = getAppliedDiscountRate();
+  } else {
+    const code = String(localStorage.getItem('odd_coupon_code') || '').trim().toUpperCase();
+    if (code === 'ODD10') discountRate = 0.10;
+    else if (code === 'WELCOME15') discountRate = 0.15;
+  }
+
   const discount = Math.round(subtotal * discountRate);
-  const finalTotal = subtotal - discount;
+  const finalTotal = Math.max(0, subtotal - discount);
 
   const subtotalEl = document.getElementById('chk-page-subtotal');
-  if (subtotalEl) subtotalEl.innerText = `&#8377;${subtotal.toLocaleString('en-IN')}`;
-  
+  if (subtotalEl) subtotalEl.innerText = checkoutMoney(subtotal);
+
   const discRow = document.getElementById('chk-page-discount-row');
   const discEl = document.getElementById('chk-page-discount');
   if (discount > 0) {
     if (discRow) discRow.style.display = 'flex';
-    if (discEl) discEl.innerText = `-&#8377;${discount.toLocaleString('en-IN')}`;
+    if (discEl) discEl.innerText = '- ' + checkoutMoney(discount);
   } else if (discRow) {
     discRow.style.display = 'none';
   }
 
   const totalEl = document.getElementById('chk-page-total');
-  if (totalEl) totalEl.innerText = `&#8377;${finalTotal.toLocaleString('en-IN')}`;
-  container.innerHTML = html;
+  if (totalEl) totalEl.innerText = checkoutMoney(finalTotal);
+
+  const submit = document.getElementById('checkout-submit');
+  if (submit) {
+    if (hasUnavailable) {
+      submit.disabled = true;
+      submit.textContent = 'Remove Out of Stock Items';
+    } else {
+      submit.disabled = false;
+      submit.textContent = 'Confirm Order (' + checkoutMoney(finalTotal) + ')';
+    }
+  }
 }
 
-function processPageOrder(e) {
+async function processPageOrder(e) {
   if (e) e.preventDefault();
-  const inv = JSON.parse(localStorage.getItem('odd_admin_inventory') || '{}');
-  for (let item of cartState) {
-    if (inv[item.id] !== undefined && inv[item.id] < item.qty) {
-      showToast('Error: ' + item.name + ' is out of stock or insufficient quantity.');
-      return;
-    }
-  }
-  
-  // Deduct inventory
-  for (let item of cartState) {
-    if (inv[item.id] !== undefined) {
-      inv[item.id] -= item.qty;
-    }
-  }
-  localStorage.setItem('odd_admin_inventory', JSON.stringify(inv));
-  
-  
-  if (cartState.length === 0) {
-    showToast('Your bag is empty.');
+
+  const cart = (typeof cartState !== 'undefined' && Array.isArray(cartState)) ? cartState : JSON.parse(localStorage.getItem('odd_cart') || '[]');
+  if (!cart || cart.length === 0) {
+    if (typeof showToast === 'function') showToast('Your bag is currently empty.');
     return;
   }
 
-  // Stock Validation Check against Admin Inventory
-  const inv = JSON.parse(localStorage.getItem('odd_admin_inventory'));
-  if (inv) {
-    for (let item of cartState) {
-      let sku = '';
-      if (item.id === 'phantom') sku = 'ODD-PH-001';
-      else if (item.id === 'lucid') sku = 'ODD-LC-003';
-      else if (item.id === 'first-move') sku = 'ODD-FM-002';
-
-      if (sku && inv[sku]) {
-        if (inv[sku].stock <= 0) {
-          showToast(`Sorry, ${inv[sku].name} is OUT OF STOCK. Please remove it from your cart to proceed.`);
-          return;
-        }
-        if (item.qty > inv[sku].stock) {
-          showToast(`Only ${inv[sku].stock} unit(s) available for ${inv[sku].name}.`);
-          return;
-        }
-      }
+  // Stock check
+  for (let item of cart) {
+    const avail = getProductAvailability(item.id);
+    if (avail.stock < item.qty) {
+      if (typeof showToast === 'function') showToast('Error: ' + avail.name + ' is out of stock.');
+      return;
     }
   }
 
-  // Calculate totals and items list
-  let subtotal = 0;
-  let itemsStr = [];
-  
-  cartState.forEach(item => {
-    const prod = PRODUCTS[item.id];
-    if (prod) {
-      subtotal += (prod.price * item.qty);
-      itemsStr.push(`${prod.name} (x${item.qty})`);
-    }
-  });
+  // Get Form Inputs
+  const firstName = (document.getElementById('first-name')?.value || '').trim();
+  const lastName = (document.getElementById('last-name')?.value || '').trim();
+  const phone = (document.getElementById('mobile')?.value || document.getElementById('phone')?.value || '').trim();
+  const email = (document.getElementById('email')?.value || '').trim();
+  const address = (document.getElementById('address')?.value || document.getElementById('street')?.value || '').trim();
+  const city = (document.getElementById('city')?.value || '').trim();
+  const pincode = (document.getElementById('pincode')?.value || '').trim();
+  const method = document.querySelector('input[name="payment-method"]:checked')?.value || 'cod';
 
-  const discountRate = getAppliedDiscountRate();
-  const discount = Math.round(subtotal * discountRate);
-  const finalTotal = subtotal - discount;
+  if (!firstName || !phone || !address) {
+    if (typeof showToast === 'function') showToast('Please fill in your name, mobile number, and delivery address.');
+    else alert('Please fill in your name, mobile number, and delivery address.');
+    return;
+  }
 
-  // Order Details
-  const orderId = '#ODD-' + Math.floor(10000 + Math.random() * 90000);
-  const firstName = document.getElementById('chk-fname') ? document.getElementById('chk-fname').value.trim() : 'Customer';
-  const lastName = document.getElementById('chk-lname') ? document.getElementById('chk-lname').value.trim() : '';
-  const customerName = `${firstName} ${lastName}`.trim() || 'Guest Customer';
-  const customerEmail = document.getElementById('chk-email') ? document.getElementById('chk-email').value.trim() : 'customer@oddperfume.com';
-  const customerPhone = document.getElementById('chk-phone') ? document.getElementById('chk-phone').value.trim() : '9876543210';
-  
-  const selectedPaymentInput = document.querySelector('input[name="payment"]:checked') || document.querySelector('input[name="payment_method"]:checked');
-  const method = selectedPaymentInput ? selectedPaymentInput.value : 'razorpay';
+  const orderId = 'ODD-' + Math.floor(100000 + Math.random() * 900000);
+  const totalStr = document.getElementById('chk-page-total')?.innerText || '₹899';
 
-  const now = new Date();
-  const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-
-  // If Razorpay Express selected -> Open Real Razorpay Checkout Modal
-  if (method === 'razorpay') {
-    const rzpKey = localStorage.getItem('odd_admin_rzp_key') || 'rzp_test_1DP5mmOlF5G5ag';
-    
-    if (typeof Razorpay === 'undefined') {
-      console.warn('Razorpay SDK not loaded, proceeding with simulated gateway verification');
-      finalizeCustomerOrder({
-        id: orderId,
-        customer: customerName,
-        items: itemsStr.join(', '),
-        amount: finalTotal,
-        method: 'Razorpay',
-        status: 'Paid',
-        paymentId: 'pay_' + Math.random().toString(36).substring(2, 12),
-        date: dateStr
-      });
-      return;
-    }
-
+  if (method === 'razorpay' && typeof Razorpay !== 'undefined') {
+    // Razorpay Integration with graceful fallback
     const options = {
-      key: rzpKey,
-      amount: Math.round(finalTotal * 100), // amount in paise
+      key: 'rzp_test_ODDPERFUMEKEY',
+      amount: parseInt(totalStr.replace(/[^0-9]/g, '')) * 100 || 89900,
       currency: 'INR',
-      name: 'ODD PERFUME',
-      description: itemsStr.join(', '),
+      name: 'ODD Perfume',
+      description: 'Order ' + orderId,
       image: 'assets/images/Phantom Single bottle.png',
       handler: function (response) {
-        finalizeCustomerOrder({
-          id: orderId,
-          customer: customerName,
-          items: itemsStr.join(', '),
-          amount: finalTotal,
-          method: 'Razorpay',
-          status: 'Paid',
-          paymentId: response.razorpay_payment_id || ('pay_' + Math.random().toString(36).substring(2, 12)),
-          date: dateStr
-        });
+        completeOrderPlacement(orderId, firstName, lastName, phone, email, address, city, pincode, 'Razorpay (' + response.razorpay_payment_id + ')', cart);
       },
-      prefill: {
-        name: customerName,
-        email: customerEmail,
-        contact: customerPhone
-      },
-      theme: {
-        color: '#E86B32'
-      },
+      prefill: { name: firstName + ' ' + lastName, email: email, contact: phone },
+      theme: { color: '#E86B32' },
       modal: {
         ondismiss: function() {
-          showToast('Payment window cancelled. You can retry anytime.');
+          if (typeof showToast === 'function') showToast('Payment window closed.');
         }
       }
     };
-
-    const rzp = new Razorpay(options);
-    rzp.open();
-
-  } else {
-    // Cash on Delivery
-    finalizeCustomerOrder({
-      id: orderId,
-      customer: customerName,
-      items: itemsStr.join(', '),
-      amount: finalTotal,
-      method: 'COD',
-      status: 'Pending',
-      paymentId: 'COD-' + Math.floor(1000 + Math.random() * 9000),
-      date: dateStr
-    });
-  }
-}
-
-function finalizeCustomerOrder(orderObj) {
-  // 1. Sync to Admin Orders in localStorage
-  let ordersData = JSON.parse(localStorage.getItem('odd_admin_orders')) || [];
-  ordersData.unshift(orderObj);
-  localStorage.setItem('odd_admin_orders', JSON.stringify(ordersData));
-
-  // 2. Decrement Stock in Admin Inventory
-  let inventoryData = JSON.parse(localStorage.getItem('odd_admin_inventory'));
-  if (inventoryData) {
-    cartState.forEach(item => {
-      let sku = '';
-      if (item.id === 'phantom') sku = 'ODD-PH-001';
-      else if (item.id === 'lucid') sku = 'ODD-LC-003';
-      else if (item.id === 'first-move') sku = 'ODD-FM-002';
-      
-      if (sku && inventoryData[sku]) {
-        inventoryData[sku].stock = Math.max(0, inventoryData[sku].stock - item.qty);
-        inventoryData[sku].updated = new Date().toISOString().slice(0, 16).replace('T', ' ');
-      }
-    });
-    localStorage.setItem('odd_admin_inventory', JSON.stringify(inventoryData));
+    try {
+      const rzp = new Razorpay(options);
+      rzp.open();
+      return;
+    } catch (err) {
+      console.warn('Razorpay failed, falling back to instant placement:', err);
+    }
   }
 
-  // 3. Clear Bag
-  cartState = [];
-  appliedCoupon = null;
-  localStorage.removeItem('odd_coupon');
-  localStorage.removeItem('odd_coupon_discount');
-  saveCart();
-  updateCartUI();
-
-  showToast(`Order confirmed! Order ID: ${orderObj.id}`);
-  setTimeout(() => {
-    window.location.href = 'order-tracking.html';
-  }, 1200);
+  // Complete COD or fallback placement
+  completeOrderPlacement(orderId, firstName, lastName, phone, email, address, city, pincode, method === 'razorpay' ? 'Razorpay Online' : 'Cash on Delivery (COD)', cart);
 }
+
+function completeOrderPlacement(orderId, firstName, lastName, phone, email, address, city, pincode, paymentMethod, cart) {
+  // 1. Deduct Inventory from odd_admin_inventory
+  const inv = JSON.parse(localStorage.getItem('odd_admin_inventory') || '{}');
+  const skuMap = { 'phantom': 'ODD-PH-001', 'lucid': 'ODD-LC-003', 'first-move': 'ODD-FM-002' };
+
+  cart.forEach(item => {
+    const sku = skuMap[item.id];
+    if (inv && sku && inv[sku]) {
+      inv[sku].stock = Math.max(0, Number(inv[sku].stock) - item.qty);
+    }
+  });
+  localStorage.setItem('odd_admin_inventory', JSON.stringify(inv));
+
+  // 2. Save Order to odd_orders in localStorage
+  const existingOrders = JSON.parse(localStorage.getItem('odd_orders') || '[]');
+  const newOrder = {
+    id: orderId,
+    date: new Date().toISOString().split('T')[0],
+    customer: firstName + ' ' + lastName,
+    phone: phone,
+    email: email,
+    address: address + ', ' + city + ' - ' + pincode,
+    items: cart,
+    total: document.getElementById('chk-page-total')?.innerText || '₹899',
+    status: 'Processing',
+    paymentMethod: paymentMethod
+  };
+  existingOrders.unshift(newOrder);
+  localStorage.setItem('odd_orders', JSON.stringify(existingOrders));
+
+  // 3. Clear Cart
+  localStorage.setItem('odd_cart', '[]');
+  if (typeof cartState !== 'undefined') cartState.length = 0;
+  if (typeof updateCartUI === 'function') updateCartUI();
+
+  // 4. Success UI Feedback
+  alert('Order Confirmed! Order ID: ' + orderId + '\nThank you for shopping with ODD Perfume.');
+  window.location.href = 'order-tracking.html?orderId=' + orderId;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderCheckoutSummary();
+
+  const checkoutForm = document.getElementById('checkout-form');
+  if (checkoutForm) {
+    checkoutForm.addEventListener('submit', processPageOrder);
+  }
+});

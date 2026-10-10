@@ -27,9 +27,6 @@
       </div>
 
               <div class="top-right">
-          <a href="admin.html" class="top-nav-btn" style="color:var(--text-main);" aria-label="Admin Portal" title="Admin Portal">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
-          </a>
           <a href="my-account.html" class="top-nav-btn" aria-label="Account" title="Account">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           </a>
@@ -61,18 +58,18 @@
       </div>
     </section>
 
-    <div class="acc-dashboard-grid reveal-on-scroll">
+    <div class="acc-dashboard-grid">
       <!-- Sidebar -->
       <aside class="acc-sidebar">
         <div class="acc-avatar">O</div>
-        <h3 style="font-family:var(--font-serif); font-size:1.4rem; margin-bottom:0.2rem;">Welcome back</h3>
-        <p style="color:var(--text-muted); font-size:0.85rem;">customer@oddperfume.com</p>
+        <h3 style="font-family:var(--font-serif); font-size:1.4rem; margin-bottom:0.2rem;">Guest shopper</h3>
+        <p style="color:var(--text-muted); font-size:0.85rem;">Customer account preview · no customer session</p>
         
         <nav class="acc-nav">
           <a href="#orders" class="acc-nav-link active">Order History</a>
           <a href="#addresses" class="acc-nav-link">Saved Addresses</a>
           <a href="#details" class="acc-nav-link">Account Details</a>
-          <a href="#" class="acc-nav-link" style="color: #d32f2f;" onclick="showToast('Logged out successfully'); setTimeout(() => window.location.href='index.html', 1000);">Logout</a>
+          <a href="index.html" class="acc-nav-link" style="color: #d32f2f;">Back to shop</a>
         </nav>
       </aside>
 
@@ -93,20 +90,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td><strong>#ODD-89421</strong></td>
-                  <td>Oct 08, 2026</td>
-                  <td><span class="status-pill status-transit">In Transit</span></td>
-                  <td>₹41,354</td>
-                  <td><a href="order-tracking.html" class="btn btn-outline" style="padding:0.4rem 1rem; font-size:0.75rem;">Track</a></td>
-                </tr>
-                <tr>
-                  <td><strong>#ODD-61033</strong></td>
-                  <td>Sep 12, 2026</td>
-                  <td><span class="status-pill status-delivered">Delivered</span></td>
-                  <td>₹1,899</td>
-                  <td><a href="#" class="btn btn-outline" style="padding:0.4rem 1rem; font-size:0.75rem;">View</a></td>
-                </tr>
+                <tr><td colspan="5" class="account-empty-orders"><strong>No account-linked orders yet.</strong><span>This guest account preview is not connected to customer sign-in or an account order database. To look up a real order, use its order reference and checkout mobile number.</span><a href="order-tracking.html" class="btn btn-outline" style="margin-top:.7rem; padding:.55rem 1rem;">Track an order</a></td></tr>
               </tbody>
             </table>
           </div>
@@ -121,22 +105,7 @@
           </div>
 
           <div id="addresses-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.5rem;">
-            <!-- Default Address Card -->
-            <div class="address-card" style="border:1px solid var(--brand-orange); border-radius:8px; padding:1.2rem; background:rgba(232,107,50,0.03); position:relative;">
-              <span class="default-tag" style="position:absolute; top:12px; right:12px; background:var(--brand-orange); color:#fff; font-size:0.65rem; font-family:var(--font-mono); font-weight:700; padding:0.2rem 0.5rem; border-radius:4px;">DEFAULT</span>
-              <h4 style="margin:0 0 0.5rem; font-size:1.05rem;">Omkar Tapshale</h4>
-              <p style="color:var(--text-muted); font-size:0.85rem; line-height:1.6; margin:0 0 1rem;">
-                Flat 402, Sea Breeze Heights<br>
-                Bandra West, Hill Road<br>
-                Mumbai, Maharashtra &ndash; 400050<br>
-                India<br>
-                <strong>Phone:</strong> +91 98765 43210
-              </p>
-              <div style="display:flex; gap:0.6rem;">
-                <button class="btn btn-sm btn-outline make-def-btn" onclick="showToast('Address is already default.')">Default</button>
-                <button class="btn btn-sm btn-outline" onclick="openEditModal(this)">Edit</button>
-              </div>
-            </div>
+            <div id="account-address-empty" class="account-empty-orders"><strong>No saved addresses.</strong><span>Add an address here to preview the address-card UI. Address persistence is not connected to a customer account service yet.</span></div>
           </div>
         </div>
 
@@ -176,7 +145,7 @@
         </div>
         <div class="acc-content-card" id="details">
           <h2 class="acc-section-title">Account Details</h2>
-          <form style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;" onsubmit="event.preventDefault(); showToast('Details updated successfully!');">
+          <form style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;" onsubmit="event.preventDefault(); showToast('Preview only: account details are not saved to a customer account yet.');">
             <div style="grid-column: span 1;">
               <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">First Name</label>
               <input type="text" value="Odd" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); border-radius:var(--radius-sm); font-family:var(--font-sans);">
@@ -235,7 +204,7 @@
             <li><a href="my-account.html">My account</a></li>
             <li><a href="faq.html">FAQ</a></li>
             <li><a href="contact.html">Contact</a></li>
-            <li><a href="admin.html">Admin & Inventory</a></li>
+            
           </ul>
         </div>
 
@@ -413,209 +382,29 @@
             </form>
           </div>
         </div>
-        <div class="acc-content-card" id="details">
-          <h2 class="acc-section-title">Account Details</h2>
-          <form style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;" onsubmit="event.preventDefault(); showToast('Details updated successfully!');">
-            <div style="grid-column: span 1;">
-              <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">First Name</label>
-              <input type="text" value="Odd" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); border-radius:var(--radius-sm); font-family:var(--font-sans);">
-            </div>
-            <div style="grid-column: span 1;">
-              <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">Last Name</label>
-              <input type="text" value="Customer" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); border-radius:var(--radius-sm); font-family:var(--font-sans);">
-            </div>
-            <div style="grid-column: span 2;">
-              <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">Email Address</label>
-              <input type="email" value="customer@oddperfume.com" readonly style="width:100%; padding:0.8rem; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-subtle); color:var(--text-muted); font-family:var(--font-sans);">
-            </div>
-            <div style="grid-column: span 2;">
-              <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Save Changes</button>
-            </div>
-          </form>
-        </div>
+        
 
       </div>
     </div>
   </main>
 
     <!-- Global Footer (media_1791442638385.png) -->
-  <footer class="site-footer-luxury">
-    <div class="container">
-      <!-- Top Email Signup -->
-      <div class="footer-top-signup">
-        <div class="footer-signup-left">
-          <div class="footer-signup-header">
-            <span class="orange-dot-lg"></span>
-            <h2 class="footer-signup-title">Get our emails.</h2>
-          </div>
-          <p class="footer-signup-sub">New scents, the odd offer, and nothing else. About once a month.</p>
-        </div>
-        <form class="footer-signup-form" onsubmit="handleEmailSignup(event)">
-          <input type="email" placeholder="your@email.com" class="footer-email-input" required>
-          <button type="submit" class="footer-email-btn btn-water-float">Join</button>
-        </form>
-      </div>
-
-      <!-- 4 Columns Navigation -->
-      <div class="footer-nav-columns">
-        <div class="footer-col">
-          <div class="footer-col-title">Shop</div>
-          <ul class="footer-links-list">
-            <li><a href="shop.html">All perfumes</a></li>
-            <li></li>
-            <li><a href="story.html">Our story</a></li>
-          </ul>
-        </div>
-
-        <div class="footer-col">
-          <div class="footer-col-title">Help</div>
-          <ul class="footer-links-list">
-            <li><a href="order-tracking.html">Track order</a></li>
-            <li><a href="my-account.html">My account</a></li>
-            <li><a href="faq.html">FAQ</a></li>
-            <li><a href="contact.html">Contact</a></li>
-            <li><a href="admin.html">Admin & Inventory</a></li>
-          </ul>
-        </div>
-
-        <div class="footer-col">
-          <div class="footer-col-title">Say Hi</div>
-          <a href="mailto:hello@oddperfume.com" class="footer-contact-link">hello@oddperfume.com</a>
-          <p class="footer-contact-hours">Mon—Sat · 10am—7pm IST</p>
-        </div>
-
-        <div class="footer-col">
-          <div class="footer-col-title">Pay Your Way</div>
-          <div class="payment-pills-row">
-            <span class="pay-pill-badge">UPI</span>
-            <span class="pay-pill-badge">Cards</span>
-            <span class="pay-pill-badge">Netbanking</span>
-            <span class="pay-pill-badge">Cash on delivery</span>
-          </div>
-          <div class="pay-razorpay-secure">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            <span>Secure payments by Razorpay</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Massive Statement: It's good to be ODD. -->
-      <div class="footer-massive-odd-container">
-        <span class="massive-odd-lead-text">It's good to be</span>
-        <div class="massive-odd-display-text">ODD<span class="massive-odd-dot-orange"></span></div>
-      </div>
-
-      <!-- Legal Bar -->
-      <div class="footer-legal-bar">
-        <div class="legal-left">&copy; 2026 ODD Perfume &middot; Mumbai, India</div>
-        <div class="footer-legal-links">
-          <a href="shipping-policy.html">Shipping policy</a>
-          <a href="refund-policy.html">Returns & refunds</a>
-          <a href="privacy-policy.html">Privacy policy</a>
-          <a href="terms.html">Terms of service</a>
-        </div>
-        <div class="legal-right">Based in Mumbai.</div>
-      </div>
-    </div>
-  </footer>
+  
 
   <!-- Quick View Modal (media_1791443891864.png) -->
-  <div class="quick-view-modal-backdrop" id="quick-view-modal" onclick="if(event.target===this) closeQuickView()">
-    <div class="quick-view-card">
-      <button class="quick-view-close-btn" onclick="closeQuickView()">&times;</button>
-      <div class="quick-view-visual">
-        <img src="assets/images/Phantom.jpeg" id="qv-img" alt="ODD Perfume" class="quick-view-bottle-img">
-      </div>
-      <div class="quick-view-details">
-        <span class="qv-brand">ODD PARFUMS</span>
-        <h3 class="qv-title" id="qv-title">Phantom</h3>
-        <div class="qv-price" id="qv-price">&#8377; 899</div>
-        <div class="qv-size-row">
-          <span class="qv-size-label">Size: 100ml</span>
-          <span class="qv-size-pill">100ml</span>
-        </div>
-        <div class="qv-stock-badge">
-          <span class="qv-stock-dot"></span> In stock, ready to ship
-        </div>
-        <div class="qv-actions-row">
-          <div class="qv-qty-stepper">
-            <button onclick="updateQvQty(-1)">&minus;</button>
-            <span id="qv-qty">1</span>
-            <button onclick="updateQvQty(1)">&plus;</button>
-          </div>
-          <button class="qv-add-btn btn-water-float" onclick="addQvToCart()">Add to cart</button>
-        </div>
-        <button class="qv-buy-btn btn-water-float" onclick="buyNowQv()">Buy now</button>
-        <a href="products-odd-phantom.html" id="qv-link" class="qv-full-details-link">View full details &rarr;</a>
-      </div>
-    </div>
-  </div>
+  
 
-  <script src="assets/js/global.js"></script>
+  
 
   <!-- Global Mobile Navigation Drawer -->
-  <div class="mobile-nav-drawer" id="mobile-nav">
-    <div class="drawer-header">
-      <span class="brand-logo-cr7" style="font-size: 1.8rem;">ODD<span class="logo-dot" style="color: var(--brand-orange);">.</span></span>
-      <button class="close-drawer" onclick="toggleMobileNav()">&times;</button>
-    </div>
-    <div class="drawer-content">
-      <a href="index.html">Home</a>
-      <a href="shop.html">Shop The Three</a>
-      <a href="index.html#showcase" onclick="toggleMobileNav()">Collections</a>
-      <a href="index.html#comparison" onclick="toggleMobileNav()">Compare</a>
-      <a href="story.html">Our Story</a>
-      <a href="order-tracking.html">Track Order</a>
-      <a href="my-account.html">My Account</a>
-      <a href="faq.html">FAQ & Support</a>
-      <a href="contact.html">Contact Us</a>
-      <div class="drawer-footer">
-        <p>hello@oddperfume.com</p>
-        <p>Mon—Sat &middot; 10am—7pm IST &middot; Mumbai</p>
-      </div>
-    </div>
-  </div>
+  
 
   <!-- Global Slide-Out Cart Drawer -->
-  <div class="cart-drawer-backdrop" id="cart-backdrop" onclick="toggleCartDrawer()"></div>
-  <div class="cart-drawer" id="cart-drawer">
-    <div class="cart-header">
-      <h3>YOUR BAG (<span id="cart-drawer-count">0</span>)</h3>
-      <button class="close-drawer" onclick="toggleCartDrawer()">&times;</button>
-    </div>
-    <div class="free-shipping-banner">
-      <span>Free Express Shipping Unlocked Across India</span>
-      <div class="shipping-progress"><div class="fill" style="width: 100%;"></div></div>
-    </div>
-    <div class="cart-items-list" id="cart-items"></div>
-    <div class="cart-footer" id="cart-footer" style="display: none;">
-      <div class="coupon-box">
-        <input type="text" id="cart-coupon-input" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;">
-        <button class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
-      </div>
-      <div class="coupon-applied-tag" id="coupon-tag-applied" style="display: none;">
-        <span>Code <strong id="applied-code-name">LAUNCH20</strong> applied</span>
-        <button onclick="removeCartCoupon()" class="remove-coupon">&times;</button>
-      </div>
-      <div class="cart-totals">
-        <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹ 0</span></div>
-        <div class="total-row grand-total"><span>Total:</span><span id="cart-total">₹ 0</span></div>
-      </div>
-      <a href="checkout.html" class="btn btn-primary btn-lg full-width btn-water-float">Proceed to Checkout</a>
-    </div>
-  </div>
+  
+  
 
   <!-- Global Search Modal -->
-  <div class="search-modal-backdrop" id="search-modal" onclick="if(event.target===this) closeSearchModal()">
-    <div class="search-modal-card">
-      <div class="search-modal-header">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="text" class="search-modal-input" placeholder="Search by name, notes, or occasion..." oninput="handleSearchInput(this.value)">
-        <button class="search-modal-close" onclick="closeSearchModal()">&times;</button>
-      </div>
-      <div class="search-modal-results" id="search-modal-results"></div>
-    </div>
-  </div>
+  
 
 
 
@@ -695,6 +484,8 @@ function hideEditAddressModal() {
   document.getElementById('edit-address-modal').style.display = 'none';
 }
 
+function accountEscape(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+
 function saveEditAddress(e) {
   e.preventDefault();
   if(!currentEditCard) return;
@@ -706,10 +497,10 @@ function saveEditAddress(e) {
   const phone = document.getElementById('edit-addr-phone').value;
   
   currentEditCard.querySelector('h4').innerText = name;
-  currentEditCard.querySelector('p').innerHTML = street + '<br>' + city + ' &ndash; ' + pin + '<br>India<br><strong>Phone:</strong> ' + phone;
+  currentEditCard.querySelector('p').innerHTML = accountEscape(street) + '<br>' + accountEscape(city) + ' &ndash; ' + accountEscape(pin) + '<br>India<br><strong>Phone:</strong> ' + accountEscape(phone);
   
   hideEditAddressModal();
-  showToast('Address updated successfully.');
+  showToast('Address updated in this page preview only.');
 }
 
 function setDefaultAddress(btn) {
@@ -753,14 +544,15 @@ function saveCustomerAddress(e) {
 
   const card = document.createElement('div');
   card.className = 'address-card';
-  card.style.cssText = 'border:1px solid var(--border-color); border-radius:8px; padding:1.2rem; background:#FFF;';
+  card.style.cssText = 'border:1px solid var(--border-color); border-radius:8px; padding:1.2rem; background:#FFF; position:relative;';
+  const emptyAddress = document.getElementById('account-address-empty'); emptyAddress?.remove();
   card.innerHTML = `
-    <h4 style="margin:0 0 0.5rem; font-size:1.05rem;">${name}</h4>
+    <h4 style="margin:0 0 0.5rem; font-size:1.05rem;">${accountEscape(name)}</h4>
     <p style="color:var(--text-muted); font-size:0.85rem; line-height:1.6; margin:0 0 1rem;">
-      ${street}<br>
-      ${city} &ndash; ${pin}<br>
+      ${accountEscape(street)}<br>
+      ${accountEscape(city)} &ndash; ${accountEscape(pin)}<br>
       India<br>
-      <strong>Phone:</strong> ${phone}
+      <strong>Phone:</strong> ${accountEscape(phone)}
     </p>
     <div style="display:flex; gap:0.6rem;">
       <button class="btn btn-sm btn-outline" onclick="setDefaultAddress(this)">Make Default</button>
@@ -771,7 +563,7 @@ function saveCustomerAddress(e) {
   document.getElementById('addresses-grid').appendChild(card);
   hideAddAddressModal();
   e.target.reset();
-  showToast('New address saved successfully!');
+  showToast('Address added to this page preview. It is not saved to an online customer profile.');
 }
 </script>
 </body>

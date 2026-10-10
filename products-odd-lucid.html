@@ -15,14 +15,14 @@
       <span class="status-bullet"></span>
       <span class="banner-text"><strong>WE'RE LIVE.</strong> Take 20% OFF your first order with code <code class="coupon-tag" id="banner-code">LAUNCH20</code></span>
       <button class="banner-btn" onclick="applyCouponFromBanner()">Apply</button>
-      <button class="banner-close" onclick="document.getElementById('launch-banner').style.display='none'">&times;</button>
+      <button class="banner-close" onclick="closeLaunchBanner()">&times;</button>
     </div>
   </div>
 
   <header class="site-header" id="site-header">
     <div class="header-top-bar">
       <div class="top-left">
-        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Open menu">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Open menu" onclick="toggleMobileNav()">
           <span></span><span></span><span></span>
         </button>
         
@@ -31,9 +31,6 @@
         <a href="index.html" class="brand-logo-cr7">ODD<span class="logo-dot">.</span></a>
       </div>
               <div class="top-right">
-          <a href="admin.html" class="top-nav-btn" style="color:var(--text-main);" aria-label="Admin Portal" title="Admin Portal">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
-          </a>
           <a href="my-account.html" class="top-nav-btn" aria-label="Account" title="Account">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           </a>
@@ -107,7 +104,112 @@
 
       </div>
     </section>
+
+    <section class="product-editorial-section" aria-labelledby="product-story-title">
+      <div class="container">
+        <div class="product-editorial-heading"><span class="product-eyebrow">THE ODD PROFILE</span><h2 id="product-story-title">A scent with its own point of view.</h2><p>Crisp bergamot and black tea meet clean cedar and vetiver. A fresh, focused fragrance suited to daytime wear, office meetings and warm afternoons.</p></div>
+        <div class="product-facts-grid">
+          <article class="product-fact-card"><span>01 / CONCENTRATION</span><strong>20–25%</strong><p>Perfume oil for a considered, everyday spray.</p></article>
+          <article class="product-fact-card"><span>02 / WEAR</span><strong>8–10 hours</strong><p>Wear time can vary with skin, heat and weather.</p></article>
+          <article class="product-fact-card"><span>03 / FORMAT</span><strong>100 ml</strong><p>Eau de Parfum, formulated in Mumbai.</p></article>
+        </div>
+        <div class="product-detail-lower-grid">
+          <div class="product-detail-note-card"><span class="product-eyebrow">SCENT NOTES</span><h3>What you'll notice</h3><p>Bright citrus gives the first impression; tea and clean woods keep the dry-down calm and composed. A clear choice when you want your fragrance to feel light and deliberate.</p><div class="product-note-pills"><span>Bergamot</span><span>Darjeeling Black Tea</span><span>White Cedar</span><span>Vetiver</span></div></div>
+          <div class="product-detail-note-card"><span class="product-eyebrow">WHEN TO WEAR</span><h3>Made for real plans.</h3><p>Daily office, daytime meetings, workouts and warm summer afternoons.</p><div class="product-wear-ratings"><div><span>Intensity</span><strong>2 / 5</strong></div><div><span>Warmth</span><strong>1 / 5</strong></div><div><span>Freshness</span><strong>5 / 5</strong></div><div><span>Sweetness</span><strong>1 / 5</strong></div></div></div>
+        </div>
+      </div>
+    </section>
+    <section class="product-related-section"><div class="container"><div class="product-related-heading"><div><span class="product-eyebrow">KEEP EXPLORING</span><h2>Meet the other ODDs.</h2></div><a href="shop.html">Shop all three →</a></div><div class="product-related-grid">
+      <a class="product-related-card" href="products-odd-first-move.html"><span class="product-related-image"><img src="assets/images/First Move single bottle.png" alt="ODD First Move" loading="lazy"></span><span class="product-related-meta"><strong>First Move</strong><span>Pineapple · Woods · Smoky Musk</span><b>₹899 · Discover →</b></span></a><a class="product-related-card" href="products-odd-phantom.html"><span class="product-related-image"><img src="assets/images/Phantom Single bottle.png" alt="ODD Phantom" loading="lazy"></span><span class="product-related-meta"><strong>Phantom</strong><span>Oud · Amber · Smoky Woods</span><b>₹899 · Discover →</b></span></a>
+    </div></div></section>
   </main>
+
+
+  <div class="mobile-nav-drawer" id="mobile-nav" aria-label="Mobile navigation">
+    <div class="drawer-header"><a href="index.html" class="brand-logo-cr7">ODD<span class="logo-dot">.</span></a><button class="close-drawer" type="button" onclick="toggleMobileNav()" aria-label="Close menu">&times;</button></div>
+    <div class="drawer-content"><a href="index.html">Home</a><a href="shop.html">Shop The Three</a><a href="index.html#showcase">Collections</a><a href="index.html#comparison">Compare</a><a href="story.html">Our Story</a><a href="order-tracking.html">Track Order</a><a href="my-account.html">My Account</a><a href="faq.html">FAQ & Support</a><a href="contact.html">Contact Us</a><div class="drawer-footer"><p>hello@oddperfume.com</p><p>Mon–Sat · 10am–7pm IST · Mumbai</p></div></div>
+  </div>
+
+  <!-- Existing shared footer -->
+  <footer class="site-footer-luxury">
+    <div class="container">
+      <!-- Top Email Signup -->
+      <div class="footer-top-signup">
+        <div class="footer-signup-left">
+          <div class="footer-signup-header">
+            <span class="orange-dot-lg"></span>
+            <h2 class="footer-signup-title">Get our emails.</h2>
+          </div>
+          <p class="footer-signup-sub">New scents, the odd offer, and nothing else. About once a month.</p>
+        </div>
+        <form class="footer-signup-form" onsubmit="handleEmailSignup(event)">
+          <input type="email" placeholder="your@email.com" class="footer-email-input" required>
+          <button type="submit" class="footer-email-btn btn-water-float">Join</button>
+        </form>
+      </div>
+
+      <!-- 4 Columns Navigation -->
+      <div class="footer-nav-columns">
+        <div class="footer-col">
+          <div class="footer-col-title">Shop</div>
+          <ul class="footer-links-list">
+            <li><a href="shop.html">All perfumes</a></li>
+            <li></li>
+            <li><a href="story.html">Our story</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Help</div>
+          <ul class="footer-links-list">
+            <li><a href="order-tracking.html">Track order</a></li>
+            <li><a href="my-account.html">My account</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="contact.html">Contact</a></li>
+            
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Say Hi</div>
+          <a href="mailto:hello@oddperfume.com" class="footer-contact-link">hello@oddperfume.com</a>
+          <p class="footer-contact-hours">Mon—Sat · 10am—7pm IST</p>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Pay Your Way</div>
+          <div class="payment-pills-row">
+            <span class="pay-pill-badge">UPI</span>
+            <span class="pay-pill-badge">Cards</span>
+            <span class="pay-pill-badge">Netbanking</span>
+            <span class="pay-pill-badge">Cash on delivery</span>
+          </div>
+          <div class="pay-razorpay-secure">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <span>Secure payments by Razorpay</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Massive Statement: It's good to be ODD. -->
+      <div class="footer-massive-odd-container">
+        <span class="massive-odd-lead-text">It's good to be</span>
+        <div class="massive-odd-display-text">ODD<span class="massive-odd-dot-orange"></span></div>
+      </div>
+
+      <!-- Legal Bar -->
+      <div class="footer-legal-bar">
+        <div class="legal-left">&copy; 2026 ODD Perfume &middot; Mumbai, India</div>
+        <div class="footer-legal-links">
+          <a href="shipping-policy.html">Shipping policy</a>
+          <a href="refund-policy.html">Returns & refunds</a>
+          <a href="privacy-policy.html">Privacy policy</a>
+          <a href="terms.html">Terms of service</a>
+        </div>
+        <div class="legal-right">Based in Mumbai.</div>
+      </div>
+    </div>
+  </footer>
 
   <!-- Cart Drawer -->
   <div class="cart-drawer-backdrop" id="cart-backdrop" onclick="closeCartDrawer()"></div>

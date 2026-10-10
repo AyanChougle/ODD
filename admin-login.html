@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Staff Sign In | ODD Perfume</title>
+  <link rel="stylesheet" href="assets/css/global.css">
+  <link rel="stylesheet" href="assets/css/admin.css">
+  <style>
+    body.admin-login-body{min-height:100vh;display:grid;place-items:center;padding:24px;background:var(--admin-bg-body);color:var(--admin-text-main)}
+    .admin-login-card{width:min(100%,440px);padding:clamp(24px,5vw,42px);border:1px solid var(--admin-border);border-radius:16px;background:var(--admin-bg-card);box-shadow:0 24px 80px rgba(0,0,0,.24)}
+    .admin-login-mark{font-family:var(--font-serif);font-size:42px;line-height:1;margin-bottom:28px;color:#fff}.admin-login-mark span{color:var(--brand-orange)}
+    .admin-login-card h1{margin:0 0 8px;font-size:30px;color:#fff}.admin-login-card p{color:var(--admin-text-muted);font-size:14px;margin:0 0 24px}
+    .admin-login-card label{display:block;font-size:12px;letter-spacing:.04em;margin:16px 0 7px;color:var(--admin-text-muted)}
+    .admin-login-card input{width:100%;padding:13px 14px;border-radius:8px;border:1px solid var(--admin-border);background:#0d0f14;color:#fff;font:inherit;outline:none}
+    .admin-login-card input:focus{border-color:var(--brand-orange);box-shadow:0 0 0 3px rgba(232,107,50,.15)}
+    .admin-login-submit{width:100%;margin-top:22px;min-height:46px;border:0;border-radius:999px;background:var(--brand-orange);color:#fff;font-weight:700;letter-spacing:.04em;cursor:pointer}
+    .admin-login-error{display:none;margin-top:14px;padding:10px 12px;border-radius:8px;background:rgba(239,68,68,.12);color:#ffaaa4;font-size:13px}
+    .admin-login-foot{margin-top:22px!important;margin-bottom:0!important;font-size:12px!important}
+  </style>
+</head>
+<body class="admin-body admin-login-body">
+  <main class="admin-login-card">
+    <div class="admin-login-mark">ODD<span>.</span></div>
+    <h1>Staff sign in</h1>
+    <p>Use your assigned ODD account. Permissions depend on your staff role.</p>
+    <form id="admin-login-form">
+      <label for="login-email">Work email</label>
+      <input id="login-email" name="email" type="email" autocomplete="username" required>
+      <label for="login-password">Password</label>
+      <input id="login-password" name="password" type="password" autocomplete="current-password" minlength="12" required>
+      <button class="admin-login-submit" type="submit">Sign in securely</button>
+      <div class="admin-login-error" id="login-error" role="alert"></div>
+    </form>
+    <p class="admin-login-foot">Lost access? Ask your ODD administrator to reset your account.</p>
+  </main>
+  <script src="assets/js/admin-login.js"></script>
+</body>
+</html>
