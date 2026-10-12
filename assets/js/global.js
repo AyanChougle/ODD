@@ -476,6 +476,43 @@ function handleEmailSignup(event) {
 function escapeHTML(value) { return String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character])); }
 
 
+function initScrollReveals() {
+  const observer = new IntersectionObserver((entries, obs) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        obs.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+  document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
+}
+
+function showToast(message) {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerText = message;
+  container.appendChild(toast);
+  
+  // Trigger reflow
+  void toast.offsetWidth;
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateY(0)';
+  
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(20px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initScrollReveals();
 });
@@ -528,38 +565,30 @@ function syncStockStatusUI() {
 
 async function refreshStoreState() {
   try {
-    const response = await fetch('/api/public/store-state', { cache: 'no-store' });
-    if (!response.ok) throw new Error('Store state unavailable');
-    const state = await response.json();
-    STORE_STATE_FROM_SERVER = true;
-    ACTIVE_COUPONS = (state.coupons || []).map(c => ({ ...c, active: true }));
-    const banner = document.getElementById('launch-banner');
-    if (banner && state.banner) {
-      const text = banner.querySelector('.banner-text');
-      const code = String(state.banner.code || '').trim().toUpperCase();
-      if (text && state.banner.text) {
-        text.textContent = '';
-        const plain = String(state.banner.text).replace(code ? new RegExp(code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig') : /$^/, '').trim();
-        text.append(document.createTextNode(plain + (code ? ' ' : '')));
-        if (code) { const codeNode = document.createElement('code'); codeNode.id = 'banner-code'; codeNode.className = 'coupon-tag'; codeNode.textContent = code; text.append(codeNode); }
-      }
-      banner.hidden = !state.banner.active || sessionStorage.getItem('odd_hide_banner') === 'true';
-      banner.style.display = banner.hidden ? 'none' : '';
-      if (banner.hidden) { document.documentElement.style.setProperty('--banner-height', '0px'); const header = document.getElementById('site-header'); if (header) header.style.top = '0'; }
+    // Static host mode: load state from localStorage (set by admin dashboard)
+    const localInv = JSON.parse(localStorage.getItem('odd_admin_inventory'));
+    if (localInv) {
+      Object.entries(localInv).forEach(([productId, item]) => {
+        if (STORE_INVENTORY[productId]) {
+          STORE_INVENTORY[productId].stock = Number(item.stock);
+          STORE_INVENTORY[productId].price = Number(item.price);
+          if (PRODUCTS[productId]) PRODUCTS[productId].price = Number(item.price);
+        }
+      });
     }
-    Object.entries(state.inventory || {}).forEach(([productId, item]) => {
-      STORE_INVENTORY[productId] = { sku: item.sku, stock: Number(item.stock), price: Number(item.price) };
-      if (PRODUCTS[productId]) PRODUCTS[productId].price = Number(item.price);
-    });
+    const localCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons'));
+    if (localCoupons) {
+      ACTIVE_COUPONS = localCoupons.filter(c => c.active !== false);
+    }
+    
+    // Update UI elements
     document.querySelectorAll('.product-detail-price[data-product]').forEach(element => {
       const product = PRODUCTS[element.dataset.product]; if (!product) return;
       const original = product.originalPrice; const discount = Math.max(0, Math.round((original - product.price) / original * 100));
       element.innerHTML = `<span class="price-current">₹ ${product.price.toLocaleString('en-IN')}</span><span class="price-original">₹ ${original.toLocaleString('en-IN')}</span><span class="price-discount-pill">-${discount}%</span>`;
     });
     updateCartUI(); syncStockStatusUI();
-    const search = document.querySelector('.search-modal-input'); if (search && document.getElementById('search-modal')?.classList.contains('open')) handleSearchInput(search.value);
-  } catch {
-    // Static preview uses conservative bundled stock defaults only. Never trust stale browser storage for stock or prices.
+  } catch (e) {
     syncStockStatusUI();
   }
 }
@@ -740,6 +769,38 @@ function checkAdminAccountRole() {
       btn.style.fontWeight = '700';
       btn.innerHTML = '⚡ Go to Admin Portal';
       nav.appendChild(btn);
+    }
+    
+    // Inject into Desktop Header
+    const desktopNav = document.querySelector('.main-desktop-nav');
+    if (desktopNav && !document.getElementById('header-admin-btn')) {
+      const btn = document.createElement('a');
+      btn.id = 'header-admin-btn';
+      btn.href = 'admin.html';
+      btn.className = 'main-nav-link';
+      btn.style.color = 'var(--brand-orange, #E86B32)';
+      btn.style.fontWeight = '700';
+      btn.innerHTML = 'Admin Portal';
+      desktopNav.appendChild(btn);
+    }
+
+    // Inject into Mobile Drawer
+    const mobileDrawerContent = document.querySelector('.mobile-nav-drawer .drawer-content');
+    if (mobileDrawerContent && !document.getElementById('mobile-admin-btn')) {
+      const btn = document.createElement('a');
+      btn.id = 'mobile-admin-btn';
+      btn.href = 'admin.html';
+      btn.style.color = 'var(--brand-orange, #E86B32)';
+      btn.style.fontWeight = '700';
+      btn.innerHTML = '⚡ Admin Portal';
+      
+      // Insert before the footer
+      const footer = mobileDrawerContent.querySelector('.drawer-footer');
+      if (footer) {
+        mobileDrawerContent.insertBefore(btn, footer);
+      } else {
+        mobileDrawerContent.appendChild(btn);
+      }
     }
   }
 }

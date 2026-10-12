@@ -514,12 +514,13 @@ h1, h2, h3, h4, h5, h6 {
     background-color: var(--bg-dark);
     color: var(--text-light);
     border: none;
-    padding: 0.45rem 1rem; border-radius: 99px; display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.45rem 1rem;
     border-radius: var(--radius-full);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
+    flex-shrink: 0;
 }
 
 .cart-trigger-btn .cart-badge {
@@ -532,6 +533,7 @@ h1, h2, h3, h4, h5, h6 {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .header-bottom-bar {
@@ -1919,6 +1921,11 @@ body.drawer-open { overflow:hidden; }
   font-weight: 400;
 }
 
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .order-history-table {
   width: 100%;
   border-collapse: collapse;
@@ -2057,7 +2064,7 @@ h1, h2, h3, .section-title, .acc-section-title, .cart-header h3, .quick-view-car
 /* Mobile Table & Account Responsiveness Fix */
 .order-history-table {
   width: 100% !important;
-  min-width: 520px !important;
+  min-width: 100% !important;
   border-collapse: collapse !important;
   font-size: 0.9rem !important;
 }
@@ -2080,14 +2087,18 @@ h1, h2, h3, .section-title, .acc-section-title, .cart-header h3, .quick-view-car
   vertical-align: middle !important;
 }
 
+.order-history-table td.account-empty-orders {
+  white-space: normal !important;
+}
+
 /* Ensure mobile quickview buttons & hero buttons have z-index & touch responsiveness */
-.slide-actions, .hero-pill-buttons, .qv-actions-row {
+.slide-actions, .hero-pill-buttons, .qv-actions-row, .compare-row, .compare-col {
   position: relative !important;
   z-index: 10 !important;
   pointer-events: auto !important;
 }
 
-.btn-primary, .btn-outline, .btn-dark, .btn-pill-orange, .btn-pill-glass, .qv-add-btn, .qv-buy-btn {
+.btn-primary, .btn-outline, .btn-dark, .btn-pill-orange, .btn-pill-glass, .qv-add-btn, .qv-buy-btn, .compare-buy-btn, .top-nav-btn {
   pointer-events: auto !important;
   cursor: pointer !important;
   user-select: none !important;
