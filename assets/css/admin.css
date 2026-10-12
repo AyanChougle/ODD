@@ -1,21 +1,33 @@
 /* ==========================================================================
-   ODD Perfume — Admin & Inventory Management Portal CSS
+   ODD Perfume — Luxury Admin & Inventory Management Portal CSS
+   Responsive for Mobile Phones, Tablets, Laptops & Desktops
    ========================================================================== */
 
 :root {
-  --admin-sidebar-width: 260px;
-  --admin-bg-body: #0C0D10;
-  --admin-bg-card: #14161D;
-  --admin-bg-hover: #1E212B;
-  --admin-border: #232733;
-  --admin-text-main: #F1F3F9;
-  --admin-text-muted: #8E95A5;
+  --admin-sidebar-width: 270px;
+  --admin-bg-body: #0A0B0E;
+  --admin-bg-sidebar: #0F1116;
+  --admin-bg-card: #13161E;
+  --admin-bg-card-alt: #171B26;
+  --admin-bg-hover: #1D2230;
+  --admin-border: #222736;
+  --admin-border-subtle: rgba(255, 255, 255, 0.07);
+  --admin-text-main: #F4F6FB;
+  --admin-text-muted: #8B93A7;
   --admin-accent: #E86B32;
+  --admin-accent-hover: #D55D26;
   --admin-accent-glow: rgba(232, 107, 50, 0.15);
   --admin-success: #10B981;
   --admin-warning: #F59E0B;
   --admin-danger: #EF4444;
   --admin-info: #3B82F6;
+  --admin-radius: 10px;
+  --admin-radius-sm: 6px;
+  --admin-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 body.admin-body {
@@ -23,16 +35,19 @@ body.admin-body {
   padding: 0;
   background-color: var(--admin-bg-body);
   color: var(--admin-text-main);
-  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  font-family: var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
   display: flex;
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Sidebar Styling */
+/* ==========================================================================
+   Sidebar Navigation (Desktop / Laptop)
+   ========================================================================== */
 .admin-sidebar {
   width: var(--admin-sidebar-width);
-  background: #101116;
+  background: var(--admin-bg-sidebar);
   border-right: 1px solid var(--admin-border);
   display: flex;
   flex-direction: column;
@@ -40,12 +55,12 @@ body.admin-body {
   top: 0;
   bottom: 0;
   left: 0;
-  z-index: 100;
-  transition: transform 0.3s ease;
+  z-index: 1000;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .admin-brand {
-  padding: 1.5rem 1.5rem 1.2rem;
+  padding: 1.4rem 1.5rem;
   border-bottom: 1px solid var(--admin-border);
   display: flex;
   align-items: center;
@@ -53,12 +68,14 @@ body.admin-body {
 }
 
 .admin-brand-logo {
-  font-family: var(--font-serif, Georgia, serif);
-  font-size: 1.6rem;
+  font-family: var(--font-serif, 'DM Serif Display', Georgia, serif);
+  font-size: 1.65rem;
   color: #FFF;
   text-decoration: none;
   font-weight: 700;
   letter-spacing: -0.02em;
+  display: inline-flex;
+  align-items: center;
 }
 
 .admin-brand-logo span {
@@ -68,41 +85,60 @@ body.admin-body {
 .admin-badge-tag {
   background: var(--admin-accent-glow);
   color: var(--admin-accent);
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
   font-size: 0.65rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--admin-radius-sm);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-weight: 600;
+  font-weight: 700;
+  border: 1px solid rgba(232, 107, 50, 0.25);
+}
+
+.admin-sidebar-close {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--admin-text-muted);
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  transition: color 0.2s;
+}
+
+.admin-sidebar-close:hover {
+  color: #FFF;
 }
 
 .admin-nav {
   flex: 1;
   padding: 1rem 0;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .admin-nav-group-title {
-  padding: 0.8rem 1.5rem 0.4rem;
-  font-family: var(--font-mono, monospace);
+  padding: 0.9rem 1.5rem 0.4rem;
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
   font-size: 0.68rem;
   color: var(--admin-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-weight: 600;
+  opacity: 0.8;
 }
 
 .admin-nav-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   padding: 0.75rem 1.5rem;
   color: var(--admin-text-muted);
   text-decoration: none;
   font-size: 0.88rem;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: var(--admin-transition);
   border-left: 3px solid transparent;
   cursor: pointer;
 }
@@ -120,34 +156,143 @@ body.admin-body {
 }
 
 .admin-nav-item svg {
-  width: 18px;
-  height: 18px;
+  width: 19px;
+  height: 19px;
   stroke-width: 2;
   flex-shrink: 0;
+  transition: stroke 0.2s;
 }
 
+.admin-nav-item.active svg {
+  stroke: var(--admin-accent);
+}
+
+/* Sidebar Footer Profile Badge */
 .admin-sidebar-footer {
-  padding: 1rem 1.5rem;
+  padding: 1.2rem 1.5rem;
   border-top: 1px solid var(--admin-border);
-  font-size: 0.78rem;
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.admin-user-profile-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-avatar-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--admin-accent);
+  color: #FFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(232, 107, 50, 0.3);
+}
+
+.admin-user-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-user-details strong {
+  font-size: 0.84rem;
+  color: var(--admin-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-user-subtag {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.65rem;
   color: var(--admin-text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-footer-btn-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.6rem;
 }
 
-/* Main Layout Content */
+.admin-logout-btn {
+  border: 1px solid var(--admin-border);
+  background: transparent;
+  color: var(--admin-text-muted);
+  border-radius: var(--admin-radius-sm);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--admin-transition);
+}
+
+.admin-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: var(--admin-danger);
+  color: var(--admin-danger);
+}
+
+.admin-storefront-btn {
+  color: var(--admin-accent);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-accent-glow);
+  transition: var(--admin-transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.admin-storefront-btn:hover {
+  background: var(--admin-accent);
+  color: #FFF;
+}
+
+/* Sidebar Backdrop (Mobile Drawer) */
+.admin-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* ==========================================================================
+   Main Workspace Layout
+   ========================================================================== */
 .admin-main {
   margin-left: var(--admin-sidebar-width);
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  background: var(--admin-bg-body);
 }
 
+/* Header */
 .admin-header {
   height: 64px;
-  background: #101116;
+  background: var(--admin-bg-sidebar);
   border-bottom: 1px solid var(--admin-border);
   display: flex;
   align-items: center;
@@ -156,20 +301,56 @@ body.admin-body {
   position: sticky;
   top: 0;
   z-index: 90;
+  gap: 1rem;
+}
+
+.admin-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-mobile-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  padding: 0.5rem;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+  width: 38px;
+  height: 38px;
+  transition: border-color 0.2s;
+}
+
+.admin-mobile-toggle span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background-color: var(--admin-text-main);
+  border-radius: 2px;
 }
 
 .admin-header-title {
-  font-family: var(--font-serif, Georgia, serif);
-  font-size: 1.35rem;
+  font-family: var(--font-serif, 'DM Serif Display', Georgia, serif);
+  font-size: 1.4rem;
   font-weight: 400;
   color: #FFF;
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .admin-header-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.8rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--admin-border-subtle);
 }
 
 .admin-status-dot {
@@ -177,48 +358,93 @@ body.admin-body {
   height: 8px;
   border-radius: 50%;
   background: var(--admin-success);
-  box-shadow: 0 0 8px var(--admin-success);
+  box-shadow: 0 0 10px var(--admin-success);
+  animation: pulse-dot 2s infinite ease-in-out;
 }
 
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+/* Mobile Quick Tabs Strip (Hidden on Desktop) */
+.admin-mobile-quicktabs {
+  display: none;
+  padding: 0.6rem 1rem;
+  background: #0E1015;
+  border-bottom: 1px solid var(--admin-border);
+  gap: 0.5rem;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-mobile-quicktabs::-webkit-scrollbar {
+  display: none;
+}
+
+.quicktab-btn {
+  background: var(--admin-bg-card);
+  border: 1px solid var(--admin-border);
+  color: var(--admin-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: var(--admin-transition);
+}
+
+.quicktab-btn.active {
+  background: var(--admin-accent);
+  color: #FFF;
+  border-color: var(--admin-accent);
+}
+
+/* Workspace Container */
 .admin-container {
   padding: 2rem;
-  max-width: 1300px;
+  max-width: 1360px;
   width: 100%;
-  box-sizing: border-box;
   margin: 0 auto;
 }
 
-/* Tab Sections */
+/* Tab Panes */
 .admin-tab-pane {
   display: none;
 }
 
 .admin-tab-pane.active {
   display: block;
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn 0.25s ease-out;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Cards & Grid Layouts */
+/* ==========================================================================
+   Cards & Layout Components
+   ========================================================================== */
 .admin-card {
   background: var(--admin-bg-card);
   border: 1px solid var(--admin-border);
-  border-radius: 10px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  border-radius: var(--admin-radius);
+  padding: 1.6rem;
+  margin-bottom: 1.8rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .admin-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.8rem;
+  margin-bottom: 1.4rem;
+  padding-bottom: 0.9rem;
   border-bottom: 1px solid var(--admin-border);
+  gap: 1rem;
 }
 
 .admin-card-title {
@@ -226,64 +452,87 @@ body.admin-body {
   font-weight: 600;
   color: #FFF;
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .admin-card-subtitle {
   font-size: 0.82rem;
   color: var(--admin-text-muted);
   margin-top: 0.25rem;
+  line-height: 1.4;
 }
 
 /* KPI Cards Grid */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.2rem;
+  margin-bottom: 1.8rem;
 }
 
 .kpi-card {
   background: var(--admin-bg-card);
   border: 1px solid var(--admin-border);
-  border-radius: 10px;
-  padding: 1.25rem 1.5rem;
+  border-radius: var(--admin-radius);
+  padding: 1.4rem;
   position: relative;
   overflow: hidden;
-  border-top: 4px solid var(--kpi-color, var(--admin-accent));
+  transition: transform 0.2s, border-color 0.2s;
 }
 
-.kpi-card.green { --kpi-color: var(--admin-success); }
-.kpi-card.orange { --kpi-color: var(--admin-accent); }
-.kpi-card.amber { --kpi-color: var(--admin-warning); }
-.kpi-card.blue { --kpi-color: var(--admin-info); }
+.kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+}
+
+.kpi-card.green::before { background: var(--admin-success); }
+.kpi-card.orange::before { background: var(--admin-accent); }
+.kpi-card.amber::before { background: var(--admin-warning); }
+.kpi-card.blue::before { background: var(--admin-info); }
 
 .kpi-label {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
   font-size: 0.72rem;
   color: var(--admin-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   font-weight: 600;
+  margin-bottom: 0.5rem;
 }
 
 .kpi-value {
-  font-family: var(--font-serif, Georgia, serif);
-  font-size: 2.2rem;
+  font-size: 2rem;
+  font-weight: 700;
   color: #FFF;
-  margin: 0.4rem 0 0.2rem;
-  font-weight: 400;
+  margin-bottom: 0.35rem;
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  letter-spacing: -0.03em;
 }
 
 .kpi-subtext {
   font-size: 0.78rem;
   color: var(--admin-text-muted);
+  line-height: 1.4;
 }
 
-/* Tables */
+/* ==========================================================================
+   Tables & Data Presentation
+   ========================================================================== */
 .admin-table-wrapper {
   overflow-x: auto;
-  border-radius: 8px;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--admin-radius-sm);
   border: 1px solid var(--admin-border);
+  background: #0D0F14;
 }
 
 .admin-table {
@@ -294,96 +543,119 @@ body.admin-body {
 }
 
 .admin-table th {
-  background: #181A23;
+  background: #11131A;
   color: var(--admin-text-muted);
-  font-family: var(--font-mono, monospace);
-  font-size: 0.75rem;
-  text-transform: uppercase;
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.72rem;
   letter-spacing: 0.08em;
-  padding: 0.9rem 1.2rem;
+  text-transform: uppercase;
+  padding: 0.9rem 1.1rem;
   border-bottom: 1px solid var(--admin-border);
-  font-weight: 600;
+  white-space: nowrap;
 }
 
 .admin-table td {
-  padding: 1rem 1.2rem;
+  padding: 1rem 1.1rem;
   border-bottom: 1px solid var(--admin-border);
-  color: var(--admin-text-main);
   vertical-align: middle;
+}
+
+.admin-table tbody tr {
+  transition: background 0.15s;
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .admin-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.admin-table tbody tr:hover {
-  background: var(--admin-bg-hover);
+.admin-sku {
+  color: var(--admin-accent);
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.admin-muted-cell {
+  color: var(--admin-text-muted) !important;
+  font-size: 0.8rem;
+}
+
+.admin-cell-subtext {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--admin-text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.admin-empty-state {
+  padding: 2.5rem 1.5rem !important;
+  color: var(--admin-text-muted) !important;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 /* Status Badges */
 .badge-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
   padding: 0.25rem 0.65rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-family: var(--font-mono, monospace);
+  border-radius: 999px;
+  font-size: 0.72rem;
   font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-family: var(--font-mono, monospace);
 }
 
-.badge-status.success { background: rgba(16, 185, 129, 0.15); color: #34D399; }
-.badge-status.warning { background: rgba(245, 158, 11, 0.15); color: #FBBF24; }
-.badge-status.danger { background: rgba(239, 68, 68, 0.15); color: #F87171; }
-.badge-status.info { background: rgba(59, 130, 246, 0.15); color: #60A5FA; }
-
-/* Form Elements */
-.admin-form-group {
-  margin-bottom: 1.25rem;
+.badge-status.success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
-.admin-label {
-  display: block;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--admin-text-muted);
-  margin-bottom: 0.4rem;
+.badge-status.warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
-.admin-input, .admin-select, .admin-textarea {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: #0E1015;
-  border: 1px solid var(--admin-border);
-  border-radius: 6px;
-  color: #FFF;
-  font-size: 0.9rem;
-  box-sizing: border-box;
-  font-family: inherit;
-  transition: border-color 0.2s;
+.badge-status.danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-.admin-input:focus, .admin-select:focus, .admin-textarea:focus {
-  outline: none;
-  border-color: var(--admin-accent);
-  box-shadow: 0 0 0 3px var(--admin-accent-glow);
+.badge-status.info {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60A5FA;
+  border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
-/* Buttons */
+/* ==========================================================================
+   Buttons & Inputs
+   ========================================================================= */
 .admin-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.65rem 1.25rem;
-  font-size: 0.85rem;
+  font-family: var(--font-sans);
+  font-size: 0.84rem;
   font-weight: 600;
-  border-radius: 6px;
+  letter-spacing: 0.04em;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--admin-radius-sm);
   border: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--admin-transition);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .admin-btn-primary {
@@ -392,16 +664,18 @@ body.admin-body {
 }
 
 .admin-btn-primary:hover {
-  background: #D05A28;
+  background: var(--admin-accent-hover);
+  box-shadow: 0 4px 14px rgba(232, 107, 50, 0.35);
 }
 
 .admin-btn-secondary {
-  background: #232733;
+  background: #222633;
   color: #FFF;
+  border: 1px solid var(--admin-border);
 }
 
 .admin-btn-secondary:hover {
-  background: #2D3242;
+  background: #2D3345;
 }
 
 .admin-btn-outline {
@@ -420,201 +694,652 @@ body.admin-body {
   font-size: 0.78rem;
 }
 
-/* Scanner Interface */
-.scanner-box-container {
-  background: #090A0D;
-  border: 2px dashed var(--admin-accent);
-  border-radius: 12px;
-  padding: 2.5rem;
-  text-align: center;
-  margin-bottom: 2rem;
+.admin-btn.full-width {
+  width: 100%;
 }
 
-.scanner-input {
-  max-width: 500px;
+.admin-input {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  background: #0E1015;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  color: #FFF;
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.admin-input:focus {
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px rgba(232, 107, 50, 0.15);
+}
+
+.admin-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+  margin-bottom: 0.45rem;
+  letter-spacing: 0.04em;
+}
+
+.admin-form-group {
+  margin-bottom: 1.2rem;
+}
+
+.admin-order-status {
+  padding: 0.5rem 0.75rem;
+  background: #0E1015;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  color: var(--admin-text-main);
+  font-size: 0.82rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  min-width: 130px;
+}
+
+.admin-order-status:focus {
+  border-color: var(--admin-accent);
+}
+
+/* Stock Steppers */
+.inventory-stock-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.inventory-stock-controls .admin-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
   font-size: 1.1rem;
-  padding: 0.9rem 1.2rem;
+  line-height: 1;
+  border-radius: var(--admin-radius-sm);
+}
+
+.inventory-stock-count {
+  min-width: 42px;
   text-align: center;
   font-family: var(--font-mono, monospace);
-  letter-spacing: 0.08em;
-  margin: 1rem auto;
+  font-size: 1rem;
+  font-weight: 700;
 }
 
-/* Mode Switcher Pills */
+.inventory-stock-count.is-out {
+  color: var(--admin-danger);
+}
+
+.inventory-action-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   Warehouse Barcode Scanner Interface
+   ========================================================================== */
 .mode-pill-selector {
   display: flex;
   gap: 0.5rem;
-  background: #0E1015;
+  background: #0A0C10;
   padding: 0.35rem;
-  border-radius: 8px;
+  border-radius: var(--admin-radius-sm);
   width: fit-content;
   margin-bottom: 1.5rem;
   border: 1px solid var(--admin-border);
 }
 
 .mode-pill-btn {
-  padding: 0.55rem 1.2rem;
+  padding: 0.55rem 1.25rem;
   border: none;
   background: transparent;
   color: var(--admin-text-muted);
   font-weight: 600;
   font-size: 0.82rem;
-  border-radius: 6px;
+  border-radius: var(--admin-radius-sm);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--admin-transition);
 }
 
 .mode-pill-btn.active {
   background: var(--admin-accent);
   color: #FFF;
+  box-shadow: 0 2px 8px rgba(232, 107, 50, 0.35);
 }
 
-/* Barcode Label Sheet Printable Preview */
-.barcode-sheet-preview {
-  background: #FFF;
-  color: #000;
-  padding: 20px;
-  border-radius: 8px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 15px;
-  margin-top: 1.5rem;
-}
-
-.barcode-sticker {
-  border: 1px dashed #999;
-  padding: 10px;
+.scanner-box-container {
+  background: #090A0D;
+  border: 2px dashed var(--admin-accent);
+  border-radius: 12px;
+  padding: 2.5rem 1.5rem;
   text-align: center;
-  font-family: monospace;
-  background: #FFF;
-  border-radius: 4px;
+  margin-bottom: 2rem;
+}
+
+.scanner-input {
+  max-width: 520px;
+  font-size: 1.15rem;
+  padding: 0.9rem 1.2rem;
+  text-align: center;
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.08em;
+  margin: 1.2rem auto;
+}
+
+.admin-scan-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-scan-row:last-child {
+  border-bottom: none;
+}
+
+.admin-scan-row code {
+  color: var(--admin-accent);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.admin-scan-row small {
+  color: var(--admin-text-muted);
+  font-size: 0.72rem;
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.scan-plus { color: #34D399; }
+.scan-minus { color: #F87171; }
+
+/* ==========================================================================
+   Luxury Barcode Stickers Sheet & Vector Labels Generator
+   ========================================================================== */
+.barcode-sheet-preview {
+  display: block !important;
+  width: 100%;
+  box-sizing: border-box;
+  background: #FFFFFF !important;
+  color: #111111 !important;
+  padding: 26px !important;
+  border-radius: 12px !important;
+  margin-top: 1.8rem !important;
+  border: 1px solid var(--admin-border) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35) !important;
+  overflow: visible !important;
+}
+
+.barcode-print-heading {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding-bottom: 16px !important;
+  margin-bottom: 20px !important;
+  border-bottom: 2px solid #E5E5E5 !important;
+  font-family: var(--font-sans) !important;
+  gap: 1rem !important;
+  flex-wrap: wrap !important;
+}
+
+.barcode-print-heading strong {
+  font-size: 14px !important;
+  letter-spacing: 0.08em !important;
+  color: #111111 !important;
+  display: block !important;
+  font-weight: 800 !important;
+}
+
+.barcode-print-heading small {
+  font-size: 11px !important;
+  color: #666666 !important;
+  font-family: var(--font-mono, monospace) !important;
+  display: block !important;
+  margin-top: 2px !important;
+}
+
+.barcode-print-heading span {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #E86B32 !important;
+  background: #FFF0EA !important;
+  padding: 4px 12px !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(232, 107, 50, 0.2) !important;
+}
+
+/* Grid of Stickers — Luxury 3-column layout matching standard 70mm label sheets */
+.barcode-label-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 20px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 992px) {
+  .barcode-label-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .barcode-label-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+}
+
+/* Authentic Luxury Packaging Sticker */
+.barcode-sticker {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  background: #FFFFFF !important;
+  border: 1px solid #D8D8D8 !important;
+  border-radius: 8px !important;
+  padding: 16px 14px !important;
+  box-sizing: border-box !important;
+  min-height: 220px !important;
+  width: 100% !important;
+  position: relative !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
+  transition: transform 0.2s, box-shadow 0.2s !important;
+  text-align: center !important;
+}
+
+.barcode-sticker:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+}
+
+.barcode-sticker-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  margin-bottom: 6px !important;
+  padding-bottom: 6px !important;
+  border-bottom: 1px solid #F0F0F0 !important;
 }
 
 .barcode-sticker-brand {
-  font-weight: bold;
-  font-size: 0.8rem;
-  letter-spacing: 0.1em;
+  font-family: var(--font-sans) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  color: #111111 !important;
+}
+
+.barcode-sticker-origin {
+  font-family: var(--font-mono, monospace) !important;
+  font-size: 8.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  color: #888888 !important;
 }
 
 .barcode-sticker-title {
-  font-size: 0.9rem;
-  font-weight: bold;
-  margin: 3px 0;
+  font-family: var(--font-serif, 'DM Serif Display', Georgia, serif) !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #111111 !important;
+  margin: 6px 0 8px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
 }
 
-.barcode-svg-container svg {
-  max-width: 100%;
-  height: 40px;
+.barcode-svg-wrapper {
+  width: 100% !important;
+  background: #FFFFFF !important;
+  padding: 8px 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
 }
 
-.barcode-meta {
-  font-size: 0.65rem;
-  color: #444;
-  margin-top: 4px;
+.barcode-svg {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 52px !important;
+  shape-rendering: crispEdges !important;
+}
+
+.barcode-serial-tag {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  color: #111111 !important;
+  margin: 4px 0 6px !important;
+  text-align: center !important;
+  background: #F4F4F4 !important;
+  padding: 2px 8px !important;
+  border-radius: 4px !important;
+  width: 90% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.barcode-compliance-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 4px !important;
+  width: 100% !important;
+  padding-top: 6px !important;
+  border-top: 1px solid #EEEEEE !important;
+  font-family: var(--font-mono, monospace) !important;
+  text-align: center !important;
+}
+
+.comp-col span {
+  display: block !important;
+  font-size: 7.5px !important;
+  color: #888888 !important;
+  letter-spacing: 0.05em !important;
+  font-weight: 600 !important;
+}
+
+.comp-col strong {
+  display: block !important;
+  font-size: 8.5px !important;
+  color: #222222 !important;
+  font-weight: 700 !important;
+  margin-top: 1px !important;
+}
+
+/* ==========================================================================
+   Toast Notifications
+   ========================================================================== */
+.admin-toast-container {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 99999;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 10px;
+  width: min(380px, calc(100vw - 40px));
 }
 
-@media print {
-  body * {
-    visibility: hidden;
+.admin-toast {
+  padding: 12px 18px;
+  border-radius: var(--admin-radius-sm);
+  color: #FFF;
+  background: #1B5E3C;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.5;
+  transition: opacity 0.25s, transform 0.25s;
+}
+
+.admin-toast.is-error {
+  background: #8A2B20;
+}
+
+.admin-toast.is-leaving {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+/* ==========================================================================
+   Responsive Adaptations (Laptops, Tablets, and Phones)
+   ========================================================================== */
+
+/* Laptops / Desktops under 1200px */
+@media (max-width: 1200px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
-  .barcode-sheet-preview, .barcode-sheet-preview * {
+}
+
+/* Tablets & Small Laptops under 992px */
+@media (max-width: 992px) {
+  :root {
+    --admin-sidebar-width: 250px;
+  }
+
+  .admin-header {
+    padding: 0 1.5rem;
+  }
+
+  .admin-container {
+    padding: 1.5rem;
+  }
+}
+
+/* Mobile Devices & Phones under 900px */
+@media (max-width: 900px) {
+  body.admin-body {
+    display: block;
+  }
+
+  body.admin-sidebar-open {
+    overflow: hidden;
+  }
+
+  /* Off-Canvas Slide-In Drawer */
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(300px, 85vw);
+    height: 100vh;
+    z-index: 2000;
+    transform: translateX(-100%);
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.6);
+  }
+
+  .admin-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .admin-sidebar-close {
+    display: block;
+  }
+
+  .admin-sidebar-backdrop {
+    display: block;
+  }
+
+  .admin-sidebar-backdrop.open {
+    opacity: 1;
     visibility: visible;
   }
-  .barcode-sheet-preview {
-    position: absolute;
-    left: 0;
-    top: 0;
+
+  /* Main View adjustments */
+  .admin-main {
+    margin-left: 0;
     width: 100%;
-    border: none;
+  }
+
+  .admin-header {
+    padding: 0.8rem 1rem;
+    height: auto;
+    min-height: 58px;
+  }
+
+  .admin-mobile-toggle {
+    display: flex;
+  }
+
+  .admin-header-title {
+    font-size: 1.15rem;
+  }
+
+  .admin-header-actions span {
+    display: none; /* Hide long text on phone header */
+  }
+
+  .admin-mobile-quicktabs {
+    display: flex;
+  }
+
+  .admin-container {
+    padding: 1rem;
+  }
+
+  .admin-card {
+    padding: 1.2rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.8rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .kpi-card {
+    padding: 1rem;
+  }
+
+  .kpi-value {
+    font-size: 1.6rem;
+  }
+
+  /* Barcode Controls on Tablet/Phone */
+  #tab-barcodes .admin-card > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    gap: 1.2rem !important;
+  }
+
+  .barcode-sheet-preview {
+    padding: 16px !important;
+  }
+
+  .barcode-label-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
   }
 }
 
-/* Admin polish and responsive layout. Colours intentionally remain in the existing ODD palette. */
-.admin-nav-item[hidden], .admin-tab-pane[hidden] { display: none !important; }
-.admin-logout-btn { border: 1px solid var(--admin-border); background: transparent; color: var(--admin-text-muted); border-radius: 6px; padding: .35rem .6rem; font: 500 .75rem var(--font-sans); cursor: pointer; }
-.admin-logout-btn:hover { color: #fff; border-color: var(--admin-accent); }
-.admin-sku { color: var(--admin-accent); font-weight: 700; }
-.admin-muted-cell { color: var(--admin-text-muted) !important; font-size: .78rem; }
-.admin-cell-subtext { display: block; margin-top: .25rem; color: var(--admin-text-muted); font-size: .73rem; font-weight: 400; }
-.admin-empty-state { padding: 1.4rem !important; color: var(--admin-text-muted) !important; text-align: center; line-height: 1.7; }
-.inventory-stock-controls, .inventory-action-group { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
-.inventory-stock-count { min-width: 36px; text-align: center; font: 600 1rem var(--font-sans); font-variant-numeric: tabular-nums; }
-.inventory-stock-count.is-out { color: #ff9c8b; }
-.admin-order-status { min-width: 120px; max-width: 100%; padding: .5rem .6rem; background: #0e1015; border: 1px solid var(--admin-border); border-radius: 6px; color: var(--admin-text-main); font: 500 .78rem var(--font-sans); }
-.admin-order-status:focus { outline: 2px solid var(--admin-accent); outline-offset: 1px; }
-.admin-toast-container { position: fixed; right: 18px; bottom: 18px; z-index: 99999; display: grid; gap: 8px; width: min(380px, calc(100vw - 36px)); }
-.admin-toast { padding: 12px 15px; border-radius: 10px; color: #fff; background: #1f704c; border: 1px solid rgba(255,255,255,.1); box-shadow: 0 12px 32px rgba(0,0,0,.3); font: 500 .82rem/1.5 var(--font-sans); opacity: 1; transform: translateY(0); transition: opacity .2s ease, transform .2s ease; }
-.admin-toast.is-error { background: #813b31; }
-.admin-toast.is-leaving { opacity: 0; transform: translateY(6px); }
-.admin-scan-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .85rem 0; border-bottom: 1px solid var(--admin-border); }
-.admin-scan-row:last-child { border-bottom: 0; }
-.admin-scan-row code, .admin-scan-row small { display: block; margin-top: .22rem; color: var(--admin-text-muted); font-size: .74rem; }
-.scan-plus { color: #34d399; white-space: nowrap; } .scan-minus { color: #fb9286; white-space: nowrap; }
-.scan-plus small, .scan-minus small { display: block; font-size: .68rem; font-weight: 400; color: var(--admin-text-muted); }
-.staff-create-form { display: grid; grid-template-columns: 1fr 1.2fr .85fr 1.2fr auto; gap: 12px; align-items: end; margin-bottom: 24px; }
-.staff-create-form .admin-form-group { margin-bottom: 0; min-width: 0; }
-.gateway-status-panel { border: 1px solid var(--admin-border); border-radius: 10px; background: var(--admin-bg-hover); padding: 1.2rem; color: var(--admin-text-muted); font-size: .9rem; line-height: 1.7; }
-.gateway-status-panel p:first-child { color: var(--admin-text-main); font-weight: 600; }
-.gateway-status-panel code { color: var(--admin-accent); overflow-wrap: anywhere; }
-.barcode-print-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; margin: 0 0 14px; padding-bottom: 12px; border-bottom: 1px solid #ddd; font: 600 11px var(--font-sans); }
-.barcode-print-heading span { color: #555; font-size: 10px; }
-.barcode-label-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
-.barcode-sticker { min-width: 0; padding: 10px 8px; border: 1px dashed #999; border-radius: 3px; break-inside: avoid; }
-.barcode-sticker-brand { display: block; font: 700 10px var(--font-sans); letter-spacing: .08em; }
-.barcode-sticker-title { display: block; margin: 6px 0; font: 700 11px var(--font-sans); }
-.barcode-svg { display: block; width: 100%; height: 42px; }
-.barcode-serial { display: block; margin: 4px 0 6px; color: #111; font: 700 9px var(--font-mono); letter-spacing: .04em; }
-.barcode-meta { flex-wrap: wrap; gap: 3px 7px; font: 8px var(--font-mono); }
-@media (max-width: 1100px) { .staff-create-form { grid-template-columns: repeat(2,minmax(0,1fr)); } .staff-create-form > button { min-height: 42px; } .barcode-label-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
-@media (max-width: 900px) {
-  body.admin-body { display: block; }
-  .admin-sidebar { position: sticky; top: 0; width: 100%; height: auto; max-height: none; z-index: 1000; border-right: 0; border-bottom: 1px solid var(--admin-border); }
-  .admin-brand { padding: .8rem 1rem; }
-  .admin-brand-logo { font-size: 1.4rem; }
-  .admin-nav { display: flex; align-items: center; gap: .3rem; padding: .45rem .5rem; overflow-x: auto; overflow-y: hidden; white-space: nowrap; }
-  .admin-nav-group-title { display: none; }
-  .admin-nav-item { flex: 0 0 auto; padding: .65rem .8rem; border-left: 0; border-bottom: 2px solid transparent; font-size: .78rem; }
-  .admin-nav-item.active { border-bottom-color: var(--admin-accent); }
-  .admin-nav-item svg { width: 15px; height: 15px; }
-  .admin-sidebar-footer { padding: .55rem 1rem; gap: .6rem; justify-content: flex-start; flex-wrap: wrap; font-size: .72rem; }
-  .admin-main { margin-left: 0; width: 100%; }
-  .admin-header { height: auto; min-height: 58px; padding: .8rem 1rem; }
-  .admin-header-title { font-size: 1.2rem; }
-  .admin-container { padding: 1rem; max-width: none; }
-  .admin-card { padding: 1rem; }
-  .kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: .7rem; }
-  .kpi-card { padding: 1rem; }
-  .kpi-value { font-size: 1.8rem; }
-  .admin-card-header { flex-wrap: wrap; gap: .8rem; }
-  .barcode-label-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-}
-@media (max-width: 540px) {
-  .admin-header-actions { gap: .4rem; }
-  .admin-card-title { font-size: 1.02rem; }
-  .kpi-grid { grid-template-columns: minmax(0,1fr); }
-  .staff-create-form { grid-template-columns: minmax(0,1fr); }
-  .staff-create-form .admin-form-group { margin-bottom: .6rem; }
-  .mode-pill-selector { width: 100%; }
-  .mode-pill-btn { flex: 1; padding: .6rem .45rem; font-size: .72rem; }
-  .scanner-box-container { padding: 1rem .8rem; }
-  .scanner-input { font-size: .86rem; letter-spacing: .03em; }
-  .barcode-label-grid { grid-template-columns: minmax(0,1fr); }
-  .barcode-sheet-preview { padding: 10px; grid-template-columns: minmax(0,1fr); }
-  .admin-sidebar-footer a { margin-left: auto; }
-}
-@media print {
-  .admin-sidebar, .admin-header, .admin-container, .admin-toast-container, .admin-card-header, .barcode-generator-controls, #tab-barcodes > :not(.admin-card) { display: none !important; }
-  body.admin-body { background: #fff !important; color: #111 !important; display: block !important; }
-  .admin-tab-pane:not(#tab-barcodes) { display: none !important; }
-  #tab-barcodes { display: block !important; }
-  #tab-barcodes .admin-card { display: block !important; background: #fff !important; border: 0 !important; padding: 0 !important; margin: 0 !important; }
-  #tab-barcodes .admin-card-header, #tab-barcodes .admin-card-header * { display: none !important; }
-  .barcode-sheet-preview { display: block !important; margin: 0 !important; padding: 0 !important; border-radius: 0 !important; }
-  .barcode-label-grid { grid-template-columns: repeat(3,minmax(0,1fr)) !important; gap: 5mm !important; }
-  .barcode-sticker { border: 1px dashed #777 !important; }
+/* Small Phones under 520px */
+@media (max-width: 520px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .barcode-label-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .scanner-box-container {
+    padding: 1.5rem 1rem;
+  }
+
+  .scanner-input {
+    font-size: 0.95rem;
+  }
+
+  .mode-pill-selector {
+    width: 100%;
+  }
+
+  .mode-pill-btn {
+    flex: 1;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  /* Coupon form stack on small screens */
+  #tab-launch-offer form[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Staff form stack */
+  .staff-create-form {
+    grid-template-columns: 1fr !important;
+  }
 }
 
-@page { size: A4 landscape; margin: 5mm; }
-@media print { .barcode-label-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 4mm !important; } .barcode-sticker { max-width: 100% !important; } .barcode-svg { height: 34px; } }
+/* ==========================================================================
+   Print Output Media Query (A4 / Thermal Label Paper)
+   ========================================================================== */
+@media print {
+  body.admin-body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .admin-sidebar,
+  .admin-header,
+  .admin-mobile-quicktabs,
+  .admin-sidebar-backdrop,
+  .admin-card-header,
+  #tab-barcodes .admin-card > div[style*="grid-template-columns"],
+  .admin-toast-container {
+    display: none !important;
+  }
+
+  .admin-main,
+  .admin-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  #tab-barcodes,
+  #tab-barcodes .admin-card {
+    display: block !important;
+    background: #FFF !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .barcode-sheet-preview {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .barcode-label-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6mm !important;
+  }
+
+  .barcode-sticker {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    border: 1px dashed #333333 !important;
+    box-shadow: none !important;
+    min-height: auto !important;
+  }
+}
+
+@page {
+  size: A4 portrait;
+  margin: 8mm;
+}

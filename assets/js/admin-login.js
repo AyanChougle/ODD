@@ -49,6 +49,7 @@ if (form) {
       email: email,
       name: email.split('@')[0].toUpperCase(),
       role: 'admin',
+      permissions: ['*'],
       token: 'static-hostinger-token-' + Date.now()
     };
 

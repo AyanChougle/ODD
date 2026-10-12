@@ -170,99 +170,7 @@
   font-family: var(--font-mono);
   color: #444;
 }
-/* --- Account Dashboard --- */
-.acc-dashboard-grid {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 4rem;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 4rem clamp(1rem, 4vw, 2.5rem);
-}
-@media (max-width: 768px) {
-  .acc-dashboard-grid {
-    grid-template-columns: 1fr;
-    gap: 3rem;
-  }
-}
-.acc-sidebar {
-  background: var(--bg-subtle);
-  padding: 2.5rem;
-  border-radius: var(--radius-md);
-  text-align: center;
-  border: 1px solid var(--border-color);
-}
-.acc-avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: var(--bg-dark);
-  color: var(--brand-orange);
-  font-family: var(--font-serif);
-  font-size: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1.5rem;
-}
-.acc-nav {
-  margin-top: 2.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  text-align: left;
-}
-.acc-nav-link {
-  display: block;
-  padding: 1rem 1.5rem;
-  color: var(--text-main);
-  text-decoration: none;
-  font-family: var(--font-sans);
-  font-weight: 600;
-  border-radius: var(--radius-sm);
-  transition: var(--transition);
-  border: 1px solid transparent;
-}
-.acc-nav-link:hover, .acc-nav-link.active {
-  background: white;
-  border-color: var(--border-color);
-  color: var(--brand-orange);
-}
-.acc-content-card {
-  background: white;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 2.5rem 3rem;
-  margin-bottom: 2rem;
-}
-.acc-section-title {
-  font-family: var(--font-serif);
-  font-size: 1.8rem;
-  margin-bottom: 2rem;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 1rem;
-}
-.order-history-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.95rem;
-}
-.order-history-table th {
-  text-align: left;
-  padding: 1rem 0;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-weight: normal;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border-color);
-}
-.order-history-table td {
-  padding: 1.2rem 0;
-  border-bottom: 1px solid var(--border-color);
-  vertical-align: middle;
-}
+/* Account status pills */
 .status-pill {
   display: inline-block;
   padding: 0.3rem 0.8rem;
@@ -324,11 +232,6 @@
 .tracking-timeline li strong { font-size:.75rem; line-height:1.4; }
 .tracking-timeline li span { color:var(--text-muted); font-size:.7rem; line-height:1.5; }
 @media(max-width:700px) { .tracking-form { grid-template-columns:minmax(0,1fr); } .tracking-form button { width:100%; min-height:46px; } .tracking-order-header { flex-direction:column; } .tracking-order-total { text-align:left; } .tracking-timeline ol { grid-template-columns:minmax(0,1fr); gap:0; } .tracking-timeline li { grid-template-columns: minmax(100px,.5fr) minmax(0,1fr); border-top:0; border-left:2px solid var(--border-color); padding:.3rem 0 .95rem 1rem; } .tracking-timeline li.is-complete { border-left-color:var(--brand-orange); } .tracking-timeline li.is-cancelled { border-left-color:#a83224; } }
-
-.account-empty-orders { min-height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.65rem; padding:1.5rem; text-align:center; color:var(--text-muted); line-height:1.7; }
-.account-empty-orders strong { color:var(--text-main); font-family:var(--font-serif); font-size:1.25rem; font-weight:400; }
-.account-empty-orders span { max-width:440px; font-size:.83rem; }
-@media(max-width:600px) { .account-empty-orders { padding:1rem .5rem; } }
 
 /* Full cart page, driven by the shared persisted bag state. */
 .cart-page-empty { min-height:280px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.55rem; padding:2rem 1rem; text-align:center; border:1px solid var(--border-color); border-radius:14px; background:var(--bg-subtle); }

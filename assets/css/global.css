@@ -129,7 +129,8 @@ svg {
    4. Typography
    ========================================================================== */
 body {
-    padding-top: var(--total-header-height);
+    padding-top: 0;
+    margin: 0;
     font-family: var(--font-sans);
     background-color: var(--bg-primary);
     color: var(--text-main);
@@ -329,16 +330,13 @@ h1, h2, h3, h4, h5, h6 {
    6. Launch Banner
    ========================================================================== */
 .launch-banner {
-    position: fixed;
-    top: 0;
-    left: 0;
+    position: relative;
     width: 100%;
     background-color: #111111;
     color: var(--text-light);
     font-family: var(--font-mono);
     font-size: 0.78rem;
     padding: 0.6rem 0;
-    position: relative;
     z-index: 800;
     border-bottom: 1px solid rgba(232, 107, 50, 0.3);
 }
@@ -403,10 +401,9 @@ h1, h2, h3, h4, h5, h6 {
    7. Site Header (Two-tier CR7-style)
    ========================================================================== */
 .site-header {
-    position: fixed;
-    width: 100%;
-    left: 0;
+    position: sticky;
     top: 0;
+    width: 100%;
     z-index: 900;
     background-color: #FFFFFF;
     border-bottom: 1px solid var(--border-color);
@@ -547,7 +544,8 @@ h1, h2, h3, h4, h5, h6 {
     gap: clamp(1.2rem, 3vw, 2.5rem);
 }
 
-.main-nav-link {\n    display: inline-block;
+.main-nav-link {
+    display: inline-block;
     font-family: var(--font-sans);
     font-size: 0.78rem;
     letter-spacing: 0.12em;
@@ -1473,8 +1471,58 @@ h1, h2, h3, h4, h5, h6 {
    18. Mobile Responsive (@media max-width: 768px)
    ========================================================================== */
 @media (max-width: 768px) {
+    .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 950;
+    }
+
+    .header-top-bar {
+        padding: 0.65rem clamp(0.75rem, 3vw, 1.25rem);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .top-left {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
     .mobile-menu-toggle {
         display: flex;
+        padding: 6px;
+        margin-left: -4px;
+        cursor: pointer;
+    }
+
+    .mobile-menu-toggle span {
+        width: 22px;
+        height: 2px;
+        background-color: var(--text-main);
+    }
+
+    .top-center {
+        flex: 1 1 auto;
+        text-align: center;
+    }
+
+    .brand-logo-cr7 {
+        font-size: clamp(1.75rem, 5.5vw, 2.2rem) !important;
+        letter-spacing: -0.02em;
+        display: inline-block;
+        line-height: 1;
+    }
+
+    .top-right {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 0.45rem !important;
+        justify-content: flex-end;
     }
 
     .header-bottom-bar {
@@ -1486,12 +1534,44 @@ h1, h2, h3, h4, h5, h6 {
     }
 
     .top-nav-btn {
-        font-size: 0;
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        background: transparent !important;
+        font-size: 0 !important;
+        color: var(--text-main) !important;
+        flex-shrink: 0 !important;
     }
-    
-    .top-nav-btn svg,
-    .top-nav-btn i {
-        font-size: 1rem;
+
+    .top-nav-btn svg {
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px !important;
+        display: block !important;
+        stroke: currentColor !important;
+    }
+
+    .cart-trigger-btn {
+        padding: 0.35rem 0.65rem !important;
+        gap: 0.35rem !important;
+        flex-shrink: 0 !important;
+        border-radius: var(--radius-full) !important;
+    }
+
+    .cart-trigger-btn svg {
+        width: 17px !important;
+        height: 17px !important;
+    }
+
+    .cart-trigger-btn .cart-badge {
+        width: 18px !important;
+        height: 18px !important;
+        flex-shrink: 0 !important;
     }
 
     .footer-nav-columns {
@@ -1839,18 +1919,17 @@ body.drawer-open { overflow:hidden; }
 
 .acc-dashboard-grid {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 2.5rem;
   max-width: 1240px;
   margin: 3rem auto;
   padding: 0 clamp(1rem, 4vw, 2.5rem);
+  box-sizing: border-box;
+  width: 100%;
 }
 
-@media (max-width: 868px) {
-  .acc-dashboard-grid {
-    grid-template-columns: 1fr;
-    margin: 1.5rem auto;
-  }
+.acc-dashboard-grid > * {
+  min-width: 0;
 }
 
 .acc-sidebar {
@@ -1859,6 +1938,9 @@ body.drawer-open { overflow:hidden; }
   border-radius: var(--radius-md, 8px);
   border: 1px solid var(--border-color, #E5E5E5);
   height: fit-content;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
 }
 
 .acc-avatar {
@@ -1880,9 +1962,11 @@ body.drawer-open { overflow:hidden; }
   flex-direction: column;
   gap: 0.5rem;
   margin-top: 1.5rem;
+  width: 100%;
 }
 
 .acc-nav-link {
+  display: block;
   padding: 0.75rem 1rem;
   border-radius: var(--radius-sm, 4px);
   color: var(--text-main, #111111);
@@ -1890,6 +1974,8 @@ body.drawer-open { overflow:hidden; }
   text-decoration: none;
   font-weight: 500;
   transition: all 0.3s ease;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .acc-nav-link.active, .acc-nav-link:hover {
@@ -1903,6 +1989,8 @@ body.drawer-open { overflow:hidden; }
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  min-width: 0;
+  width: 100%;
 }
 
 .acc-content-card {
@@ -1911,6 +1999,9 @@ body.drawer-open { overflow:hidden; }
   border-radius: var(--radius-md, 8px);
   padding: 2rem;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
 }
 
 .acc-section-title {
@@ -1922,12 +2013,17 @@ body.drawer-open { overflow:hidden; }
 }
 
 .table-responsive {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  display: block;
+  box-sizing: border-box;
 }
 
 .order-history-table {
   width: 100%;
+  min-width: 480px;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
@@ -1941,6 +2037,7 @@ body.drawer-open { overflow:hidden; }
   color: var(--text-muted, #777777);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 
 .order-history-table td {
@@ -1952,13 +2049,17 @@ body.drawer-open { overflow:hidden; }
 .account-empty-orders {
   text-align: center;
   padding: 3rem 1.5rem !important;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .account-empty-orders strong {
   display: block;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-family: var(--font-serif, 'DM Serif Display', serif);
+  color: var(--text-main);
   margin-bottom: 0.5rem;
+  font-weight: 400;
 }
 
 .account-empty-orders span {
@@ -1967,7 +2068,60 @@ body.drawer-open { overflow:hidden; }
   max-width: 460px;
   margin: 0 auto 1.2rem;
   line-height: 1.6;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 868px) {
+  .acc-dashboard-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 1.5rem !important;
+    margin: 1.2rem auto !important;
+    padding: 0 1rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .acc-sidebar {
+    padding: 1.5rem 1.1rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    text-align: center !important;
+  }
+  .acc-avatar {
+    margin: 0 auto 0.75rem !important;
+  }
+  .acc-sidebar p {
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    max-width: 100% !important;
+    margin: 0 auto 1.2rem !important;
+  }
+  .acc-nav-link, #acc-admin-btn {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    text-align: center !important;
+    padding: 0.8rem 1rem !important;
+    display: block !important;
+  }
+  .acc-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .acc-content-card {
+    padding: 1.5rem 1.1rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .acc-section-title {
+    font-size: 1.45rem !important;
+    margin-bottom: 1rem !important;
+  }
+  .account-empty-orders {
+    padding: 2.2rem 0.5rem !important;
+  }
 }
 
 /* Luxury Stepper Buttons (Qty - / +) */

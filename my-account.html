@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Customer Account â€” ODD Perfume</title>
+  <title>Customer Account — ODD Perfume</title>
   <meta name="description" content="Manage your account, order history, and preferences.">
   <link rel="stylesheet" href="assets/css/global.css">
   <link rel="stylesheet" href="assets/css/policy.css">
@@ -78,7 +78,14 @@
         <!-- Orders Section -->
         <div class="acc-content-card" id="orders">
           <h2 class="acc-section-title">Order History</h2>
-          <div style="overflow-x:auto;">
+          
+          <div id="account-orders-empty" class="account-empty-orders">
+            <strong>No account-linked orders yet.</strong>
+            <span>This guest account preview is not connected to customer sign-in or an account order database. To look up a real order, use its order reference and checkout mobile number.</span>
+            <a href="order-tracking.html" class="btn btn-outline" style="margin-top:0.75rem; padding:0.6rem 1.4rem;">Track an order</a>
+          </div>
+
+          <div id="account-orders-table-wrap" class="table-responsive" style="display:none; overflow-x:auto;">
             <table class="order-history-table">
               <thead>
                 <tr>
@@ -89,8 +96,7 @@
                   <th>Action</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr><td colspan="5" class="account-empty-orders"><strong>No account-linked orders yet.</strong><span>This guest account preview is not connected to customer sign-in or an account order database. To look up a real order, use its order reference and checkout mobile number.</span><a href="order-tracking.html" class="btn btn-outline" style="margin-top:.7rem; padding:.55rem 1rem;">Track an order</a></td></tr>
+              <tbody id="account-orders-tbody">
               </tbody>
             </table>
           </div>
@@ -211,7 +217,7 @@
         <div class="footer-col">
           <div class="footer-col-title">Say Hi</div>
           <a href="mailto:hello@oddperfume.com" class="footer-contact-link">hello@oddperfume.com</a>
-          <p class="footer-contact-hours">Monâ€”Sat Â· 10amâ€”7pm IST</p>
+          <p class="footer-contact-hours">Mon—Sat · 10am—7pm IST</p>
         </div>
 
         <div class="footer-col">
@@ -301,7 +307,7 @@
       <a href="contact.html">Contact Us</a>
       <div class="drawer-footer">
         <p>hello@oddperfume.com</p>
-        <p>Monâ€”Sat &middot; 10amâ€”7pm IST &middot; Mumbai</p>
+        <p>Mon—Sat &middot; 10am—7pm IST &middot; Mumbai</p>
       </div>
     </div>
   </div>
@@ -328,8 +334,8 @@
         <button onclick="removeCartCoupon()" class="remove-coupon">&times;</button>
       </div>
       <div class="cart-totals">
-        <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">â‚¹ 0</span></div>
-        <div class="total-row grand-total"><span>Total:</span><span id="cart-total">â‚¹ 0</span></div>
+        <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹ 0</span></div>
+        <div class="total-row grand-total"><span>Total:</span><span id="cart-total">₹ 0</span></div>
       </div>
       <a href="checkout.html" class="btn btn-primary btn-lg full-width btn-water-float">Proceed to Checkout</a>
     </div>
@@ -445,7 +451,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const initialHash = window.location.hash || '#orders';
   switchTab(initialHash);
+  renderAccountOrders();
 });
+
+function renderAccountOrders() {
+  const tbody = document.getElementById('account-orders-tbody');
+  const emptyWrap = document.getElementById('account-orders-empty');
+  const tableWrap = document.getElementById('account-orders-table-wrap');
+  if (!tbody) return;
+  const orders = JSON.parse(localStorage.getItem('odd_orders') || '[]');
+  
+  if (!orders || !orders.length) {
+    if (emptyWrap) emptyWrap.style.display = 'block';
+    if (tableWrap) tableWrap.style.display = 'none';
+    return;
+  }
+
+  if (emptyWrap) emptyWrap.style.display = 'none';
+  if (tableWrap) tableWrap.style.display = 'block';
+
+  tbody.innerHTML = orders.map(o => {
+    const rawTotal = o.total || o.amount || 0;
+    const amountStr = typeof rawTotal === 'number' ? `₹${rawTotal.toLocaleString('en-IN')}` : String(rawTotal);
+    const status = o.status || 'Processing';
+    const dateStr = o.date ? new Date(o.date).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : 'Recent';
+    return `
+      <tr>
+        <td><strong>${accountEscape(o.id)}</strong></td>
+        <td>${accountEscape(dateStr)}</td>
+        <td><span style="display:inline-block; padding:0.25rem 0.6rem; border-radius:4px; font-size:0.75rem; font-family:var(--font-mono); font-weight:600; background:rgba(232,107,50,0.1); color:var(--brand-orange);">${accountEscape(status)}</span></td>
+        <td><strong>${accountEscape(amountStr)}</strong></td>
+        <td><a href="order-tracking.html?orderId=${encodeURIComponent(o.id)}" class="btn btn-sm btn-outline" style="padding:0.35rem 0.8rem; font-size:0.75rem;">Track</a></td>
+      </tr>
+    `;
+  }).join('');
+}
 
 function showAddAddressModal() {
   const modal = document.getElementById('address-modal');
@@ -469,8 +509,8 @@ function openEditModal(btn) {
   document.getElementById('edit-addr-street').value = pText[0] || '';
   
   let cityPin = pText[1] || '';
-  let city = cityPin.split(' ï¿½ ')[0] || '';
-  let pin = cityPin.split(' ï¿½ ')[1] || '';
+  let city = cityPin.split(' · ')[0] || '';
+  let pin = cityPin.split(' · ')[1] || '';
   document.getElementById('edit-addr-city').value = city.trim();
   document.getElementById('edit-addr-pin').value = pin.trim();
   

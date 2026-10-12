@@ -9,11 +9,17 @@
 </head>
 <body class="admin-body">
 
+  <!-- Sidebar Backdrop (Mobile) -->
+  <div class="admin-sidebar-backdrop" id="admin-sidebar-backdrop"></div>
+
   <!-- Sidebar -->
-  <aside class="admin-sidebar">
+  <aside class="admin-sidebar" id="admin-sidebar">
     <div class="admin-brand">
-      <a href="index.html" class="admin-brand-logo">ODD<span>.</span></a>
-      <span class="admin-badge-tag">ADMIN v2.0</span>
+      <div style="display:flex; align-items:center; gap:0.6rem;">
+        <a href="index.html" class="admin-brand-logo">ODD<span>.</span></a>
+        <span class="admin-badge-tag">ADMIN v2.0</span>
+      </div>
+      <button type="button" class="admin-sidebar-close" id="admin-sidebar-close" aria-label="Close navigation">&times;</button>
     </div>
 
     <nav class="admin-nav">
@@ -57,21 +63,45 @@
     </nav>
 
     <div class="admin-sidebar-footer">
-      <span>Signed in: <strong id="admin-user-name">Loading…</strong></span>
-      <button type="button" id="admin-logout" class="admin-logout-btn">Sign out</button>
-      <a href="index.html" style="color:var(--admin-accent); text-decoration:none;">Storefront &rarr;</a>
+      <div class="admin-user-profile-badge">
+        <div class="admin-avatar-icon">A</div>
+        <div class="admin-user-details">
+          <strong id="admin-user-name">Admin User</strong>
+          <span class="admin-user-subtag">Offline Local Mode</span>
+        </div>
+      </div>
+      <div class="admin-footer-btn-row">
+        <button type="button" id="admin-logout" class="admin-logout-btn">Sign out</button>
+        <a href="index.html" class="admin-storefront-btn">Storefront &rarr;</a>
+      </div>
     </div>
   </aside>
 
   <!-- Main Workspace -->
   <main class="admin-main">
     <header class="admin-header">
-      <h2 class="admin-header-title" id="admin-page-title">Payment Dashboard</h2>
+      <div class="admin-header-left">
+        <button type="button" class="admin-mobile-toggle" id="admin-mobile-menu-toggle" aria-label="Toggle navigation">
+          <span></span><span></span><span></span>
+        </button>
+        <h2 class="admin-header-title" id="admin-page-title">Payment Dashboard</h2>
+      </div>
       <div class="admin-header-actions">
-        <div class="admin-status-dot" title="Database Connected"></div>
-        <span id="admin-connection-status" style="font-size:0.8rem; color:var(--admin-text-muted);">Checking server…</span>
+        <div class="admin-status-dot" title="Local Mode Connected"></div>
+        <span id="admin-connection-status" style="font-size:0.8rem; color:var(--admin-text-muted);">Offline Local Storage Mode</span>
       </div>
     </header>
+
+    <!-- Mobile Quick Navigation Tabs -->
+    <div class="admin-mobile-quicktabs" id="admin-mobile-quicktabs">
+      <button type="button" class="quicktab-btn active" data-tab="payments">Payments</button>
+      <button type="button" class="quicktab-btn" data-tab="orders">Orders</button>
+      <button type="button" class="quicktab-btn" data-tab="inventory">Stock</button>
+      <button type="button" class="quicktab-btn" data-tab="scanner">Scanner</button>
+      <button type="button" class="quicktab-btn" data-tab="barcodes">Labels</button>
+      <button type="button" class="quicktab-btn" data-tab="launch-offer">Offers</button>
+      <button type="button" class="quicktab-btn" data-tab="access-links">Staff</button>
+    </div>
 
     <div class="admin-container">
 
@@ -214,7 +244,10 @@
             <form id="barcode-scan-form">
               <input type="text" id="barcode-scan-input" class="admin-input scanner-input" placeholder="Click here, then scan — or type SKU and press Enter" autofocus>
             </form>
-            <button class="admin-btn admin-btn-secondary" disabled title="Camera scanning is not enabled in this build">"· Use Camera Scanner</button>
+            <button class="admin-btn admin-btn-secondary admin-btn-sm" disabled title="Camera scanning requires HTTPS and media stream. Hardware USB scanner listener is active above.">
+              <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="4"/></svg>
+              Camera Scanner (Hardware Listener Active)
+            </button>
           </div>
 
           <div class="admin-card" style="margin-bottom:0;">

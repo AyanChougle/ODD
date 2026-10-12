@@ -568,17 +568,47 @@ async function refreshStoreState() {
     // Static host mode: load state from localStorage (set by admin dashboard)
     const localInv = JSON.parse(localStorage.getItem('odd_admin_inventory'));
     if (localInv) {
-      Object.entries(localInv).forEach(([productId, item]) => {
-        if (STORE_INVENTORY[productId]) {
-          STORE_INVENTORY[productId].stock = Number(item.stock);
-          STORE_INVENTORY[productId].price = Number(item.price);
-          if (PRODUCTS[productId]) PRODUCTS[productId].price = Number(item.price);
+      const skuMap = {
+        'ODD-PH-001': 'phantom',
+        'ODD-LC-003': 'lucid',
+        'ODD-FM-002': 'first-move'
+      };
+      Object.entries(localInv).forEach(([key, item]) => {
+        const pid = skuMap[key] || key;
+        if (STORE_INVENTORY[pid]) {
+          STORE_INVENTORY[pid].stock = Number(item.stock);
+          STORE_INVENTORY[pid].price = Number(item.price);
+        }
+        if (PRODUCTS[pid]) {
+          PRODUCTS[pid].price = Number(item.price);
         }
       });
     }
-    const localCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons'));
-    if (localCoupons) {
+
+    const localCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || localStorage.getItem('odd_coupons') || 'null');
+    if (localCoupons && Array.isArray(localCoupons)) {
       ACTIVE_COUPONS = localCoupons.filter(c => c.active !== false);
+    }
+
+    // Sync banner settings from admin
+    const localBanner = JSON.parse(localStorage.getItem('odd_admin_banner') || 'null');
+    const bannerEl = document.getElementById('launch-banner');
+    if (bannerEl && localBanner) {
+      if (localBanner.active === false || sessionStorage.getItem('odd_hide_banner') === 'true') {
+        bannerEl.style.display = 'none';
+        document.documentElement.style.setProperty('--banner-height', '0px');
+      } else {
+        bannerEl.style.display = '';
+        const textNode = bannerEl.querySelector('.banner-text');
+        if (textNode && localBanner.text) {
+          const codeStr = localBanner.code ? `<code class="coupon-tag" id="banner-code">${escapeHTML(localBanner.code)}</code>` : '';
+          textNode.innerHTML = `${escapeHTML(localBanner.text)} ${codeStr}`;
+        }
+        const copyBtn = bannerEl.querySelector('.banner-btn');
+        if (copyBtn && localBanner.code) {
+          copyBtn.setAttribute('onclick', `copyCouponCode('${escapeHTML(localBanner.code)}')`);
+        }
+      }
     }
     
     // Update UI elements
@@ -767,7 +797,10 @@ function checkAdminAccountRole() {
       btn.style.color = '#FFFFFF';
       btn.style.marginTop = '1rem';
       btn.style.fontWeight = '700';
-      btn.innerHTML = '⚡ Go to Admin Portal';
+      btn.style.boxSizing = 'border-box';
+      btn.style.width = '100%';
+      btn.style.textAlign = 'center';
+      btn.textContent = 'Go to Admin Portal';
       nav.appendChild(btn);
     }
     
@@ -780,7 +813,7 @@ function checkAdminAccountRole() {
       btn.className = 'main-nav-link';
       btn.style.color = 'var(--brand-orange, #E86B32)';
       btn.style.fontWeight = '700';
-      btn.innerHTML = 'Admin Portal';
+      btn.textContent = 'Admin Portal';
       desktopNav.appendChild(btn);
     }
 
@@ -792,7 +825,7 @@ function checkAdminAccountRole() {
       btn.href = 'admin.html';
       btn.style.color = 'var(--brand-orange, #E86B32)';
       btn.style.fontWeight = '700';
-      btn.innerHTML = '⚡ Admin Portal';
+      btn.textContent = 'Admin Portal';
       
       // Insert before the footer
       const footer = mobileDrawerContent.querySelector('.drawer-footer');
