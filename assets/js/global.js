@@ -83,13 +83,44 @@ function readStorageJSON(key, fallback) {
   catch { return fallback; }
 }
 let cartState = readStorageJSON('odd_cart', []).filter(item => item && PRODUCTS[item.id] && Number.isInteger(Number(item.qty)) && Number(item.qty) > 0).map(item => ({ id: item.id, qty: Number(item.qty) }));
-let appliedCoupon = localStorage.getItem('odd_coupon') || null;
+let appliedCoupon = localStorage.getItem('odd_coupon') || localStorage.getItem('odd_coupon_code') || null;
 let STORE_INVENTORY = {
-  phantom: { sku: 'ODD-PH-001', stock: 330, price: 899 },
-  lucid: { sku: 'ODD-LC-003', stock: 326, price: 899 },
-  'first-move': { sku: 'ODD-FM-002', stock: 0, price: 899 }
+  phantom: { sku: 'ODD-PH-001', stock: 240, price: 899 },
+  lucid: { sku: 'ODD-LC-003', stock: 180, price: 899 },
+  'first-move': { sku: 'ODD-FM-002', stock: 320, price: 899 }
 };
-let ACTIVE_COUPONS = [{ code: 'LAUNCH20', discount: 20 }, { code: 'ODDSPOT10', discount: 10 }];
+
+// Immediate sync from odd_admin_inventory if present
+(function initLiveStorageInventory() {
+  try {
+    const localInv = JSON.parse(localStorage.getItem('odd_admin_inventory'));
+    if (localInv && typeof localInv === 'object') {
+      const skuMap = { 'ODD-PH-001': 'phantom', 'ODD-LC-003': 'lucid', 'ODD-FM-002': 'first-move' };
+      Object.entries(localInv).forEach(([key, item]) => {
+        const pid = skuMap[key] || key;
+        if (STORE_INVENTORY[pid] && item) {
+          STORE_INVENTORY[pid].stock = Math.max(0, Number(item.stock ?? STORE_INVENTORY[pid].stock));
+          if (item.price) STORE_INVENTORY[pid].price = Number(item.price);
+        }
+      });
+    } else {
+      // Seed odd_admin_inventory for first load
+      const seed = {
+        'ODD-PH-001': { sku: 'ODD-PH-001', name: 'ODD PHANTOM', stock: 240, price: 899, updated: '2026-10-12 10:00' },
+        'ODD-LC-003': { sku: 'ODD-LC-003', name: 'ODD LUCID', stock: 180, price: 899, updated: '2026-10-12 10:00' },
+        'ODD-FM-002': { sku: 'ODD-FM-002', name: 'ODD FIRST MOVE', stock: 320, price: 899, updated: '2026-10-12 10:00' }
+      };
+      localStorage.setItem('odd_admin_inventory', JSON.stringify(seed));
+    }
+  } catch (e) {}
+})();
+
+let ACTIVE_COUPONS = [
+  { code: 'LAUNCH20', discount: 20 },
+  { code: 'ODD10', discount: 10 },
+  { code: 'WELCOME15', discount: 15 },
+  { code: 'ODDSPOT10', discount: 10 }
+];
 let STORE_STATE_FROM_SERVER = false;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -149,6 +180,23 @@ function toggleCartDrawer() {
 }
 
 function getProductAvailability(productId) {
+  try {
+    const localInv = JSON.parse(localStorage.getItem('odd_admin_inventory'));
+    if (localInv && typeof localInv === 'object') {
+      const skuMap = { 'phantom': 'ODD-PH-001', 'lucid': 'ODD-LC-003', 'first-move': 'ODD-FM-002' };
+      const sku = skuMap[productId] || productId;
+      if (localInv[sku]) {
+        const liveStock = Math.max(0, Number(localInv[sku].stock ?? 0));
+        const livePrice = Math.max(0, Number(localInv[sku].price ?? PRODUCTS[productId]?.price ?? 899));
+        if (STORE_INVENTORY[productId]) {
+          STORE_INVENTORY[productId].stock = liveStock;
+          STORE_INVENTORY[productId].price = livePrice;
+        }
+        return { stock: liveStock, price: livePrice };
+      }
+    }
+  } catch (e) {}
+
   const state = STORE_INVENTORY[productId];
   if (!state) return { stock: 0, price: PRODUCTS[productId]?.price || 0 };
   return { stock: Math.max(0, Number(state.stock) || 0), price: Math.max(0, Number(state.price) || 0) };
@@ -210,8 +258,14 @@ function removeFromCart(productId) {
 
 function saveCart() {
   localStorage.setItem('odd_cart', JSON.stringify(cartState));
-  if (appliedCoupon) localStorage.setItem('odd_coupon', appliedCoupon);
-  else localStorage.removeItem('odd_coupon');
+  if (appliedCoupon) {
+    localStorage.setItem('odd_coupon', appliedCoupon);
+    localStorage.setItem('odd_coupon_code', appliedCoupon);
+  } else {
+    localStorage.removeItem('odd_coupon');
+    localStorage.removeItem('odd_coupon_code');
+    localStorage.removeItem('odd_coupon_discount');
+  }
   document.dispatchEvent(new CustomEvent('odd:cart-updated', { detail: { items: cartState.length } }));
 }
 
@@ -352,7 +406,10 @@ function renderCartPage() {
     const coupon = appliedCoupon ? ACTIVE_COUPONS.find(item => item.code === appliedCoupon && item.active !== false) : null;
     const discount = coupon ? Math.round(subtotal * Number(coupon.discount) / 100) : 0;
     if (subtotalEl) subtotalEl.textContent = `₹${subtotal.toLocaleString('en-IN')}`;
-    if (discountRow) discountRow.hidden = discount <= 0;
+    if (discountRow) {
+      discountRow.hidden = discount <= 0;
+      discountRow.style.display = discount > 0 ? 'flex' : 'none';
+    }
     if (discountEl) discountEl.textContent = `−₹${discount.toLocaleString('en-IN')}`;
     if (totalEl) totalEl.textContent = `₹${Math.max(0, subtotal - discount).toLocaleString('en-IN')}`;
     if (checkoutLink) { checkoutLink.setAttribute('aria-disabled', String(unavailable)); checkoutLink.classList.toggle('is-disabled', unavailable); }
@@ -375,33 +432,45 @@ function renderCartPage() {
 }
 
 function applyCartCoupon() {
-    const input = document.getElementById('cart-coupon-input') || document.getElementById('coupon-input-drawer');
-    if (!input) return;
-    const code = input.value.trim().toUpperCase();
-    if (!code) return;
+  const input = document.getElementById('cart-coupon-input') || document.getElementById('coupon-input-drawer');
+  if (!input) return;
+  const code = input.value.trim().toUpperCase();
+  if (!code) return;
 
-    // Read active coupons from Admin
-    const coupons = ACTIVE_COUPONS;
-    const found = coupons.find(c => c.code === code && c.active !== false);
-
-    if (found) {
-      appliedCoupon = found.code;
-      localStorage.setItem('odd_coupon_discount', found.discount);
-      saveCart();
-      const tag = document.getElementById('coupon-tag-applied');
-      if (tag) tag.style.display = 'flex';
-      const codeName = document.getElementById('applied-code-name');
-      if (codeName) codeName.innerText = `${found.code} (${found.discount}% OFF)`;
-      input.value = '';
-      updateCartUI();
-      showToast(`Code ${found.code} applied: ${found.discount}% discount!`);
-    } else {
-      showToast('Invalid or expired promo code.');
+  // Refresh active coupons from Admin/localStorage
+  try {
+    const localCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || localStorage.getItem('odd_coupons'));
+    if (localCoupons && Array.isArray(localCoupons)) {
+      ACTIVE_COUPONS = localCoupons.filter(c => c.active !== false);
     }
+  } catch (e) {}
+
+  const coupons = ACTIVE_COUPONS;
+  const found = coupons.find(c => c.code === code && c.active !== false);
+
+  if (found) {
+    appliedCoupon = found.code;
+    localStorage.setItem('odd_coupon', found.code);
+    localStorage.setItem('odd_coupon_code', found.code);
+    localStorage.setItem('odd_coupon_discount', String(found.discount));
+    saveCart();
+    const tag = document.getElementById('coupon-tag-applied');
+    if (tag) tag.style.display = 'flex';
+    const codeName = document.getElementById('applied-code-name');
+    if (codeName) codeName.innerText = `${found.code} (${found.discount}% OFF)`;
+    input.value = '';
+    updateCartUI();
+    showToast(`Code ${found.code} applied: ${found.discount}% discount!`);
+  } else {
+    showToast('Invalid or expired promo code.');
   }
+}
 
 function removeCartCoupon() {
   appliedCoupon = null;
+  localStorage.removeItem('odd_coupon');
+  localStorage.removeItem('odd_coupon_code');
+  localStorage.removeItem('odd_coupon_discount');
   saveCart();
   const tag = document.getElementById('coupon-tag-applied');
   if (tag) tag.style.display = 'none';
@@ -412,10 +481,21 @@ function removeCartCoupon() {
 function applyCoupon() { applyCartCoupon(); }
 function applyCouponFromBanner() {
   const code = (document.getElementById('banner-code')?.textContent || 'LAUNCH20').trim().toUpperCase();
+  try {
+    const localCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || localStorage.getItem('odd_coupons'));
+    if (localCoupons && Array.isArray(localCoupons)) {
+      ACTIVE_COUPONS = localCoupons.filter(c => c.active !== false);
+    }
+  } catch (e) {}
   const coupons = ACTIVE_COUPONS;
   const found = coupons.find(item => item.code === code && item.active !== false);
   if (!found) { showToast('This offer is no longer active.'); return; }
-  appliedCoupon = found.code; localStorage.setItem('odd_coupon_discount', String(found.discount)); saveCart(); updateCartUI();
+  appliedCoupon = found.code;
+  localStorage.setItem('odd_coupon', found.code);
+  localStorage.setItem('odd_coupon_code', found.code);
+  localStorage.setItem('odd_coupon_discount', String(found.discount));
+  saveCart();
+  updateCartUI();
   showToast(`${found.code} is ready. Add a fragrance to apply it at checkout.`);
 }
 
@@ -623,7 +703,26 @@ async function refreshStoreState() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => { syncStockStatusUI(); refreshStoreState(); });
+document.addEventListener('DOMContentLoaded', () => {
+  syncStockStatusUI();
+  refreshStoreState();
+});
+
+window.addEventListener('storage', (e) => {
+  if (e.key === 'odd_admin_inventory' || e.key === 'odd_orders' || e.key === 'odd_admin_coupons') {
+    refreshStoreState();
+    syncStockStatusUI();
+  }
+  if (e.key === 'odd_cart') {
+    cartState = readStorageJSON('odd_cart', []).filter(item => item && PRODUCTS[item.id] && Number.isInteger(Number(item.qty)) && Number(item.qty) > 0).map(item => ({ id: item.id, qty: Number(item.qty) }));
+    updateCartUI();
+  }
+});
+
+window.addEventListener('odd:inventory-updated', () => {
+  refreshStoreState();
+  syncStockStatusUI();
+});
 
 
 function initScrollSpy() {

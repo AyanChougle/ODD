@@ -92,13 +92,16 @@ function getOfflineInventory() {
 
 function saveOfflineInventory(inv) {
   localStorage.setItem('odd_admin_inventory', JSON.stringify(inv));
+  try {
+    window.dispatchEvent(new CustomEvent('odd:inventory-updated', { detail: inv }));
+  } catch (e) {}
 }
 
 function normalizeOrder(o) {
-  const rawTotal = o.total || o.amount || 0;
+  const rawTotal = o.total != null ? o.total : (o.amount || 0);
   const amountNum = typeof rawTotal === 'number'
     ? rawTotal
-    : (parseInt(String(rawTotal).replace(/[^0-9]/g, '')) || 899);
+    : (parseInt(String(rawTotal).replace(/[^0-9]/g, '')) || 0);
 
   const rawItems = Array.isArray(o.items) ? o.items : [];
   const items = rawItems.map(it => {
@@ -117,7 +120,8 @@ function normalizeOrder(o) {
   });
 
   const isRzp = String(o.paymentMethod || o.method || '').toLowerCase().includes('razorpay');
-  const isPaid = isRzp || String(o.paymentStatus || '').toLowerCase() === 'paid';
+  const isDelivered = o.status === 'Delivered';
+  const isPaid = isRzp || String(o.paymentStatus || '').toLowerCase() === 'paid' || isDelivered;
 
   return {
     id: o.id || ('ODD-' + Math.floor(100000 + Math.random() * 900000)),
@@ -127,9 +131,14 @@ function normalizeOrder(o) {
     email: o.email || '—',
     address: o.address || '—',
     amount: amountNum,
+    total: amountNum,
+    subtotal: o.subtotal || amountNum,
+    coupon: o.coupon || null,
+    discount: Number(o.discount) || 0,
     method: isRzp ? 'Razorpay' : 'COD',
+    paymentMethod: o.paymentMethod || (isRzp ? 'Razorpay Online' : 'Cash on Delivery (COD)'),
     paymentStatus: isPaid ? 'Paid' : 'Payment pending',
-    status: o.status || 'Processing',
+    status: o.status || 'Confirmed',
     items: items
   };
 }
@@ -141,6 +150,9 @@ function getOfflineOrders() {
 
 function saveOfflineOrders(orders) {
   localStorage.setItem('odd_orders', JSON.stringify(orders));
+  try {
+    window.dispatchEvent(new CustomEvent('odd:orders-updated', { detail: orders }));
+  } catch (e) {}
 }
 
 function getOfflineCoupons() {
@@ -238,7 +250,16 @@ async function adminApi(path, options = {}) {
       const parts = path.split('/');
       const orderId = decodeURIComponent(parts[parts.length - 1]);
       if (body.status) {
-        orders = orders.map(o => o.id === orderId ? { ...o, status: body.status } : o);
+        orders = orders.map(o => {
+          if (o.id === orderId) {
+            const updated = { ...o, status: body.status };
+            if (body.status === 'Delivered') {
+              updated.paymentStatus = 'Paid';
+            }
+            return updated;
+          }
+          return o;
+        });
         saveOfflineOrders(orders);
         const updated = orders.find(o => o.id === orderId);
         return { order: updated };
@@ -252,9 +273,9 @@ async function adminApi(path, options = {}) {
   if (path.includes('/api/payments/summary')) {
     const orders = getOfflineOrders();
     const activeOrders = orders.filter(o => o.status !== 'Cancelled');
-    const paidOrders = activeOrders.filter(o => o.paymentStatus === 'Paid');
-    const codOrders = activeOrders.filter(o => o.method === 'COD');
-    const pendingOrders = activeOrders.filter(o => ['Pending', 'Payment pending'].includes(o.paymentStatus));
+    const paidOrders = activeOrders.filter(o => o.paymentStatus === 'Paid' || o.status === 'Delivered');
+    const codOrders = activeOrders.filter(o => o.method === 'COD' && o.status !== 'Delivered' && o.paymentStatus !== 'Paid');
+    const pendingOrders = activeOrders.filter(o => ['Pending', 'Payment pending'].includes(o.paymentStatus) && o.status !== 'Delivered' && o.paymentStatus !== 'Paid');
 
     const confirmedRev = paidOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
     const codRev = codOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
@@ -288,9 +309,19 @@ async function adminApi(path, options = {}) {
       else if (code.includes('FM') || code.includes('MOVE')) matchedSku = 'ODD-FM-002';
       else matchedSku = 'ODD-PH-001'; // Fallback
 
+      if (!inv[matchedSku]) {
+        inv[matchedSku] = {
+          sku: matchedSku,
+          name: SKU_LABELS[matchedSku] || matchedSku,
+          stock: 100,
+          price: 899,
+          updated: new Date().toISOString().replace('T', ' ').substring(0, 16)
+        };
+      }
+
       const item = inv[matchedSku];
       const delta = mode === 'receive' ? 1 : -1;
-      item.stock = Math.max(0, item.stock + delta);
+      item.stock = Math.max(0, (Number(item.stock) || 0) + delta);
       item.updated = new Date().toISOString().replace('T', ' ').substring(0, 16);
       saveOfflineInventory(inv);
 
@@ -667,9 +698,12 @@ function renderOrdersTable() {
         <td><strong>${escapeHtml(order.id)}</strong><small class="admin-cell-subtext">${escapeHtml(order.phone)}</small></td>
         <td>${escapeHtml(order.customer)}<small class="admin-cell-subtext">${escapeHtml(order.email)}</small></td>
         <td>${escapeHtml(items || '—')}</td>
-        <td>${formatINR(order.amount)}</td>
         <td>
-          <span class="badge-status ${order.method === 'Razorpay' ? 'info' : 'warning'}">${escapeHtml(order.method)}</span>
+          <strong>${formatINR(order.amount)}</strong>
+          ${order.discount ? `<small class="admin-cell-subtext" style="color:var(--admin-warning, #d97706); font-size:0.75rem;">-${formatINR(order.discount)} (${escapeHtml(order.coupon || 'PROMO')})</small>` : ''}
+        </td>
+        <td>
+          <span class="badge-status ${order.method === 'Razorpay' || order.paymentStatus === 'Paid' ? 'info' : 'warning'}">${escapeHtml(order.method)}</span>
           <small class="admin-cell-subtext">${escapeHtml(order.paymentStatus)}</small>
         </td>
         <td>${statusControl}</td>

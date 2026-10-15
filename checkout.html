@@ -96,12 +96,24 @@
           <div class="receipt-bill-card">
             <h3 style="font-family:var(--font-serif); margin-bottom:1.5rem;">Order Summary</h3>
             <div id="chk-page-summary"></div>
+
+            <!-- Promo Code Input -->
+            <div class="checkout-promo-box" style="margin: 1.25rem 0; padding: 1rem 0; border-top: 1px dashed var(--border-color); border-bottom: 1px dashed var(--border-color);">
+              <div style="display:flex; gap:0.5rem;">
+                <input type="text" id="chk-coupon-input" placeholder="Promo code (e.g. LAUNCH20)" style="flex:1; padding:0.6rem 0.8rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.82rem; font-family:var(--font-mono); text-transform:uppercase;">
+                <button type="button" class="btn btn-sm btn-dark" onclick="applyCheckoutCoupon()">Apply</button>
+              </div>
+              <div id="chk-coupon-applied-badge" style="display:none; align-items:center; justify-content:space-between; background:rgba(232,107,50,0.08); border:1px solid rgba(232,107,50,0.3); border-radius:4px; padding:0.45rem 0.8rem; margin-top:0.6rem; font-size:0.8rem; font-family:var(--font-mono);">
+                <span>Coupon <strong id="chk-applied-code-text" style="color:var(--brand-orange);"></strong> applied</span>
+                <button type="button" onclick="removeCheckoutCoupon()" style="background:none; border:none; font-size:1.1rem; cursor:pointer; color:var(--text-muted); line-height:1;" aria-label="Remove coupon">&times;</button>
+              </div>
+            </div>
             
-            <div style="border-top:1px solid var(--border-color); margin:1.5rem 0; padding-top:1rem;">
+            <div style="margin:1.5rem 0; padding-top:0.5rem;">
               <div class="total-row" style="margin-bottom:0.5rem;"><span>Items Total:</span><span id="chk-page-subtotal">₹0</span></div>
-              <div class="total-row" id="chk-page-discount-row" style="display:none; margin-bottom:0.5rem;"><span>Discount:</span><span id="chk-page-discount">-₹0</span></div>
+              <div class="total-row" id="chk-page-discount-row" style="display:none; margin-bottom:0.5rem; color:var(--brand-orange); font-weight:600;"><span>Coupon Discount:</span><span id="chk-page-discount">-₹0</span></div>
               <div class="total-row" style="margin-bottom:0.5rem;"><span>Shipping:</span><span style="color:#2E7D32; font-weight:700;">FREE</span></div>
-              <div class="total-row grand-total" style="font-size:1.2rem; font-weight:700;"><span>Total Payable:</span><span id="chk-page-total">₹0</span></div>
+              <div class="total-row grand-total" style="font-size:1.2rem; font-weight:700; border-top:1px solid var(--border-color); padding-top:0.8rem; margin-top:0.8rem;"><span>Total Payable:</span><span id="chk-page-total">₹0</span></div>
             </div>
           </div>
         </div>

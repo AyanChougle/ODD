@@ -128,12 +128,29 @@ async function submitOrderTracking(event) {
           <div class="tracking-order-total">
             <span>Order total</span>
             <strong>${trackingMoney(amountNum)}</strong>
+            ${order.discount ? `<small style="display:block; color:var(--brand-orange, #E86B32); font-size:0.75rem; font-weight:600;">Includes discount -${trackingMoney(order.discount)} (${trackingEscape(order.coupon || 'PROMO')})</small>` : ''}
             <small>${order.date ? new Date(order.date).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : ''}</small>
           </div>
         </header>
         <section class="tracking-order-items">
           <h3>Items in your order</h3>
           ${itemsHtml || '<p>No item details available.</p>'}
+          ${order.discount ? `
+            <div style="border-top:1px dashed var(--border-color, #E5E5E5); margin-top:0.8rem; padding-top:0.8rem;">
+              <div class="tracking-item" style="color:var(--text-muted); font-size:0.85rem;">
+                <span>Items Subtotal</span>
+                <strong>${trackingMoney(order.subtotal || (amountNum + order.discount))}</strong>
+              </div>
+              <div class="tracking-item" style="color:var(--brand-orange, #E86B32); font-weight:600; font-size:0.85rem;">
+                <span>Coupon Discount (${trackingEscape(order.coupon || 'PROMO')})</span>
+                <strong>-${trackingMoney(order.discount)}</strong>
+              </div>
+              <div class="tracking-item" style="font-weight:700; font-size:1rem; border-top:1px solid var(--border-color, #E5E5E5); margin-top:0.5rem; padding-top:0.5rem;">
+                <span>Total Payable</span>
+                <strong>${trackingMoney(amountNum)}</strong>
+              </div>
+            </div>
+          ` : ''}
         </section>
         <section class="tracking-timeline">
           <h3>Delivery progress</h3>

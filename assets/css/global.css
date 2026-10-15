@@ -1,3 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
+
+/* Cormorant Garamond (Local + Web Fallback) */
+@font-face {
+    font-family: 'Cormorant Garamond';
+    src: local('Cormorant Garamond'), local('Cormorant-Regular'), url('../fonts/Cormorant-Regular.ttf') format('truetype');
+    font-weight: 400 500;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* Product-specific luxury fonts — strictly from assets/fonts/ */
 @font-face {
     font-family: 'Phantom Font';
@@ -111,7 +122,8 @@ svg {
     --border-dark: #2A2A2A;
 
     /* Fonts */
-    --font-serif: 'DM Serif Display', serif;
+    --font-brand: 'DM Serif Display', serif;
+    --font-serif: 'Cormorant Garamond', 'Cormorant', Georgia, serif;
     --font-sans: 'DM Sans', sans-serif;
     --font-mono: 'IBM Plex Mono', monospace;
 
@@ -140,7 +152,7 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-serif);
-    font-weight: 400;
+    font-weight: 500;
 }
 
 .container {
@@ -470,7 +482,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .brand-logo-cr7 {
-    font-family: var(--font-serif);
+    font-family: var(--font-brand, 'DM Serif Display', serif);
     font-size: 2.8rem;
     font-weight: 700;
     line-height: 1;
@@ -1280,7 +1292,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .massive-odd-display-text {
-    font-family: var(--font-serif);
+    font-family: var(--font-brand, 'DM Serif Display', serif);
     font-size: clamp(5rem, 15vw, 12rem);
     color: white;
     line-height: 0.9;
@@ -2209,9 +2221,27 @@ body.drawer-open { overflow:hidden; }
   margin: 0 !important;
 }
 
-/* Force All Headings to Serif */
-h1, h2, h3, .section-title, .acc-section-title, .cart-header h3, .quick-view-card .qv-title {
-  font-family: var(--font-serif, 'DM Serif Display', serif) !important;
+/* All General Headings & Section Titles use Cormorant Garamond */
+h1, h2, h3, h4, h5, h6, .section-title, .acc-section-title, .cart-header h3, .page-hero .section-title, .footer-signup-title {
+  font-family: var(--font-serif, 'Cormorant Garamond', serif) !important;
+  font-weight: 500 !important;
+}
+
+/* Brand Name explicitly retains DM Serif Display */
+.brand-logo-cr7,
+.hero-giant-odd,
+.massive-odd-display-text,
+.admin-sidebar-logo h2 {
+  font-family: var(--font-brand, 'DM Serif Display', Georgia, serif) !important;
+}
+
+/* Product Names retain their distinct product font identity */
+.slide-title,
+.product-card-title,
+.qv-title,
+.cart-item-details h4,
+.barcode-sticker-title {
+  font-family: var(--font-brand, 'DM Serif Display', Georgia, serif) !important;
 }
 
 
