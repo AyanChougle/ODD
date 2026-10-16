@@ -3,21 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Customer Account — ODD Perfume</title>
-  <meta name="description" content="Manage your account, order history, and preferences.">
+  <title>Customer Account &mdash; ODD Perfume</title>
+  <meta name="description" content="Manage your customer account, track fragrance orders, redeem coupons, and update addresses.">
   <link rel="stylesheet" href="assets/css/global.css">
   <link rel="stylesheet" href="assets/css/policy.css">
 </head>
 <body>
 
-    <!-- Site Header (CR7 Luxury Navbar Edition) -->
+  <!-- Site Header (CR7 Luxury Navbar Edition) -->
   <header class="site-header" id="site-header">
     <div class="header-top-bar">
       <div class="top-left">
         <button class="mobile-menu-toggle" onclick="toggleMobileNav()" aria-label="Toggle menu">
           <span></span><span></span><span></span>
         </button>
-        
       </div>
 
       <div class="top-center">
@@ -26,27 +25,27 @@
         </a>
       </div>
 
-              <div class="top-right">
-          <a href="my-account.html" class="top-nav-btn" aria-label="Account" title="Account">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-          </a>
-          <button class="top-nav-btn" onclick="openSearchModal()" aria-label="Search" title="Search">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          </button>
-          <button class="cart-trigger-btn" onclick="toggleCartDrawer()" aria-label="Cart" title="Cart">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
-            <span class="cart-badge" id="cart-count">0</span>
-          </button>
-        </div>
+      <div class="top-right">
+        <a href="my-account.html" class="top-nav-btn active" aria-label="Account" title="Account">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </a>
+        <button class="top-nav-btn" onclick="openSearchModal()" aria-label="Search" title="Search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </button>
+        <button class="cart-trigger-btn" onclick="toggleCartDrawer()" aria-label="Cart" title="Cart">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+          <span class="cart-badge" id="cart-count">0</span>
+        </button>
+      </div>
     </div>
 
     <div class="header-bottom-bar">
-            <nav class="main-desktop-nav">
-        <a href="index.html" class="main-nav-link active">Home</a>
+      <nav class="main-desktop-nav">
+        <a href="index.html" class="main-nav-link">Home</a>
         <a href="shop.html" class="main-nav-link">Shop The Three</a>
         <a href="index.html#showcase" class="main-nav-link">Collections</a>
         <a href="index.html#comparison" class="main-nav-link">Compare</a>
-        <a href="index.html#story" class="main-nav-link">Our Story</a>
+        <a href="story.html" class="main-nav-link">Our Story</a>
       </nav>
     </div>
   </header>
@@ -54,43 +53,97 @@
   <main>
     <section class="page-hero">
       <div class="container">
-        <h1 class="section-title">My Account</h1>
+        <h1 class="section-title">Customer Account</h1>
       </div>
     </section>
 
-    <div class="acc-dashboard-grid">
+    <!-- 1. Customer Sign In & Sign Up Container (Shown when NOT logged in) -->
+    <div id="account-auth-view" style="display:none; max-width:540px; margin:3rem auto; padding:0 clamp(1rem, 4vw, 2rem);">
+      <div style="background:#FFFFFF; border:1px solid var(--border-color); border-radius:12px; padding:2rem clamp(1.2rem, 4vw, 2.5rem); box-shadow:0 8px 30px rgba(0,0,0,0.05);">
+        <div style="display:flex; border-bottom:1px solid var(--border-color); margin-bottom:1.8rem;">
+          <button type="button" id="tab-auth-login-btn" onclick="switchAuthTab('login')" style="flex:1; padding:0.8rem; background:none; border:none; border-bottom:2px solid var(--brand-orange); font-family:var(--font-sans); font-weight:700; font-size:0.95rem; cursor:pointer; color:var(--text-main);">Sign In</button>
+          <button type="button" id="tab-auth-signup-btn" onclick="switchAuthTab('signup')" style="flex:1; padding:0.8rem; background:none; border:none; border-bottom:2px solid transparent; font-family:var(--font-sans); font-weight:500; font-size:0.95rem; cursor:pointer; color:var(--text-muted);">Create Account</button>
+        </div>
+
+        <!-- Sign In Form -->
+        <form id="auth-login-form" onsubmit="handleCustomerLogin(event)">
+          <div style="margin-bottom:1.2rem;">
+            <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.4rem; color:var(--text-main);">Email Address</label>
+            <input type="email" id="login-email" class="form-control" placeholder="name@domain.com" required autocomplete="email" style="margin-bottom:0;">
+          </div>
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.4rem; color:var(--text-main);">Password</label>
+            <input type="password" id="login-password" class="form-control" placeholder="Your password" required autocomplete="current-password" style="margin-bottom:0;">
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg full-width">Sign In</button>
+          <p style="font-size:0.82rem; color:var(--text-muted); text-align:center; margin-top:1.2rem;">Don't have an account yet? <a href="javascript:void(0)" onclick="switchAuthTab('signup')" style="color:var(--brand-orange); font-weight:600; text-decoration:none;">Create one now</a></p>
+        </form>
+
+        <!-- Sign Up Form -->
+        <form id="auth-signup-form" onsubmit="handleCustomerSignup(event)" style="display:none;">
+          <div style="margin-bottom:1.1rem;">
+            <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.4rem; color:var(--text-main);">Full Name</label>
+            <input type="text" id="signup-name" class="form-control" placeholder="e.g. Omkar Tapshale" required minlength="2" autocomplete="name" style="margin-bottom:0;">
+          </div>
+          <div style="margin-bottom:1.1rem;">
+            <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.4rem; color:var(--text-main);">Email Address</label>
+            <input type="email" id="signup-email" class="form-control" placeholder="name@domain.com" required autocomplete="email" style="margin-bottom:0;">
+          </div>
+          <div style="margin-bottom:1.1rem;">
+            <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.4rem; color:var(--text-main);">Mobile Number (for Order SMS &amp; Tracking)</label>
+            <input type="tel" id="signup-phone" class="form-control" placeholder="+91 98765 43210" required pattern="[0-9+() -]{10,18}" autocomplete="tel" style="margin-bottom:0;">
+          </div>
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.4rem; color:var(--text-main);">Create Password</label>
+            <input type="password" id="signup-password" class="form-control" placeholder="Minimum 6 characters" required minlength="6" autocomplete="new-password" style="margin-bottom:0;">
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg full-width">Create Account</button>
+          <p style="font-size:0.82rem; color:var(--text-muted); text-align:center; margin-top:1.2rem;">Already registered? <a href="javascript:void(0)" onclick="switchAuthTab('login')" style="color:var(--brand-orange); font-weight:600; text-decoration:none;">Sign in to your account</a></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- 2. Customer Dashboard Container (Shown when LOGGED IN) -->
+    <div id="account-dashboard-view" class="acc-dashboard-grid" style="display:none;">
       <!-- Sidebar -->
       <aside class="acc-sidebar">
-        <div class="acc-avatar">O</div>
-        <h3 style="font-family:var(--font-serif); font-size:1.4rem; margin-bottom:0.2rem;">Guest shopper</h3>
-        <p style="color:var(--text-muted); font-size:0.85rem;">Customer account preview - no customer session</p>
+        <div class="acc-avatar" id="acc-avatar-letter">O</div>
+        <h3 id="acc-user-name" style="font-family:var(--font-serif); font-size:1.4rem; margin-bottom:0.2rem;">Customer</h3>
+        <p id="acc-user-email" style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.4rem;">customer@oddperfume.com</p>
+        <p id="acc-user-phone" style="color:var(--text-muted); font-size:0.8rem; font-family:var(--font-mono); margin-bottom:1.2rem;"></p>
         
         <nav class="acc-nav">
           <a href="#orders" class="acc-nav-link active">Order History</a>
+          <a href="#coupons" class="acc-nav-link">My Coupons &amp; Offers</a>
           <a href="#addresses" class="acc-nav-link">Saved Addresses</a>
           <a href="#details" class="acc-nav-link">Account Details</a>
-          <a href="index.html" class="acc-nav-link" style="color: #d32f2f;">Back to shop</a>
+          <button type="button" onclick="handleCustomerSignOut()" class="acc-nav-link" style="color:#d32f2f; background:none; border:none; text-align:left; cursor:pointer; width:100%; font-family:inherit;">Sign Out</button>
         </nav>
       </aside>
 
-      <!-- Main Content -->
+      <!-- Main Content Tabs -->
       <div class="acc-content">
-        <!-- Orders Section -->
+        <!-- 1. Orders Section -->
         <div class="acc-content-card" id="orders">
-          <h2 class="acc-section-title">Order History</h2>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:0.5rem;">
+            <h2 class="acc-section-title" style="margin:0;">Order History</h2>
+            <span id="order-count-pill" style="font-size:0.75rem; font-family:var(--font-mono); color:var(--brand-orange); background:rgba(232,107,50,0.1); padding:0.25rem 0.6rem; border-radius:4px;">0 orders</span>
+          </div>
           
-          <div id="account-orders-empty" class="account-empty-orders">
-            <strong>No account-linked orders yet.</strong>
-            <span>This guest account preview is not connected to customer sign-in or an account order database. To look up a real order, use its order reference and checkout mobile number.</span>
-            <a href="order-tracking.html" class="btn btn-outline" style="margin-top:0.75rem; padding:0.6rem 1.4rem;">Track an order</a>
+          <div id="account-orders-empty" class="account-empty-orders" style="display:none;">
+            <strong>No orders placed under this account yet.</strong>
+            <span>Your purchases made at checkout with this email or mobile number will automatically be logged here with live tracking updates.</span>
+            <a href="shop.html" class="btn btn-primary" style="margin-top:1rem; padding:0.6rem 1.4rem;">Explore Fragrances</a>
           </div>
 
-          <div id="account-orders-table-wrap" class="table-responsive" style="display:none; overflow-x:auto;">
-            <table class="order-history-table">
+          <div id="account-orders-table-wrap" class="table-responsive" style="overflow-x:auto;">
+            <table class="order-history-table" style="width:100%; min-width:620px;">
               <thead>
                 <tr>
-                  <th>Order</th>
+                  <th>Order Reference</th>
                   <th>Date</th>
+                  <th>Fragrances</th>
+                  <th>Payment</th>
                   <th>Status</th>
                   <th>Total</th>
                   <th>Action</th>
@@ -102,8 +155,17 @@
           </div>
         </div>
 
-        <!-- Account Details Section -->
-                <!-- Saved Addresses Section -->
+        <!-- 2. Coupons & Launch Offers Section -->
+        <div class="acc-content-card" id="coupons" style="display:none;">
+          <h2 class="acc-section-title" style="margin-bottom:0.5rem;">My Coupons &amp; Offers</h2>
+          <p style="color:var(--text-muted); font-size:0.88rem; margin-bottom:1.5rem;">Redeem promo codes during checkout. Single-use coupon eligibility is verified against your account email.</p>
+
+          <div id="customer-coupons-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.2rem;">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+
+        <!-- 3. Saved Addresses Section -->
         <div class="acc-content-card" id="addresses" style="display:none;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
             <h2 class="acc-section-title" style="margin:0;">Saved Addresses</h2>
@@ -111,70 +173,78 @@
           </div>
 
           <div id="addresses-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.5rem;">
-            <div id="account-address-empty" class="account-empty-orders"><strong>No saved addresses.</strong><span>Add an address here to preview the address-card UI. Address persistence is not connected to a customer account service yet.</span></div>
+            <div id="account-address-empty" class="account-empty-orders">
+              <strong>No saved addresses.</strong>
+              <span>Add your shipping address for fast, one-click checkout.</span>
+            </div>
           </div>
         </div>
 
-        <!-- Add Address Modal -->
-        <div class="modal-backdrop" id="address-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2000; align-items:center; justify-content:center;">
-          <div style="background:#fff; border-radius:12px; padding:2rem; width:90%; max-width:500px; max-height:90vh; overflow-y:auto;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-              <h3 style="margin:0; font-family:var(--font-serif); font-size:1.5rem;">Add Delivery Address</h3>
-              <button onclick="hideAddAddressModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
-            </div>
-            <form onsubmit="saveCustomerAddress(event)">
-              <div style="margin-bottom:1rem;">
-                <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">Full Name</label>
-                <input type="text" id="addr-name" class="admin-input" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px;">
-              </div>
-              <div style="margin-bottom:1rem;">
-                <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">Street / Building Address</label>
-                <input type="text" id="addr-street" class="admin-input" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px;">
-              </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
-                <div>
-                  <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">City</label>
-                  <input type="text" id="addr-city" class="admin-input" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px;">
-                </div>
-                <div>
-                  <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">PIN Code</label>
-                  <input type="text" id="addr-pin" class="admin-input" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px;">
-                </div>
-              </div>
-              <div style="margin-bottom:1.5rem;">
-                <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">Phone Number</label>
-                <input type="tel" id="addr-phone" class="admin-input" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px;">
-              </div>
-              <button type="submit" class="btn btn-primary full-width">Save Address</button>
-            </form>
-          </div>
-        </div>
-        <div class="acc-content-card" id="details">
+        <!-- 4. Account Details Section -->
+        <div class="acc-content-card" id="details" style="display:none;">
           <h2 class="acc-section-title">Account Details</h2>
-          <form style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;" onsubmit="event.preventDefault(); showToast('Preview only: account details are not saved to a customer account yet.');">
-            <div style="grid-column: span 1;">
-              <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">First Name</label>
-              <input type="text" value="Odd" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); border-radius:var(--radius-sm); font-family:var(--font-sans);">
+          <form id="acc-details-form" onsubmit="saveCustomerDetails(event)" style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem;">
+            <div>
+              <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.4rem;">Full Name</label>
+              <input type="text" id="details-name" class="form-control" required style="margin-bottom:0;">
             </div>
-            <div style="grid-column: span 1;">
-              <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">Last Name</label>
-              <input type="text" value="Customer" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); border-radius:var(--radius-sm); font-family:var(--font-sans);">
+            <div>
+              <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.4rem;">Mobile Number</label>
+              <input type="tel" id="details-phone" class="form-control" required pattern="[0-9+() -]{10,18}" style="margin-bottom:0;">
             </div>
-            <div style="grid-column: span 2;">
-              <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">Email Address</label>
-              <input type="email" value="customer@oddperfume.com" readonly style="width:100%; padding:0.8rem; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-subtle); color:var(--text-muted); font-family:var(--font-sans);">
+            <div style="grid-column:span 2;">
+              <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.4rem;">Email Address (Primary Account ID)</label>
+              <input type="email" id="details-email" class="form-control" readonly style="background:var(--bg-subtle); color:var(--text-muted); margin-bottom:0;">
             </div>
-            <div style="grid-column: span 2;">
-              <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Save Changes</button>
+            <div style="grid-column:span 2;">
+              <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.4rem;">New Password (Optional)</label>
+              <input type="password" id="details-password" class="form-control" placeholder="Leave blank to keep existing password" minlength="6" style="margin-bottom:0;">
+            </div>
+            <div style="grid-column:span 2;">
+              <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Update Profile</button>
             </div>
           </form>
         </div>
-
       </div>
     </div>
   </main>
 
-    <!-- Global Footer (media_1791442638385.png) -->
+  <!-- Add Address Modal -->
+  <div class="modal-backdrop" id="address-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2000; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:12px; padding:2rem; width:90%; max-width:500px; max-height:90vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+        <h3 style="margin:0; font-family:var(--font-serif); font-size:1.5rem;">Add Delivery Address</h3>
+        <button onclick="hideAddAddressModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;" aria-label="Close">&times;</button>
+      </div>
+      <form onsubmit="saveCustomerAddress(event)">
+        <div style="margin-bottom:1rem;">
+          <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">Full Name</label>
+          <input type="text" id="addr-name" class="form-control" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px; margin-bottom:0;">
+        </div>
+        <div style="margin-bottom:1rem;">
+          <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">Street / Building Address</label>
+          <input type="text" id="addr-street" class="form-control" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px; margin-bottom:0;">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+          <div>
+            <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">City</label>
+            <input type="text" id="addr-city" class="form-control" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px; margin-bottom:0;">
+          </div>
+          <div>
+            <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">PIN Code</label>
+            <input type="text" id="addr-pin" class="form-control" required pattern="[0-9]{6}" maxlength="6" style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px; margin-bottom:0;">
+          </div>
+        </div>
+        <div style="margin-bottom:1.5rem;">
+          <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">Phone Number</label>
+          <input type="tel" id="addr-phone" class="form-control" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px; margin-bottom:0;">
+        </div>
+        <button type="submit" class="btn btn-primary full-width">Save Address</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Global Footer -->
   <footer class="site-footer-luxury">
     <div class="container">
       <!-- Top Email Signup -->
@@ -198,7 +268,6 @@
           <div class="footer-col-title">Shop</div>
           <ul class="footer-links-list">
             <li><a href="shop.html">All perfumes</a></li>
-            <li></li>
             <li><a href="story.html">Our story</a></li>
           </ul>
         </div>
@@ -210,7 +279,6 @@
             <li><a href="my-account.html">My account</a></li>
             <li><a href="faq.html">FAQ</a></li>
             <li><a href="contact.html">Contact</a></li>
-            
           </ul>
         </div>
 
@@ -235,7 +303,7 @@
         </div>
       </div>
 
-      <!-- Massive Statement: It's good to be ODD. -->
+      <!-- Massive Statement -->
       <div class="footer-massive-odd-container">
         <span class="massive-odd-lead-text">It's good to be</span>
         <div class="massive-odd-display-text">ODD<span class="massive-odd-dot-orange"></span></div>
@@ -246,7 +314,7 @@
         <div class="legal-left">&copy; 2026 ODD Perfume &middot; Mumbai, India</div>
         <div class="footer-legal-links">
           <a href="shipping-policy.html">Shipping policy</a>
-          <a href="refund-policy.html">Returns & refunds</a>
+          <a href="refund-policy.html">Returns &amp; refunds</a>
           <a href="privacy-policy.html">Privacy policy</a>
           <a href="terms.html">Terms of service</a>
         </div>
@@ -255,7 +323,7 @@
     </div>
   </footer>
 
-  <!-- Quick View Modal (media_1791443891864.png) -->
+  <!-- Quick View Modal -->
   <div class="quick-view-modal-backdrop" id="quick-view-modal" onclick="if(event.target===this) closeQuickView()">
     <div class="quick-view-card">
       <button class="quick-view-close-btn" onclick="closeQuickView()">&times;</button>
@@ -287,8 +355,6 @@
     </div>
   </div>
 
-  <script src="assets/js/global.js"></script>
-
   <!-- Global Mobile Navigation Drawer -->
   <div class="mobile-nav-drawer" id="mobile-nav">
     <div class="drawer-header">
@@ -303,7 +369,7 @@
       <a href="story.html">Our Story</a>
       <a href="order-tracking.html">Track Order</a>
       <a href="my-account.html">My Account</a>
-      <a href="faq.html">FAQ & Support</a>
+      <a href="faq.html">FAQ &amp; Support</a>
       <a href="contact.html">Contact Us</a>
       <div class="drawer-footer">
         <p>hello@oddperfume.com</p>
@@ -335,6 +401,8 @@
       </div>
       <div class="cart-totals">
         <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹ 0</span></div>
+        <div class="total-row" id="cart-discount-row" style="display:none; color:var(--brand-orange);"><span>Discount:</span><span id="cart-discount">-₹ 0</span></div>
+        <div class="total-row" id="cart-shipping-row"><span>Shipping:</span><span id="cart-shipping-fee">₹50</span></div>
         <div class="total-row grand-total"><span>Total:</span><span id="cart-total">₹ 0</span></div>
       </div>
       <a href="checkout.html" class="btn btn-primary btn-lg full-width btn-water-float">Proceed to Checkout</a>
@@ -353,261 +421,437 @@
     </div>
   </div>
 
+  <script src="assets/js/global.js"></script>
 
-<!-- Add Address Modal -->
-        <div class="modal-backdrop" id="edit-address-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2000; align-items:center; justify-content:center;">
-          <div style="background:#fff; border-radius:12px; padding:2rem; width:90%; max-width:500px; max-height:90vh; overflow-y:auto;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-              <h3 style="margin:0; font-family:var(--font-serif); font-size:1.5rem;">Add Delivery Address</h3>
-              <button onclick="hideEditAddressModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
-            </div>
-            <form onsubmit="saveEditAddress(event)">
-              <div style="margin-bottom:1rem;">
-                <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">Full Name</label>
-                <input type="text" id="edit-addr-name" class="admin-input" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px;">
-              </div>
-              <div style="margin-bottom:1rem;">
-                <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">Street / Building Address</label>
-                <input type="text" id="edit-addr-street" class="admin-input" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px;">
-              </div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
-                <div>
-                  <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">City</label>
-                  <input type="text" id="edit-addr-city" class="admin-input" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px;">
-                </div>
-                <div>
-                  <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">PIN Code</label>
-                  <input type="text" id="edit-addr-pin" class="admin-input" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px;">
-                </div>
-              </div>
-              <div style="margin-bottom:1.5rem;">
-                <label style="display:block; font-size:0.8rem; margin-bottom:0.3rem;">Phone Number</label>
-                <input type="tel" id="edit-addr-phone" class="admin-input" required style="width:100%; padding:0.6rem; border:1px solid #ccc; border-radius:4px;">
-              </div>
-              <button type="submit" class="btn btn-primary full-width">Update Address</button>
-            </form>
-          </div>
-        </div>
-        
+  <script>
+  'use strict';
 
-      </div>
-    </div>
-  </main>
-
-    <!-- Global Footer (media_1791442638385.png) -->
-  
-
-  <!-- Quick View Modal (media_1791443891864.png) -->
-  
-
-  
-
-  <!-- Global Mobile Navigation Drawer -->
-  
-
-  <!-- Global Slide-Out Cart Drawer -->
-  
-  
-
-  <!-- Global Search Modal -->
-  
-
-
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const navLinks = document.querySelectorAll('.acc-nav-link');
-  const sections = {
-    '#orders': document.getElementById('orders'),
-    '#addresses': document.getElementById('addresses'),
-    '#details': document.getElementById('details')
-  };
-
-  function switchTab(targetHash) {
-    const hash = targetHash || '#orders';
-    navLinks.forEach(link => {
-      if (link.getAttribute('href') === hash) link.classList.add('active');
-      else link.classList.remove('active');
-    });
-
-    Object.keys(sections).forEach(h => {
-      if (sections[h]) {
-        if (h === hash) sections[h].style.display = 'block';
-        else sections[h].style.display = 'none';
-      }
-    });
+  function accountEscape(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   }
 
-  navLinks.forEach(link => {
-    link.addEventListener('click', (e) => {
-      const href = link.getAttribute('href');
-      if (href.startsWith('#')) {
-        e.preventDefault();
-        window.location.hash = href;
-        switchTab(href);
-      }
-    });
-  });
-
-  const initialHash = window.location.hash || '#orders';
-  switchTab(initialHash);
-  renderAccountOrders();
-});
-
-function renderAccountOrders() {
-  const tbody = document.getElementById('account-orders-tbody');
-  const emptyWrap = document.getElementById('account-orders-empty');
-  const tableWrap = document.getElementById('account-orders-table-wrap');
-  if (!tbody) return;
-  const orders = JSON.parse(localStorage.getItem('odd_orders') || '[]');
-  
-  if (!orders || !orders.length) {
-    if (emptyWrap) emptyWrap.style.display = 'block';
-    if (tableWrap) tableWrap.style.display = 'none';
-    return;
-  }
-
-  if (emptyWrap) emptyWrap.style.display = 'none';
-  if (tableWrap) tableWrap.style.display = 'block';
-
-  tbody.innerHTML = orders.map(o => {
-    const rawTotal = o.total || o.amount || 0;
-    const amountStr = typeof rawTotal === 'number' ? `₹${rawTotal.toLocaleString('en-IN')}` : String(rawTotal);
-    const status = o.status || 'Processing';
-    const dateStr = o.date ? new Date(o.date).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : 'Recent';
-    return `
-      <tr>
-        <td><strong>${accountEscape(o.id)}</strong></td>
-        <td>${accountEscape(dateStr)}</td>
-        <td><span style="display:inline-block; padding:0.25rem 0.6rem; border-radius:4px; font-size:0.75rem; font-family:var(--font-mono); font-weight:600; background:rgba(232,107,50,0.1); color:var(--brand-orange);">${accountEscape(status)}</span></td>
-        <td><strong>${accountEscape(amountStr)}</strong></td>
-        <td><a href="order-tracking.html?orderId=${encodeURIComponent(o.id)}" class="btn btn-sm btn-outline" style="padding:0.35rem 0.8rem; font-size:0.75rem;">Track</a></td>
-      </tr>
-    `;
-  }).join('');
-}
-
-function showAddAddressModal() {
-  const modal = document.getElementById('address-modal');
-  if (modal) modal.style.display = 'flex';
-}
-
-function hideAddAddressModal() {
-  const modal = document.getElementById('address-modal');
-  if (modal) modal.style.display = 'none';
-}
-
-
-let currentEditCard = null;
-
-function openEditModal(btn) {
-  currentEditCard = btn.closest('.address-card');
-  const name = currentEditCard.querySelector('h4').innerText;
-  const pText = currentEditCard.querySelector('p').innerText.split('\n');
-  
-  document.getElementById('edit-addr-name').value = name;
-  document.getElementById('edit-addr-street').value = pText[0] || '';
-  
-  let cityPin = pText[1] || '';
-  let city = cityPin.split(' · ')[0] || '';
-  let pin = cityPin.split(' · ')[1] || '';
-  document.getElementById('edit-addr-city').value = city.trim();
-  document.getElementById('edit-addr-pin').value = pin.trim();
-  
-  let phoneLine = pText.find(line => line.includes('Phone:'));
-  document.getElementById('edit-addr-phone').value = phoneLine ? phoneLine.replace('Phone:', '').trim() : '';
-  
-  document.getElementById('edit-address-modal').style.display = 'flex';
-}
-
-function hideEditAddressModal() {
-  document.getElementById('edit-address-modal').style.display = 'none';
-}
-
-function accountEscape(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
-
-function saveEditAddress(e) {
-  e.preventDefault();
-  if(!currentEditCard) return;
-  
-  const name = document.getElementById('edit-addr-name').value;
-  const street = document.getElementById('edit-addr-street').value;
-  const city = document.getElementById('edit-addr-city').value;
-  const pin = document.getElementById('edit-addr-pin').value;
-  const phone = document.getElementById('edit-addr-phone').value;
-  
-  currentEditCard.querySelector('h4').innerText = name;
-  currentEditCard.querySelector('p').innerHTML = accountEscape(street) + '<br>' + accountEscape(city) + ' &ndash; ' + accountEscape(pin) + '<br>India<br><strong>Phone:</strong> ' + accountEscape(phone);
-  
-  hideEditAddressModal();
-  showToast('Address updated in this page preview only.');
-}
-
-function setDefaultAddress(btn) {
-  const card = btn.closest('.address-card');
-  
-  document.querySelectorAll('.address-card').forEach(c => {
-    c.style.borderColor = 'var(--border-color)';
-    c.style.background = '#FFF';
-    const tag = c.querySelector('.default-tag');
-    if(tag) tag.remove();
-    
-    const dBtn = c.querySelector('.make-def-btn');
-    if(dBtn) {
-       dBtn.innerText = 'Make Default';
-       dBtn.setAttribute('onclick', 'setDefaultAddress(this)');
+  function getCustomerSession() {
+    try {
+      const raw = localStorage.getItem('odd_customer_session');
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
     }
+  }
+
+  function setCustomerSession(customer) {
+    localStorage.setItem('odd_customer_session', JSON.stringify(customer));
+  }
+
+  function getRegisteredCustomers() {
+    try {
+      return JSON.parse(localStorage.getItem('odd_customers') || '[]');
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveRegisteredCustomer(customer) {
+    const list = getRegisteredCustomers();
+    const idx = list.findIndex(c => c.email.toLowerCase() === customer.email.toLowerCase());
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], ...customer };
+    } else {
+      list.push(customer);
+    }
+    localStorage.setItem('odd_customers', JSON.stringify(list));
+  }
+
+  function switchAuthTab(mode) {
+    const loginForm = document.getElementById('auth-login-form');
+    const signupForm = document.getElementById('auth-signup-form');
+    const loginBtn = document.getElementById('tab-auth-login-btn');
+    const signupBtn = document.getElementById('tab-auth-signup-btn');
+
+    if (mode === 'signup') {
+      loginForm.style.display = 'none';
+      signupForm.style.display = 'block';
+      signupBtn.style.borderBottomColor = 'var(--brand-orange)';
+      signupBtn.style.fontWeight = '700';
+      signupBtn.style.color = 'var(--text-main)';
+      loginBtn.style.borderBottomColor = 'transparent';
+      loginBtn.style.fontWeight = '500';
+      loginBtn.style.color = 'var(--text-muted)';
+    } else {
+      loginForm.style.display = 'block';
+      signupForm.style.display = 'none';
+      loginBtn.style.borderBottomColor = 'var(--brand-orange)';
+      loginBtn.style.fontWeight = '700';
+      loginBtn.style.color = 'var(--text-main)';
+      signupBtn.style.borderBottomColor = 'transparent';
+      signupBtn.style.fontWeight = '500';
+      signupBtn.style.color = 'var(--text-muted)';
+    }
+  }
+
+  function handleCustomerLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const password = document.getElementById('login-password').value;
+
+    const customers = getRegisteredCustomers();
+    const found = customers.find(c => c.email.toLowerCase() === email);
+
+    if (found && found.password && found.password !== password) {
+      if (typeof showToast === 'function') showToast('Incorrect password. Please try again.');
+      else alert('Incorrect password.');
+      return;
+    }
+
+    const session = found || {
+      id: 'cust-' + Math.floor(10000 + Math.random() * 90000),
+      name: email.split('@')[0].toUpperCase(),
+      email: email,
+      phone: ''
+    };
+
+    setCustomerSession(session);
+    showToast(`Welcome back, ${session.name}!`);
+    renderAccountUI();
+  }
+
+  function handleCustomerSignup(e) {
+    e.preventDefault();
+    const name = document.getElementById('signup-name').value.trim();
+    const email = document.getElementById('signup-email').value.trim().toLowerCase();
+    const phone = document.getElementById('signup-phone').value.trim();
+    const password = document.getElementById('signup-password').value;
+
+    const newCustomer = {
+      id: 'cust-' + Math.floor(10000 + Math.random() * 90000),
+      name: name,
+      email: email,
+      phone: phone,
+      password: password,
+      createdAt: new Date().toISOString()
+    };
+
+    saveRegisteredCustomer(newCustomer);
+    setCustomerSession(newCustomer);
+    showToast(`Account created successfully! Welcome, ${name}.`);
+    renderAccountUI();
+  }
+
+  function handleCustomerSignOut() {
+    localStorage.removeItem('odd_customer_session');
+    if (typeof showToast === 'function') showToast('Signed out of your account.');
+    renderAccountUI();
+  }
+
+  function saveCustomerDetails(e) {
+    e.preventDefault();
+    const session = getCustomerSession();
+    if (!session) return;
+
+    const newName = document.getElementById('details-name').value.trim();
+    const newPhone = document.getElementById('details-phone').value.trim();
+    const newPass = document.getElementById('details-password').value;
+
+    session.name = newName;
+    session.phone = newPhone;
+    if (newPass) session.password = newPass;
+
+    saveRegisteredCustomer(session);
+    setCustomerSession(session);
+    showToast('Profile updated successfully.');
+    renderAccountUI();
+  }
+
+  function renderAccountUI() {
+    const session = getCustomerSession();
+    const authView = document.getElementById('account-auth-view');
+    const dashView = document.getElementById('account-dashboard-view');
+
+    if (!session || !session.email) {
+      if (authView) authView.style.display = 'block';
+      if (dashView) dashView.style.display = 'none';
+      return;
+    }
+
+    if (authView) authView.style.display = 'none';
+    if (dashView) dashView.style.display = 'grid';
+
+    // Populate Sidebar
+    const avatar = document.getElementById('acc-avatar-letter');
+    if (avatar) avatar.textContent = (session.name || session.email || 'O').charAt(0).toUpperCase();
+
+    const nameEl = document.getElementById('acc-user-name');
+    if (nameEl) nameEl.textContent = session.name || 'Valued Customer';
+
+    const emailEl = document.getElementById('acc-user-email');
+    if (emailEl) emailEl.textContent = session.email;
+
+    const phoneEl = document.getElementById('acc-user-phone');
+    if (phoneEl) phoneEl.textContent = session.phone || 'Phone: Not provided';
+
+    // Populate Account Details Form
+    const dName = document.getElementById('details-name');
+    const dPhone = document.getElementById('details-phone');
+    const dEmail = document.getElementById('details-email');
+    if (dName) dName.value = session.name || '';
+    if (dPhone) dPhone.value = session.phone || '';
+    if (dEmail) dEmail.value = session.email || '';
+
+    // Render Tabs
+    renderCustomerOrders(session);
+    renderCustomerCoupons(session);
+    renderCustomerAddresses(session);
+  }
+
+  function renderCustomerOrders(session) {
+    const tbody = document.getElementById('account-orders-tbody');
+    const emptyWrap = document.getElementById('account-orders-empty');
+    const tableWrap = document.getElementById('account-orders-table-wrap');
+    const pill = document.getElementById('order-count-pill');
+    if (!tbody) return;
+
+    const allOrders = JSON.parse(localStorage.getItem('odd_orders') || '[]');
+    const userEmail = (session.email || '').toLowerCase();
+    const userPhone = (session.phone || '').replace(/[^0-9]/g, '');
+
+    const userOrders = allOrders.filter(o => {
+      const oEmail = String(o.email || '').toLowerCase();
+      const oPhone = String(o.phone || '').replace(/[^0-9]/g, '');
+      return (oEmail && oEmail === userEmail) || (userPhone && oPhone && oPhone.includes(userPhone));
+    });
+
+    if (pill) pill.textContent = `${userOrders.length} order${userOrders.length === 1 ? '' : 's'}`;
+
+    if (!userOrders.length) {
+      if (emptyWrap) emptyWrap.style.display = 'block';
+      if (tableWrap) tableWrap.style.display = 'none';
+      return;
+    }
+
+    if (emptyWrap) emptyWrap.style.display = 'none';
+    if (tableWrap) tableWrap.style.display = 'block';
+
+    tbody.innerHTML = userOrders.map(o => {
+      const rawTotal = o.total || o.amount || 0;
+      const amountStr = `₹${Number(rawTotal).toLocaleString('en-IN')}`;
+      const status = o.status || 'Confirmed';
+      const dateStr = o.date ? new Date(o.date).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : 'Recent';
+      const itemsList = Array.isArray(o.items) ? o.items.map(it => `${it.name || it.id} (${it.qty})`).join(', ') : 'Fragrance item';
+      const isPaid = String(o.paymentMethod || '').toLowerCase().includes('razorpay') || o.paymentStatus === 'Paid';
+
+      return `
+        <tr>
+          <td>
+            <strong>${accountEscape(o.id)}</strong>
+            <small style="display:block; color:var(--text-muted); font-size:0.75rem;">${accountEscape(o.phone || '')}</small>
+          </td>
+          <td style="font-size:0.85rem;">${accountEscape(dateStr)}</td>
+          <td style="font-size:0.85rem; max-width:200px;">${accountEscape(itemsList)}</td>
+          <td>
+            <span style="font-size:0.75rem; font-family:var(--font-mono); font-weight:600; color:${isPaid ? '#10B981' : '#F59E0B'};">${accountEscape(isPaid ? 'Razorpay Paid' : 'Cash on Delivery')}</span>
+          </td>
+          <td>
+            <span style="display:inline-block; padding:0.25rem 0.6rem; border-radius:4px; font-size:0.75rem; font-family:var(--font-mono); font-weight:600; background:rgba(232,107,50,0.1); color:var(--brand-orange);">${accountEscape(status)}</span>
+          </td>
+          <td>
+            <strong>${accountEscape(amountStr)}</strong>
+            ${o.shipping ? `<small style="display:block; color:var(--text-muted); font-size:0.72rem;">(Includes ₹${o.shipping} Shipping)</small>` : ''}
+          </td>
+          <td>
+            <a href="order-tracking.html?orderId=${encodeURIComponent(o.id)}" class="btn btn-sm btn-outline" style="padding:0.35rem 0.8rem; font-size:0.75rem; text-decoration:none;">Track</a>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function renderCustomerCoupons(session) {
+    const container = document.getElementById('customer-coupons-grid');
+    if (!container) return;
+
+    let coupons = [
+      { code: 'LAUNCH20', discount: 20, desc: 'Site-wide 20% discount on first fragrance order.' },
+      { code: 'ODD10', discount: 10, desc: 'Collector reward: 10% off entire bag.' },
+      { code: 'WELCOME15', discount: 15, desc: 'Welcome scent invitation: 15% discount.' }
+    ];
+
+    try {
+      const adminCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || '[]');
+      if (adminCoupons && adminCoupons.length) {
+        coupons = adminCoupons.map(c => ({
+          code: c.code,
+          discount: c.discount,
+          desc: `${c.discount}% discount valid at checkout across all fragrances.`
+        }));
+      }
+    } catch (e) {}
+
+    const usages = JSON.parse(localStorage.getItem('odd_coupon_usages') || '[]');
+    const userEmail = (session.email || '').toLowerCase();
+
+    container.innerHTML = coupons.map(c => {
+      const usage = usages.find(u => (u.coupon || '').toUpperCase() === c.code.toUpperCase() && String(u.email || '').toLowerCase() === userEmail);
+      const isRedeemed = !!usage;
+
+      return `
+        <div style="background:#FFFFFF; border:1px solid ${isRedeemed ? 'var(--border-color)' : 'rgba(232,107,50,0.4)'}; border-radius:10px; padding:1.4rem; position:relative; opacity:${isRedeemed ? '0.75' : '1'};">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+            <code style="font-size:1.1rem; font-weight:700; color:var(--brand-orange); background:rgba(232,107,50,0.08); padding:0.2rem 0.6rem; border-radius:4px;">${accountEscape(c.code)}</code>
+            <span style="font-size:0.95rem; font-weight:700; font-family:var(--font-mono);">${c.discount}% OFF</span>
+          </div>
+          <p style="font-size:0.82rem; color:var(--text-muted); line-height:1.5; margin:0 0 1.2rem;">${accountEscape(c.desc)}</p>
+          
+          ${isRedeemed ? `
+            <div style="background:#F3F4F6; color:#4B5563; font-size:0.75rem; font-family:var(--font-mono); font-weight:600; padding:0.4rem 0.8rem; border-radius:4px; text-align:center;">
+              Redeemed on Order #${accountEscape(usage.orderId || 'ODD')} · ₹${accountEscape(usage.discount || 0)} Saved
+            </div>
+          ` : `
+            <div style="display:flex; gap:0.6rem;">
+              <button type="button" class="btn btn-sm btn-outline full-width" onclick="copyCouponCode('${accountEscape(c.code)}')">Copy Code</button>
+              <a href="shop.html" class="btn btn-sm btn-primary full-width" style="text-decoration:none;">Shop Now</a>
+            </div>
+          `}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderCustomerAddresses(session) {
+    const grid = document.getElementById('addresses-grid');
+    if (!grid) return;
+
+    const storageKey = `odd_addresses_${(session.email || 'guest').toLowerCase()}`;
+    const addresses = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+    if (!addresses.length) {
+      grid.innerHTML = `
+        <div id="account-address-empty" class="account-empty-orders">
+          <strong>No saved addresses yet.</strong>
+          <span>Add your delivery address below for quick checkout.</span>
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = addresses.map((addr, idx) => `
+      <div class="address-card" style="border:1px solid ${addr.isDefault ? 'var(--brand-orange)' : 'var(--border-color)'}; background:${addr.isDefault ? 'rgba(232,107,50,0.03)' : '#FFF'}; border-radius:8px; padding:1.2rem; position:relative;">
+        ${addr.isDefault ? '<span style="position:absolute; top:12px; right:12px; background:var(--brand-orange); color:#fff; font-size:0.65rem; font-family:var(--font-mono); font-weight:700; padding:0.2rem 0.5rem; border-radius:4px;">DEFAULT</span>' : ''}
+        <h4 style="margin:0 0 0.5rem; font-size:1.05rem;">${accountEscape(addr.name)}</h4>
+        <p style="color:var(--text-muted); font-size:0.85rem; line-height:1.6; margin:0 0 1rem;">
+          ${accountEscape(addr.street)}<br>
+          ${accountEscape(addr.city)} &ndash; ${accountEscape(addr.pin)}<br>
+          India<br>
+          <strong>Phone:</strong> ${accountEscape(addr.phone)}
+        </p>
+        <div style="display:flex; gap:0.6rem;">
+          ${!addr.isDefault ? `<button class="btn btn-sm btn-outline" onclick="setDefaultCustomerAddress(${idx})">Make Default</button>` : ''}
+          <button class="btn btn-sm btn-outline" style="color:#d32f2f;" onclick="deleteCustomerAddress(${idx})">Delete</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function showAddAddressModal() {
+    const modal = document.getElementById('address-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function hideAddAddressModal() {
+    const modal = document.getElementById('address-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function saveCustomerAddress(e) {
+    e.preventDefault();
+    const session = getCustomerSession();
+    if (!session) return;
+
+    const storageKey = `odd_addresses_${session.email.toLowerCase()}`;
+    const addresses = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+    const newAddr = {
+      name: document.getElementById('addr-name').value.trim(),
+      street: document.getElementById('addr-street').value.trim(),
+      city: document.getElementById('addr-city').value.trim(),
+      pin: document.getElementById('addr-pin').value.trim(),
+      phone: document.getElementById('addr-phone').value.trim(),
+      isDefault: addresses.length === 0
+    };
+
+    addresses.push(newAddr);
+    localStorage.setItem(storageKey, JSON.stringify(addresses));
+    hideAddAddressModal();
+    e.target.reset();
+    showToast('Delivery address saved.');
+    renderCustomerAddresses(session);
+  }
+
+  function setDefaultCustomerAddress(index) {
+    const session = getCustomerSession();
+    if (!session) return;
+
+    const storageKey = `odd_addresses_${session.email.toLowerCase()}`;
+    const addresses = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    addresses.forEach((a, i) => { a.isDefault = (i === index); });
+    localStorage.setItem(storageKey, JSON.stringify(addresses));
+    showToast('Default delivery address updated.');
+    renderCustomerAddresses(session);
+  }
+
+  function deleteCustomerAddress(index) {
+    const session = getCustomerSession();
+    if (!session) return;
+
+    const storageKey = `odd_addresses_${session.email.toLowerCase()}`;
+    let addresses = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    addresses.splice(index, 1);
+    if (addresses.length && !addresses.some(a => a.isDefault)) {
+      addresses[0].isDefault = true;
+    }
+    localStorage.setItem(storageKey, JSON.stringify(addresses));
+    showToast('Address deleted.');
+    renderCustomerAddresses(session);
+  }
+
+  // Tab switcher
+  document.addEventListener('DOMContentLoaded', () => {
+    const navLinks = document.querySelectorAll('.acc-nav-link');
+    const sections = {
+      '#orders': document.getElementById('orders'),
+      '#coupons': document.getElementById('coupons'),
+      '#addresses': document.getElementById('addresses'),
+      '#details': document.getElementById('details')
+    };
+
+    function switchDashboardTab(targetHash) {
+      const hash = targetHash || '#orders';
+      navLinks.forEach(link => {
+        if (link.getAttribute('href') === hash) link.classList.add('active');
+        else link.classList.remove('active');
+      });
+
+      Object.keys(sections).forEach(h => {
+        if (sections[h]) {
+          sections[h].style.display = (h === hash) ? 'block' : 'none';
+        }
+      });
+    }
+
+    navLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href');
+        if (href && href.startsWith('#')) {
+          e.preventDefault();
+          window.location.hash = href;
+          switchDashboardTab(href);
+        }
+      });
+    });
+
+    const initialHash = window.location.hash || '#orders';
+    switchDashboardTab(initialHash);
+    renderAccountUI();
   });
-  
-  card.style.borderColor = 'var(--brand-orange)';
-  card.style.background = 'rgba(232,107,50,0.03)';
-  
-  let tag = document.createElement('span');
-  tag.className = 'default-tag';
-  tag.style.cssText = 'position:absolute; top:12px; right:12px; background:var(--brand-orange); color:#fff; font-size:0.65rem; font-family:var(--font-mono); font-weight:700; padding:0.2rem 0.5rem; border-radius:4px;';
-  tag.innerText = 'DEFAULT';
-  card.appendChild(tag);
-  
-  btn.innerText = 'Default';
-  btn.setAttribute('onclick', "showToast('Address is already default.')");
-  
-  showToast('Default address updated.');
-}
-
-function saveCustomerAddress(e) {
-  e.preventDefault();
-  const name = document.getElementById('addr-name').value;
-  const street = document.getElementById('addr-street').value;
-  const city = document.getElementById('addr-city').value;
-  const pin = document.getElementById('addr-pin').value;
-  const phone = document.getElementById('addr-phone').value;
-
-  const card = document.createElement('div');
-  card.className = 'address-card';
-  card.style.cssText = 'border:1px solid var(--border-color); border-radius:8px; padding:1.2rem; background:#FFF; position:relative;';
-  const emptyAddress = document.getElementById('account-address-empty'); emptyAddress?.remove();
-  card.innerHTML = `
-    <h4 style="margin:0 0 0.5rem; font-size:1.05rem;">${accountEscape(name)}</h4>
-    <p style="color:var(--text-muted); font-size:0.85rem; line-height:1.6; margin:0 0 1rem;">
-      ${accountEscape(street)}<br>
-      ${accountEscape(city)} &ndash; ${accountEscape(pin)}<br>
-      India<br>
-      <strong>Phone:</strong> ${accountEscape(phone)}
-    </p>
-    <div style="display:flex; gap:0.6rem;">
-      <button class="btn btn-sm btn-outline" onclick="setDefaultAddress(this)">Make Default</button>
-      <button class="btn btn-sm btn-outline" style="color:#d32f2f;" onclick="this.closest('.address-card').remove(); showToast('Address deleted.')">Delete</button>
-    </div>
-  `;
-
-  document.getElementById('addresses-grid').appendChild(card);
-  hideAddAddressModal();
-  e.target.reset();
-  showToast('Address added to this page preview. It is not saved to an online customer profile.');
-}
-</script>
+  </script>
 </body>
 </html>
-
-
-

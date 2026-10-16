@@ -80,6 +80,61 @@ function formatDate(value) {
     : date.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
+function resolveProductSku(identifier) {
+  if (!identifier) return null;
+  const str = String(identifier).toUpperCase().trim();
+  if (str === 'ODD-FM-002' || str.includes('FIRST MOVE') || str.includes('FIRST-MOVE') || str.includes('ODD-FM') || str.includes('MOVE') || str === 'FM') {
+    return 'ODD-FM-002';
+  }
+  if (str === 'ODD-LC-003' || str.includes('LUCID') || str.includes('ODD-LC') || str === 'LC') {
+    return 'ODD-LC-003';
+  }
+  if (str === 'ODD-PH-001' || str.includes('PHANTOM') || str.includes('ODD-PH') || str === 'PH') {
+    return 'ODD-PH-001';
+  }
+  return null;
+}
+
+function formatWpDate(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value).toUpperCase();
+  const day = String(d.getDate()).padStart(2, '0');
+  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  const mon = months[d.getMonth()];
+  const yr = d.getFullYear();
+  return `${day} ${mon} ${yr}`;
+}
+
+function playScanBeep(type = 'success') {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === 'success') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1760, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.22);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.22);
+    } else {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    }
+  } catch (e) {}
+}
+
 /* --- Offline Data Storage Getters & Setters --- */
 function getOfflineInventory() {
   let inv = JSON.parse(localStorage.getItem('odd_admin_inventory') || 'null');
@@ -256,6 +311,20 @@ async function adminApi(path, options = {}) {
             if (body.status === 'Delivered') {
               updated.paymentStatus = 'Paid';
             }
+            if (body.status === 'Dispatched' && !o.stockDeducted) {
+              const inv = getOfflineInventory();
+              (o.items || []).forEach(it => {
+                const sku = resolveProductSku(it.id || it.sku || it.name);
+                const qty = Number(it.qty) || 1;
+                if (sku && inv[sku]) {
+                  inv[sku].stock = Math.max(0, (Number(inv[sku].stock) || 0) - qty);
+                  inv[sku].updated = new Date().toISOString().replace('T', ' ').substring(0, 16);
+                }
+              });
+              saveOfflineInventory(inv);
+              updated.stockDeducted = true;
+              updated.dispatchedAt = new Date().toISOString();
+            }
             return updated;
           }
           return o;
@@ -292,7 +361,7 @@ async function adminApi(path, options = {}) {
     };
   }
 
-  // 5. Barcode Scans
+  // 5. Barcode Scans & Warehouse Dispatch Engine
   if (path.includes('/api/scans')) {
     const scans = getOfflineScans();
 
@@ -300,14 +369,75 @@ async function adminApi(path, options = {}) {
       const code = String(body.code || '').trim().toUpperCase();
       const mode = body.mode || 'receive';
       const inv = getOfflineInventory();
+      let orders = getOfflineOrders();
 
-      // Find matching SKU
-      let matchedSku = null;
-      if (inv[code]) matchedSku = code;
-      else if (code.includes('PH') || code.includes('PHANTOM')) matchedSku = 'ODD-PH-001';
-      else if (code.includes('LC') || code.includes('LUCID')) matchedSku = 'ODD-LC-003';
-      else if (code.includes('FM') || code.includes('MOVE')) matchedSku = 'ODD-FM-002';
-      else matchedSku = 'ODD-PH-001'; // Fallback
+      // Check if code matches an Order ID (e.g. ODD-123456 or numeric 123456)
+      const matchedOrder = orders.find(o => {
+        const oId = String(o.id || '').toUpperCase();
+        return oId === code || oId.replace(/[^0-9]/g, '') === code.replace(/[^0-9]/g, '') || code === ('ORDER-' + oId);
+      });
+
+      if (matchedOrder) {
+        const orderId = matchedOrder.id;
+        const alreadyDispatched = matchedOrder.status === 'Dispatched' || matchedOrder.status === 'Delivered';
+        const deductedSummary = [];
+        let totalDeductedCount = 0;
+
+        if (!matchedOrder.stockDeducted) {
+          (matchedOrder.items || []).forEach(it => {
+            const sku = resolveProductSku(it.id || it.sku || it.name);
+            const qty = Number(it.qty) || 1;
+            if (sku && inv[sku]) {
+              inv[sku].stock = Math.max(0, (Number(inv[sku].stock) || 0) - qty);
+              inv[sku].updated = new Date().toISOString().replace('T', ' ').substring(0, 16);
+              deductedSummary.push(`${inv[sku].name} (−${qty})`);
+              totalDeductedCount += qty;
+            }
+          });
+          saveOfflineInventory(inv);
+        }
+
+        matchedOrder.status = 'Dispatched';
+        matchedOrder.stockDeducted = true;
+        matchedOrder.dispatchedAt = new Date().toISOString();
+        saveOfflineOrders(orders);
+
+        const newScan = {
+          id: Date.now(),
+          code: code,
+          sku: orderId,
+          name: `Order ${orderId} (${matchedOrder.customer || 'Customer'})`,
+          delta: -totalDeductedCount,
+          newStock: 'Dispatched',
+          mode: 'dispatch',
+          staff: adminSession?.user?.name || 'Staff',
+          time: new Date().toISOString(),
+          details: deductedSummary.length ? deductedSummary.join(', ') : 'Order dispatched (stock verified)'
+        };
+
+        scans.unshift(newScan);
+        saveOfflineScans(scans);
+
+        return {
+          success: true,
+          isOrder: true,
+          order: matchedOrder,
+          code: orderId,
+          name: `Order ${orderId}`,
+          message: alreadyDispatched
+            ? `Order ${orderId} was already dispatched.`
+            : `Order ${orderId} dispatched! Deducted ${deductedSummary.join(', ') || 'items'} from inventory.`,
+          deductedSummary: deductedSummary,
+          scan: newScan
+        };
+      }
+
+      // Otherwise code is a Product SKU or product barcode
+      let matchedSku = resolveProductSku(code);
+      if (!matchedSku) {
+        if (inv[code]) matchedSku = code;
+        else matchedSku = 'ODD-PH-001'; // Fallback
+      }
 
       if (!inv[matchedSku]) {
         inv[matchedSku] = {
@@ -342,6 +472,7 @@ async function adminApi(path, options = {}) {
 
       return {
         success: true,
+        isOrder: false,
         scan: newScan,
         name: item.name,
         sku: matchedSku,
@@ -353,12 +484,13 @@ async function adminApi(path, options = {}) {
     return { scans: scans };
   }
 
-  // 6. Barcodes Batch Generation
+  // 6. Barcodes Batch Generation (WordPress Spec)
   if (path.includes('/api/barcodes/batch')) {
     const products = Array.isArray(body.products) ? body.products : [];
-    const lot = body.lot || '77750';
+    const lot = body.lot || '2';
     const mfg = body.mfg || new Date().toISOString().slice(0, 10);
     const shelfLife = Number(body.shelfLife) || 36;
+    const mrp = Number(body.mrp || 899);
 
     // Calculate expiry
     const mfgDate = new Date(mfg);
@@ -372,15 +504,14 @@ async function adminApi(path, options = {}) {
       const name = SKU_LABELS[sku] || sku;
 
       for (let i = 1; i <= count; i++) {
-        const serial = String(i).padStart(3, '0');
-        const barcode = `${sku}-B${lot}-${serial}`;
         labels.push({
-          sku,
-          name,
-          barcode,
-          lot,
-          mfg,
-          expiry
+          sku: sku,
+          name: name,
+          barcode: sku, // Barcode encodes clean SKU directly for 100% instant scanning
+          lot: lot,
+          mfg: mfg,
+          expiry: expiry,
+          mrp: mrp
         });
       }
     });
@@ -509,9 +640,10 @@ function initTabNavigation() {
     inventory: hasPermission('inventory:read'),
     scanner: hasPermission('inventory:write'),
     barcodes: hasPermission('barcodes:write'),
+    shipping: true,
     'access-links': adminSession.user.role === 'admin',
     'launch-offer': hasPermission('coupons:read') || hasPermission('banner:read') || hasPermission('coupons:write'),
-    razorpay: adminSession.user.role === 'admin'
+    razorpay: true
   };
 
   window.switchAdminTab = function(targetTab) {
@@ -607,12 +739,18 @@ async function loadTab(tab) {
       await generateBarcodeSheet();
     }
   }
+  if (tab === 'shipping') {
+    loadShippingSettings();
+  }
   if (tab === 'access-links') await loadStaff();
   if (tab === 'launch-offer') {
     await loadCoupons();
     await loadBannerSettings();
+    loadCouponUsages();
   }
-  if (tab === 'razorpay') await loadGatewayStatus();
+  if (tab === 'razorpay') {
+    loadRazorpaySettings();
+  }
 }
 
 /* ==========================================================================
@@ -862,14 +1000,42 @@ async function handleScannerSubmit(event) {
       method: 'POST',
       body: { code, mode: scannerMode }
     });
-    showAdminToast(`${result.name}: ${scannerMode === 'receive' ? '+1 received' : '−1 dispatched'} · stock now ${result.stock}`);
+    
+    playScanBeep('success');
+
+    if (result.isOrder) {
+      showAdminToast(result.message || `Order ${result.code} dispatched!`);
+      await loadOrders();
+    } else {
+      showAdminToast(`${result.name}: ${scannerMode === 'receive' ? '+1 received' : '−1 dispatched'} · stock now ${result.stock}`);
+    }
+
     input.value = '';
     await loadInventory();
     await loadRecentScans();
   } catch (error) {
+    playScanBeep('error');
     showAdminToast(error.message, true);
   }
   input?.focus();
+}
+
+function quickScanSimulate(code) {
+  const input = document.getElementById('barcode-scan-input');
+  if (input) {
+    input.value = code;
+    const form = document.getElementById('barcode-scan-form');
+    if (form) {
+      form.dispatchEvent(new Event('submit', { cancelable: true }));
+    }
+  }
+}
+
+function quickScanLatestOrder() {
+  const orders = getOfflineOrders();
+  if (!orders.length) return showAdminToast('No orders found to test dispatch scan.', true);
+  const targetOrder = orders.find(o => o.status !== 'Dispatched' && o.status !== 'Delivered') || orders[0];
+  quickScanSimulate(targetOrder.id);
 }
 
 async function loadRecentScans() {
@@ -880,7 +1046,7 @@ async function loadRecentScans() {
   recentScansLog = result.scans || [];
 
   if (!recentScansLog.length) {
-    container.innerHTML = '<p class="admin-empty-state">No barcode scans recorded yet. Scan an SKU to start logging.</p>';
+    container.innerHTML = '<p class="admin-empty-state">No barcode scans recorded yet. Scan an SKU or Order Reference to start logging.</p>';
     return;
   }
 
@@ -889,10 +1055,10 @@ async function loadRecentScans() {
       <div>
         <strong>${escapeHtml(scan.name)}</strong>
         <code>${escapeHtml(scan.sku || scan.code)}</code>
-        <small>${escapeHtml(formatDate(scan.time))} · ${escapeHtml(scan.staff || 'Staff')} · ${escapeHtml(scan.mode)}</small>
+        <small>${escapeHtml(formatDate(scan.time))} · ${escapeHtml(scan.staff || 'Staff')} · ${escapeHtml(scan.mode)}${scan.details ? ' · ' + escapeHtml(scan.details) : ''}</small>
       </div>
       <strong class="${scan.delta > 0 ? 'scan-plus' : 'scan-minus'}">
-        ${scan.delta > 0 ? '+1' : '−1'} <small>Now ${scan.newStock}</small>
+        ${scan.delta > 0 ? '+' + scan.delta : scan.delta} <small>${scan.newStock !== undefined ? 'Stock: ' + scan.newStock : ''}</small>
       </strong>
     </div>
   `).join('');
@@ -903,8 +1069,8 @@ async function loadRecentScans() {
    ========================================================================== */
 const CODE128_PATTERNS = '212222 222122 222221 121223 121322 131222 122213 122312 132212 221213 221312 231212 112232 122132 122231 113222 123122 123221 223211 221132 221231 213212 223112 312131 311222 321122 321221 312212 322112 322211 212123 212321 232121 111323 131123 131321 112313 132113 132311 211313 231113 231311 112133 112331 132131 113123 113321 133121 313121 211331 231131 213113 213311 213131 311123 311321 331121 312113 312311 332111 314111 221411 431111 111224 111422 121124 121421 141122 141221 112214 112412 122114 122411 142112 142211 241211 221114 413111 241112 134111 111242 121142 121241 114212 124112 124211 411212 421112 421211 212141 214121 412121 111143 111341 131141 114113 114311 411113 411311 113141 114131 311141 411131 211412 211214 211232 2331112'.split(' ');
 
-function code128Svg(value) {
-  const text = String(value);
+function code128Svg(value, barHeight = 48) {
+  const text = String(value || '').trim();
   const values = [104]; // Start B
   for (const char of text) {
     const code = char.charCodeAt(0);
@@ -915,29 +1081,63 @@ function code128Svg(value) {
   for (let i = 1; i < values.length; i++) sum += values[i] * i;
   values.push(sum % 103, 106);
 
-  // 12 modules quiet zone on each side
-  const quietZone = 12;
+  // 10 modules quiet zone on each side
+  const quietZone = 10;
   let x = quietZone;
   const bars = [];
   values.forEach(valuePart => {
     const pattern = CODE128_PATTERNS[valuePart];
+    if (!pattern) return;
     let black = true;
     for (const widthChar of pattern) {
       const width = Number(widthChar);
-      if (black) bars.push(`<rect x="${x}" y="0" width="${width}" height="50"/>`);
+      if (black) bars.push(`<rect x="${x}" y="0" width="${width}" height="${barHeight}"/>`);
       x += width;
       black = !black;
     }
   });
   const totalWidth = x + quietZone;
 
-  return `<svg class="barcode-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} 50" role="img" aria-label="Code 128 barcode ${escapeHtml(text)}" shape-rendering="crispEdges"><rect width="${totalWidth}" height="50" fill="#fff"/><g fill="#000">${bars.join('')}</g></svg>`;
+  return `<svg class="wp-barcode-svg" style="height:${barHeight}px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${barHeight}" preserveAspectRatio="none" role="img" aria-label="Code 128 barcode ${escapeHtml(text)}" shape-rendering="crispEdges"><rect width="${totalWidth}" height="${barHeight}" fill="#fff"/><g fill="#000">${bars.join('')}</g></svg>`;
 }
 
 function initBarcodeGenerator() {
   const mfgInput = document.getElementById('batch-mfg-date');
   if (mfgInput && !mfgInput.value) {
     mfgInput.value = new Date().toISOString().slice(0, 10);
+  }
+}
+
+function applyLabelPreset(preset) {
+  const widthInput = document.getElementById('batch-label-width');
+  const heightInput = document.getElementById('batch-label-height');
+  const colsSelect = document.getElementById('batch-label-cols');
+  if (!widthInput || !heightInput) return;
+
+  const presets = {
+    '70x35': { w: 70, h: 35, cols: 4 },
+    '60x30': { w: 60, h: 30, cols: 4 },
+    '50x25': { w: 50, h: 25, cols: 4 },
+    '80x40': { w: 80, h: 40, cols: 3 },
+    '100x50': { w: 100, h: 50, cols: 2 }
+  };
+
+  if (presets[preset]) {
+    widthInput.value = presets[preset].w;
+    heightInput.value = presets[preset].h;
+    if (colsSelect) colsSelect.value = presets[preset].cols;
+  }
+}
+
+function onCustomDimensionInput() {
+  const presetSelect = document.getElementById('batch-label-preset');
+  if (presetSelect) presetSelect.value = 'custom';
+}
+
+function backToBarcodeSelection() {
+  const card = document.querySelector('#tab-barcodes .admin-card');
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
@@ -964,52 +1164,62 @@ async function generateBarcodeSheet(event) {
 
   try {
     const width = Number(document.getElementById('batch-label-width')?.value || 70);
-    const lot = document.getElementById('batch-lot-no')?.value.trim() || '77750';
+    const height = Number(document.getElementById('batch-label-height')?.value || 35);
+    const cols = Number(document.getElementById('batch-label-cols')?.value || 4);
+    const lot = document.getElementById('batch-lot-no')?.value.trim() || '2';
     const mfg = document.getElementById('batch-mfg-date')?.value || new Date().toISOString().slice(0, 10);
     const shelfLife = Number(document.getElementById('batch-shelf-life')?.value || 36);
+    const mrp = Number(document.getElementById('batch-mrp')?.value || 899);
 
     const result = await adminApi('/api/barcodes/batch', {
       method: 'POST',
-      body: { products: selected, lot, mfg, shelfLife }
+      body: { products: selected, lot, mfg, shelfLife, mrp }
     });
 
     const labels = result.labels || [];
     const expiry = result.expiry || labels[0]?.expiry || '';
-    preview.style.setProperty('--barcode-label-width', `${width}mm`);
+    const barHeight = Math.max(28, Math.min(65, Math.round(height * 1.35)));
+
+    preview.style.setProperty('--label-width', `${width}mm`);
+    preview.style.setProperty('--label-height', `${height}mm`);
+    preview.style.setProperty('--label-cols', cols);
+
     preview.innerHTML = `
-      <div class="barcode-print-heading">
-        <div>
-          <strong>ODD PERFUME · TRACEABLE PACKAGING LABELS</strong>
-          <small>Batch Lot ${escapeHtml(lot)} · MFG ${escapeHtml(mfg)} · EXP ${escapeHtml(expiry)}</small>
-        </div>
+      <div class="wp-barcode-actions-bar">
         <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
-          <span>${labels.length} stickers (${width}mm)</span>
-          <button type="button" class="admin-btn admin-btn-primary admin-btn-sm" onclick="printBarcodeSheet()" style="padding:0.45rem 1.1rem; font-size:0.78rem; font-weight:700;">Print label sheet</button>
+          <button type="button" class="wp-btn-print" onclick="printBarcodeSheet()">Print This Sheet</button>
+          <button type="button" class="wp-btn-back" onclick="backToBarcodeSelection()">← Back to Selection</button>
+        </div>
+        <div class="wp-barcode-meta-summary">
+          <span>${labels.length} labels</span> · Size: <strong>${width} × ${height} mm</strong> (${cols} cols) · Lot No: <strong>${escapeHtml(lot)}</strong> · Mfg: <strong>${formatWpDate(mfg)}</strong> · Exp: <strong>${formatWpDate(expiry)}</strong>
         </div>
       </div>
-      <div class="barcode-label-grid">
+      <div class="barcode-label-grid" style="grid-template-columns: repeat(${cols}, minmax(0, 1fr)) !important;">
         ${labels.map(label => `
-          <article class="barcode-sticker">
-            <div class="barcode-sticker-top">
-              <strong class="barcode-sticker-brand">ODD PERFUME</strong>
-              <span class="barcode-sticker-origin">MUMBAI</span>
+          <article class="barcode-sticker" style="min-height:${height}mm;">
+            <div class="wp-barcode-title">${escapeHtml(label.name)}</div>
+            <div class="wp-barcode-svg-wrap">
+              ${code128Svg(label.sku, barHeight)}
             </div>
-            <h4 class="barcode-sticker-title">${escapeHtml(label.name)}</h4>
-            <div class="barcode-svg-wrapper">
-              ${code128Svg(label.barcode)}
-            </div>
-            <div class="barcode-serial-tag">${escapeHtml(label.barcode)}</div>
-            <div class="barcode-compliance-grid">
-              <div class="comp-col"><span>LOT</span><strong>${escapeHtml(label.lot)}</strong></div>
-              <div class="comp-col"><span>MFG</span><strong>${escapeHtml(label.mfg)}</strong></div>
-              <div class="comp-col"><span>EXP</span><strong>${escapeHtml(label.expiry)}</strong></div>
+            <div class="wp-barcode-sku">${escapeHtml(label.sku)}</div>
+            <div class="wp-barcode-meta">
+              <div class="wp-barcode-meta-left">
+                <div>Lot No.</div>
+                <div>Mfg.</div>
+                <div>Exp.</div>
+              </div>
+              <div class="wp-barcode-meta-right">
+                <div>${escapeHtml(label.lot)}</div>
+                <div>${formatWpDate(label.mfg)}</div>
+                <div>${formatWpDate(label.expiry)}</div>
+              </div>
             </div>
           </article>
         `).join('')}
       </div>
     `;
 
-    showAdminToast(`${labels.length} Code 128 labels generated.`);
+    showAdminToast(`${labels.length} labels generated (${width} × ${height} mm).`);
   } catch (error) {
     showAdminToast(error.message, true);
   } finally {
@@ -1224,14 +1434,166 @@ async function saveBannerSettings(event) {
 }
 
 /* ==========================================================================
-   Tab 8: Razorpay Gateway Settings
+   Tab 7: Shipping & Delivery Pricing Configuration
    ========================================================================== */
-async function loadGatewayStatus() {
-  const status = document.getElementById('razorpay-status-text');
-  if (status) {
-    status.textContent = 'ODD Storefront is currently accepting Cash on Delivery (COD) seamlessly without requiring a server. To connect Razorpay client checkout on Hostinger, enter your test Key ID in checkout.js.';
+function getOfflineShipping() {
+  try {
+    const raw = localStorage.getItem('odd_admin_shipping');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return {
+    standardRate: 50,
+    freeThreshold: 0,
+    expressRate: 120,
+    timeline: '3–5 Business Days Across India',
+    enabled: true
+  };
+}
+
+function loadShippingSettings() {
+  const cfg = getOfflineShipping();
+  const enCheck = document.getElementById('shipping-enabled-check');
+  const stdRate = document.getElementById('shipping-standard-rate');
+  const freeThresh = document.getElementById('shipping-free-threshold');
+  const expRate = document.getElementById('shipping-express-rate');
+  const timeline = document.getElementById('shipping-timeline-text');
+
+  if (enCheck) enCheck.checked = cfg.enabled !== false;
+  if (stdRate) stdRate.value = cfg.standardRate ?? 50;
+  if (freeThresh) freeThresh.value = cfg.freeThreshold ?? 0;
+  if (expRate) expRate.value = cfg.expressRate ?? 120;
+  if (timeline) timeline.value = cfg.timeline || '3–5 Business Days Across India';
+}
+
+function saveShippingSettings(event) {
+  if (event) event.preventDefault();
+  const cfg = {
+    enabled: document.getElementById('shipping-enabled-check')?.checked ?? true,
+    standardRate: Number(document.getElementById('shipping-standard-rate')?.value ?? 50),
+    freeThreshold: Number(document.getElementById('shipping-free-threshold')?.value ?? 0),
+    expressRate: Number(document.getElementById('shipping-express-rate')?.value ?? 120),
+    timeline: document.getElementById('shipping-timeline-text')?.value?.trim() || '3–5 Business Days Across India'
+  };
+
+  localStorage.setItem('odd_admin_shipping', JSON.stringify(cfg));
+  const msg = document.getElementById('shipping-saved-msg');
+  if (msg) {
+    msg.style.display = 'inline';
+    setTimeout(() => { msg.style.display = 'none'; }, 2500);
+  }
+  showAdminToast(`Shipping fees updated: Standard ₹${cfg.standardRate}${cfg.freeThreshold > 0 ? ` (Free above ₹${cfg.freeThreshold})` : ''}.`);
+  try {
+    window.dispatchEvent(new CustomEvent('odd:shipping-updated', { detail: cfg }));
+  } catch (e) {}
+}
+
+/* ==========================================================================
+   Tab 8: Customer Coupon Usages Log
+   ========================================================================== */
+function loadCouponUsages() {
+  const tbody = document.getElementById('coupon-usages-tbody');
+  if (!tbody) return;
+
+  let usages = [];
+  try {
+    usages = JSON.parse(localStorage.getItem('odd_coupon_usages') || '[]');
+  } catch (e) {
+    usages = [];
+  }
+
+  if (!usages || !usages.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="admin-empty-state">No coupons redeemed yet. When customers apply coupons at checkout with their emails, redemptions appear here.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = usages.map(u => `
+    <tr>
+      <td><code class="admin-sku">${escapeHtml(u.coupon || 'PROMO')}</code></td>
+      <td><strong>${escapeHtml(u.email || '—')}</strong></td>
+      <td>${escapeHtml(u.phone || '—')}</td>
+      <td><strong>${escapeHtml(u.orderId || '—')}</strong></td>
+      <td><span style="color:var(--brand-orange, #E86B32); font-weight:700;">-₹${Number(u.discount || 0).toLocaleString('en-IN')}</span></td>
+      <td class="admin-muted-cell">${escapeHtml(formatDate(u.date))}</td>
+    </tr>
+  `).join('');
+}
+
+function clearCouponUsages() {
+  if (!confirm('Clear all customer coupon usage logs?')) return;
+  localStorage.setItem('odd_coupon_usages', '[]');
+  loadCouponUsages();
+  showAdminToast('Coupon redemptions log cleared.');
+}
+
+/* ==========================================================================
+   Tab 9: Razorpay Gateway Configuration
+   ========================================================================== */
+function getOfflineRazorpayConfig() {
+  try {
+    const raw = localStorage.getItem('odd_razorpay_config');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return {
+    enabled: true,
+    env: 'test',
+    keyId: 'rzp_test_51NgQODDPERFUME',
+    brandName: 'ODD Perfume',
+    themeColor: '#E86B32',
+    simulate: true
+  };
+}
+
+function loadRazorpaySettings() {
+  const cfg = getOfflineRazorpayConfig();
+  const enCheck = document.getElementById('rzp-enabled-check');
+  const envSelect = document.getElementById('rzp-env-select');
+  const keyInput = document.getElementById('rzp-key-id');
+  const brandInput = document.getElementById('rzp-brand-name');
+  const colorInput = document.getElementById('rzp-theme-color');
+  const simCheck = document.getElementById('rzp-simulate-check');
+  const badge = document.getElementById('rzp-active-badge');
+
+  if (enCheck) enCheck.checked = cfg.enabled !== false;
+  if (envSelect) envSelect.value = cfg.env || 'test';
+  if (keyInput) keyInput.value = cfg.keyId || 'rzp_test_51NgQODDPERFUME';
+  if (brandInput) brandInput.value = cfg.brandName || 'ODD Perfume';
+  if (colorInput) colorInput.value = cfg.themeColor || '#E86B32';
+  if (simCheck) simCheck.checked = cfg.simulate !== false;
+  if (badge) {
+    badge.className = `badge-status ${cfg.enabled !== false ? 'success' : 'danger'}`;
+    badge.textContent = cfg.enabled !== false ? (cfg.env === 'live' ? 'Live Gateway' : 'Test Mode Active') : 'Disabled';
   }
 }
+
+function saveRazorpaySettings(event) {
+  if (event) event.preventDefault();
+  const cfg = {
+    enabled: document.getElementById('rzp-enabled-check')?.checked ?? true,
+    env: document.getElementById('rzp-env-select')?.value || 'test',
+    keyId: document.getElementById('rzp-key-id')?.value?.trim() || 'rzp_test_51NgQODDPERFUME',
+    brandName: document.getElementById('rzp-brand-name')?.value?.trim() || 'ODD Perfume',
+    themeColor: document.getElementById('rzp-theme-color')?.value?.trim() || '#E86B32',
+    simulate: document.getElementById('rzp-simulate-check')?.checked ?? true
+  };
+
+  localStorage.setItem('odd_razorpay_config', JSON.stringify(cfg));
+  const msg = document.getElementById('rzp-saved-msg');
+  if (msg) {
+    msg.style.display = 'inline';
+    setTimeout(() => { msg.style.display = 'none'; }, 2500);
+  }
+  const badge = document.getElementById('rzp-active-badge');
+  if (badge) {
+    badge.className = `badge-status ${cfg.enabled ? 'success' : 'danger'}`;
+    badge.textContent = cfg.enabled ? (cfg.env === 'live' ? 'Live Gateway' : 'Test Mode Active') : 'Disabled';
+  }
+  showAdminToast(`Razorpay configuration saved (${cfg.env.toUpperCase()} mode).`);
+  try {
+    window.dispatchEvent(new CustomEvent('odd:razorpay-updated', { detail: cfg }));
+  } catch (e) {}
+}
+
+
 
 /* ==========================================================================
    Sign Out
@@ -1299,6 +1661,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const bannerForm = document.getElementById('banner-active-check')?.closest('form');
     bannerForm?.addEventListener('submit', saveBannerSettings);
+
+    const shippingForm = document.getElementById('shipping-settings-form');
+    shippingForm?.addEventListener('submit', saveShippingSettings);
+
+    const razorpayForm = document.getElementById('razorpay-settings-form');
+    razorpayForm?.addEventListener('submit', saveRazorpaySettings);
 
   } catch (error) {
     console.error('Admin initialization error:', error);

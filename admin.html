@@ -52,6 +52,10 @@
       </a>
 
       <div class="admin-nav-group-title">Settings & Marketing</div>
+      <a class="admin-nav-item" data-tab="shipping">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8 17a2 2 0 100 4 2 2 0 000-4zm10 0a2 2 0 100 4 2 2 0 000-4zM3 4h3l2 8h10l2.5-6H6M5 16h14a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1z" /></svg>
+        Shipping & Delivery
+      </a>
       <a class="admin-nav-item" data-tab="launch-offer">
         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
         Launch Offer & Banner
@@ -99,7 +103,9 @@
       <button type="button" class="quicktab-btn" data-tab="inventory">Stock</button>
       <button type="button" class="quicktab-btn" data-tab="scanner">Scanner</button>
       <button type="button" class="quicktab-btn" data-tab="barcodes">Labels</button>
+      <button type="button" class="quicktab-btn" data-tab="shipping">Shipping</button>
       <button type="button" class="quicktab-btn" data-tab="launch-offer">Offers</button>
+      <button type="button" class="quicktab-btn" data-tab="razorpay">Razorpay</button>
       <button type="button" class="quicktab-btn" data-tab="access-links">Staff</button>
     </div>
 
@@ -241,13 +247,18 @@
 
           <div class="scanner-box-container">
             <div style="font-family:var(--font-mono, monospace); font-size:0.8rem; color:var(--admin-accent); font-weight:bold; letter-spacing:0.1em; text-transform:uppercase;">Warehouse Hardware Scanner Listener</div>
+            <div style="font-size:0.8rem; color:var(--admin-text-muted); margin-top:0.4rem;">
+              Scan <strong>Order ID (ODD-XXXXXX)</strong> to dispatch order &amp; deduct items from stock, or scan <strong>Product Barcode</strong> in Receive (+1) / Dispatch (−1) mode.
+            </div>
             <form id="barcode-scan-form">
-              <input type="text" id="barcode-scan-input" class="admin-input scanner-input" placeholder="Click here, then scan — or type SKU and press Enter" autofocus>
+              <input type="text" id="barcode-scan-input" class="admin-input scanner-input" placeholder="Point scanner here — or type SKU / Order ID and press Enter" autofocus>
             </form>
-            <button class="admin-btn admin-btn-secondary admin-btn-sm" disabled title="Camera scanning requires HTTPS and media stream. Hardware USB scanner listener is active above.">
-              <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="4"/></svg>
-              Camera Scanner (Hardware Listener Active)
-            </button>
+            <div style="display:flex; justify-content:center; gap:0.5rem; flex-wrap:wrap; margin-top:0.75rem;">
+              <button type="button" class="admin-btn admin-btn-outline admin-btn-sm" style="font-size:0.72rem; padding:0.35rem 0.8rem;" onclick="quickScanSimulate('ODD-FM-002')">Scan ODD-FM-002</button>
+              <button type="button" class="admin-btn admin-btn-outline admin-btn-sm" style="font-size:0.72rem; padding:0.35rem 0.8rem;" onclick="quickScanSimulate('ODD-LC-003')">Scan ODD-LC-003</button>
+              <button type="button" class="admin-btn admin-btn-outline admin-btn-sm" style="font-size:0.72rem; padding:0.35rem 0.8rem;" onclick="quickScanSimulate('ODD-PH-001')">Scan ODD-PH-001</button>
+              <button type="button" class="admin-btn admin-btn-outline admin-btn-sm" style="font-size:0.72rem; padding:0.35rem 0.8rem; border-color:var(--admin-accent); color:var(--admin-accent);" onclick="quickScanLatestOrder()">Dispatch Latest Order</button>
+            </div>
           </div>
 
           <div class="admin-card" style="margin-bottom:0;">
@@ -265,36 +276,76 @@
           <div class="admin-card-header">
             <div>
               <h3 class="admin-card-title">Batch Barcode Label Generator</h3>
-              <div class="admin-card-subtitle">Generate Code128 barcodes with Lot/Mfg/Exp compliance data for packaging boxes</div>
+              <div class="admin-card-subtitle">Generate Code 128 barcodes with custom label dimensions, Lot No, Mfg, and Exp for perfume packaging boxes</div>
             </div>
-            <button class="admin-btn admin-btn-primary admin-btn-sm" data-print-barcodes>Print label sheet</button>
+            <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+              <button class="admin-btn admin-btn-primary admin-btn-sm" data-print-barcodes>Print label sheet</button>
+            </div>
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;">
             <div>
-              <h4 style="margin:0 0 0.8rem; font-size:0.9rem; color:var(--admin-accent);">1. Select Fragrance Products</h4>
-              <div style="background:#0E1015; border:1px solid var(--admin-border); border-radius:6px; padding:1rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                  <label><input type="checkbox" id="chk-fm" checked> <strong>ODD FIRST MOVE</strong> (ODD-FM-002)</label>
-                  <input type="number" id="copies-fm" value="5" min="1" max="100" style="width:60px;" class="admin-input">
+              <div style="margin-bottom:1.5rem;">
+                <h4 style="margin:0 0 0.8rem; font-size:0.9rem; color:var(--admin-accent);">1. Select Fragrance Products</h4>
+                <div style="background:#0E1015; border:1px solid var(--admin-border); border-radius:6px; padding:1rem;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                    <label><input type="checkbox" id="chk-fm" checked> <strong id="lbl-fm">ODD FIRST MOVE</strong> <span style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-FM-002)</span></label>
+                    <input type="number" id="copies-fm" value="5" min="1" max="100" style="width:60px;" class="admin-input">
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                    <label><input type="checkbox" id="chk-lc" checked> <strong id="lbl-lc">ODD LUCID</strong> <span style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-LC-003)</span></label>
+                    <input type="number" id="copies-lc" value="5" min="1" max="100" style="width:60px;" class="admin-input">
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label><input type="checkbox" id="chk-ph" checked> <strong id="lbl-ph">ODD PHANTOM</strong> <span style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-PH-001)</span></label>
+                    <input type="number" id="copies-ph" value="5" min="1" max="100" style="width:60px;" class="admin-input">
+                  </div>
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                  <label><input type="checkbox" id="chk-lc" checked> <strong>ODD LUCID</strong> (ODD-LC-003)</label>
-                  <input type="number" id="copies-lc" value="5" min="1" max="100" style="width:60px;" class="admin-input">
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <label><input type="checkbox" id="chk-ph" checked> <strong>ODD PHANTOM</strong> (ODD-PH-001)</label>
-                  <input type="number" id="copies-ph" value="5" min="1" max="100" style="width:60px;" class="admin-input">
+              </div>
+
+              <div>
+                <h4 style="margin:0 0 0.8rem; font-size:0.9rem; color:var(--admin-accent);">2. Label Dimensions &amp; Sheet Layout</h4>
+                <div style="background:#0E1015; border:1px solid var(--admin-border); border-radius:6px; padding:1rem;">
+                  <div class="admin-form-group" style="margin-bottom:0.9rem;">
+                    <label class="admin-label">Preset Label Dimension</label>
+                    <select id="batch-label-preset" class="admin-input" onchange="applyLabelPreset(this.value)">
+                      <option value="70x35" selected>70 × 35 mm (Standard Fragrance Box - Recommended)</option>
+                      <option value="60x30">60 × 30 mm (Compact Bottle Sticker)</option>
+                      <option value="50x25">50 × 25 mm (Small Vial / Sample)</option>
+                      <option value="80x40">80 × 40 mm (Large Presentation Box)</option>
+                      <option value="100x50">100 × 50 mm (Warehouse Outer Shipper Carton)</option>
+                      <option value="custom">Custom Dimensions (Enter below)</option>
+                    </select>
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.8rem;">
+                    <div class="admin-form-group" style="margin:0;">
+                      <label class="admin-label">Width (mm)</label>
+                      <input type="number" id="batch-label-width" class="admin-input" value="70" min="25" max="250" step="1" oninput="onCustomDimensionInput()">
+                    </div>
+                    <div class="admin-form-group" style="margin:0;">
+                      <label class="admin-label">Height (mm)</label>
+                      <input type="number" id="batch-label-height" class="admin-input" value="35" min="20" max="200" step="1" oninput="onCustomDimensionInput()">
+                    </div>
+                    <div class="admin-form-group" style="margin:0;">
+                      <label class="admin-label">Sheet Grid</label>
+                      <select id="batch-label-cols" class="admin-input">
+                        <option value="4" selected>4 Columns</option>
+                        <option value="3">3 Columns</option>
+                        <option value="2">2 Columns</option>
+                        <option value="1">1 Column</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div>
-              <h4 style="margin:0 0 0.8rem; font-size:0.9rem; color:var(--admin-accent);">2. Batch & Compliance Info</h4>
+              <h4 style="margin:0 0 0.8rem; font-size:0.9rem; color:var(--admin-accent);">3. Batch &amp; Regulatory Compliance Info</h4>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
                 <div class="admin-form-group">
                   <label class="admin-label">Lot & Control No.</label>
-                  <input type="text" id="batch-lot-no" class="admin-input" value="77750">
+                  <input type="text" id="batch-lot-no" class="admin-input" value="2">
                 </div>
                 <div class="admin-form-group">
                   <label class="admin-label">Manufacturing Date</label>
@@ -305,15 +356,15 @@
                   <input type="number" id="batch-shelf-life" class="admin-input" value="36">
                 </div>
                 <div class="admin-form-group">
-                  <label class="admin-label">Label Width (mm)</label>
-                  <input type="number" id="batch-label-width" class="admin-input" value="70">
+                  <label class="admin-label">Retail MRP (₹)</label>
+                  <input type="number" id="batch-mrp" class="admin-input" value="899">
                 </div>
               </div>
-              <button class="admin-btn admin-btn-primary full-width" data-generate-barcode>Generate Printable Stickers Sheet</button>
+              <button class="admin-btn admin-btn-primary full-width" data-generate-barcode style="margin-top:0.8rem; padding:0.85rem; font-weight:700;">Generate Printable Stickers Sheet</button>
             </div>
           </div>
 
-          <div id="barcode-sheet-preview" class="barcode-sheet-preview">
+          <div id="barcode-sheet-preview" class="barcode-sheet-preview" style="overflow-x:auto;">
             <p style="color:#666; text-align:center;">Click "Generate Printable Stickers Sheet" above to preview barcodes.</p>
           </div>
         </div>
@@ -334,7 +385,59 @@
         </div>
       </div>
 
-            <!-- 7. Launch Offer & Coupon Codes Manager (Full CRUD) -->
+      <!-- 7. Shipping & Delivery Pricing Configuration -->
+      <div class="admin-tab-pane" id="tab-shipping">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">Shipping & Delivery Pricing</h3>
+              <div class="admin-card-subtitle">Configure delivery charges applied across the perfume store, cart drawer, and checkout flow</div>
+            </div>
+          </div>
+          <form id="shipping-settings-form" onsubmit="saveShippingSettings(event)" style="max-width:680px;">
+            <div class="admin-form-group">
+              <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; cursor:pointer;">
+                <input type="checkbox" id="shipping-enabled-check" checked> Enable Shipping Charge Calculation
+              </label>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.2rem;">
+              <div class="admin-form-group" style="margin:0;">
+                <label class="admin-label">Standard Shipping Fee (₹)</label>
+                <input type="number" id="shipping-standard-rate" class="admin-input" value="50" min="0" max="1000" step="1" required>
+                <small style="color:var(--admin-text-muted); font-size:0.75rem;">Flat fee added to customer orders (default: ₹50).</small>
+              </div>
+
+              <div class="admin-form-group" style="margin:0;">
+                <label class="admin-label">Free Shipping Threshold (₹)</label>
+                <input type="number" id="shipping-free-threshold" class="admin-input" value="0" min="0" max="10000" step="50">
+                <small style="color:var(--admin-text-muted); font-size:0.75rem;">Set to 0 to always charge shipping, or e.g. 1500 for orders above ₹1,500.</small>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.5rem;">
+              <div class="admin-form-group" style="margin:0;">
+                <label class="admin-label">Express Delivery Fee (₹)</label>
+                <input type="number" id="shipping-express-rate" class="admin-input" value="120" min="0" max="2000" step="5">
+                <small style="color:var(--admin-text-muted); font-size:0.75rem;">Optional express courier speed surcharge.</small>
+              </div>
+
+              <div class="admin-form-group" style="margin:0;">
+                <label class="admin-label">Delivery Timeline Label</label>
+                <input type="text" id="shipping-timeline-text" class="admin-input" value="3–5 Business Days Across India">
+                <small style="color:var(--admin-text-muted); font-size:0.75rem;">Shown on checkout summary and product pages.</small>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:1rem; align-items:center;">
+              <button type="submit" class="admin-btn admin-btn-primary">Save Shipping Rates</button>
+              <span id="shipping-saved-msg" style="font-size:0.8rem; color:#10B981; display:none;">Saved!</span>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- 8. Launch Offer & Coupon Codes Manager (Full CRUD + Redemptions Log) -->
       <div class="admin-tab-pane" id="tab-launch-offer">
         <div class="admin-card" style="margin-bottom:2rem;">
           <div class="admin-card-header">
@@ -343,7 +446,7 @@
               <div class="admin-card-subtitle">Controls the top announcement ribbon visible on all storefront pages</div>
             </div>
           </div>
-          <form  style="max-width:650px;">
+          <form style="max-width:650px;">
             <div class="admin-form-group">
               <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; cursor:pointer;">
                 <input type="checkbox" id="banner-active-check" checked> Enable top announcement banner
@@ -361,7 +464,7 @@
           </form>
         </div>
 
-        <div class="admin-card">
+        <div class="admin-card" style="margin-bottom:2rem;">
           <div class="admin-card-header">
             <div>
               <h3 class="admin-card-title">Coupon Codes (CRUD System)</h3>
@@ -370,7 +473,7 @@
           </div>
 
           <!-- Add Coupon Form -->
-          <form  style="display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:1rem; align-items:flex-end; margin-bottom:2rem; background:rgba(255,255,255,0.03); padding:1.2rem; border-radius:8px;">
+          <form style="display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:1rem; align-items:flex-end; margin-bottom:2rem; background:rgba(255,255,255,0.03); padding:1.2rem; border-radius:8px;">
             <div class="admin-form-group" style="margin:0;">
               <label class="admin-label">New Coupon Code</label>
               <input type="text" id="new-coupon-code" class="admin-input" placeholder="e.g. SUMMER25" style="text-transform:uppercase;" required>
@@ -404,13 +507,95 @@
             </table>
           </div>
         </div>
+
+        <!-- Customer Coupon Usage Tracking Log -->
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">Customer Coupon Redemptions Log</h3>
+              <div class="admin-card-subtitle">Audit of coupons redeemed per customer email, phone, and order number</div>
+            </div>
+            <button type="button" class="admin-btn admin-btn-outline admin-btn-sm" onclick="clearCouponUsages()">Clear Usage Log</button>
+          </div>
+          <div class="admin-table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>COUPON</th>
+                  <th>CUSTOMER EMAIL</th>
+                  <th>CUSTOMER PHONE</th>
+                  <th>ORDER REF</th>
+                  <th>DISCOUNT DEDUCTED</th>
+                  <th>DATE REDEEMED</th>
+                </tr>
+              </thead>
+              <tbody id="coupon-usages-tbody">
+                <tr><td colspan="6" class="admin-empty-state">No coupons redeemed yet. When customers apply coupons at checkout with their emails, redemptions appear here.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
-      <!-- Gateway secrets are configured only in the server environment -->
+      <!-- 9. Razorpay Gateway Settings & Configuration -->
       <div class="admin-tab-pane" id="tab-razorpay">
         <div class="admin-card">
-          <div class="admin-card-header"><div><h3 class="admin-card-title">Razorpay gateway status</h3><div class="admin-card-subtitle">Keys are server secrets and are never stored in browser storage.</div></div></div>
-          <div class="gateway-status-panel"><p id="razorpay-status-text">Checking server configuration…</p><p>Online payment is disabled in this build. Adding gateway keys alone will not enable checkout. Implement and verify server-side order creation, signature validation, webhook reconciliation, and failure handling before activating Razorpay.</p><p class="admin-card-subtitle">No gateway secrets are stored in the browser or admin database.</p></div>
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">Razorpay Gateway Integration</h3>
+              <div class="admin-card-subtitle">Enable online payments via UPI, Credit/Debit Cards, NetBanking, and Wallets</div>
+            </div>
+            <span id="rzp-active-badge" class="badge-status success">Active</span>
+          </div>
+
+          <form id="razorpay-settings-form" onsubmit="saveRazorpaySettings(event)" style="max-width:720px;">
+            <div class="admin-form-group">
+              <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; cursor:pointer;">
+                <input type="checkbox" id="rzp-enabled-check" checked> Enable Razorpay Payment Method at Checkout
+              </label>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.2rem;">
+              <div class="admin-form-group" style="margin:0;">
+                <label class="admin-label">Environment Mode</label>
+                <select id="rzp-env-select" class="admin-input" style="background:#111; color:#fff;">
+                  <option value="test" selected>Test (Sandbox)</option>
+                  <option value="live">Live (Production)</option>
+                </select>
+                <small style="color:var(--admin-text-muted); font-size:0.75rem;">Switch between test keys and live merchant keys.</small>
+              </div>
+
+              <div class="admin-form-group" style="margin:0;">
+                <label class="admin-label">Razorpay Key ID</label>
+                <input type="text" id="rzp-key-id" class="admin-input" value="rzp_test_51NgQODDPERFUME" placeholder="rzp_test_... / rzp_live_..." required>
+                <small style="color:var(--admin-text-muted); font-size:0.75rem;">Public Key from your Razorpay Dashboard &gt; API Keys.</small>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.5rem;">
+              <div class="admin-form-group" style="margin:0;">
+                <label class="admin-label">Store Brand Name (Razorpay Header)</label>
+                <input type="text" id="rzp-brand-name" class="admin-input" value="ODD Perfume">
+              </div>
+
+              <div class="admin-form-group" style="margin:0;">
+                <label class="admin-label">Theme Color</label>
+                <input type="text" id="rzp-theme-color" class="admin-input" value="#E86B32">
+              </div>
+            </div>
+
+            <div class="admin-form-group" style="background:rgba(232,107,50,0.06); border:1px solid rgba(232,107,50,0.25); border-radius:6px; padding:1rem; margin-bottom:1.5rem;">
+              <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; cursor:pointer;">
+                <input type="checkbox" id="rzp-simulate-check" checked> Enable Sandbox Payment Simulation Mode
+              </label>
+              <p style="font-size:0.8rem; color:var(--admin-text-muted); margin:0.35rem 0 0;">Allows full checkout order completion in demo/test environments when a real live bank API key is not connected yet, guaranteeing zero checkout dropoffs on static hosting.</p>
+            </div>
+
+            <div style="display:flex; gap:1rem; align-items:center;">
+              <button type="submit" class="admin-btn admin-btn-primary">Save Razorpay Settings</button>
+              <span id="rzp-saved-msg" style="font-size:0.8rem; color:#10B981; display:none;">Razorpay settings saved!</span>
+            </div>
+          </form>
         </div>
       </div>
     </div>

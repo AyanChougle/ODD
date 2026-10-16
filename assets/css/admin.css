@@ -873,147 +873,164 @@ body.admin-body {
   box-sizing: border-box;
   background: #FFFFFF !important;
   color: #111111 !important;
-  padding: 26px !important;
-  border-radius: 12px !important;
+  padding: 24px !important;
+  border-radius: 8px !important;
   margin-top: 1.8rem !important;
-  border: 1px solid var(--admin-border) !important;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35) !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
   overflow: visible !important;
 }
 
-.barcode-print-heading {
+.wp-barcode-actions-bar {
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
   padding-bottom: 16px !important;
   margin-bottom: 20px !important;
-  border-bottom: 2px solid #E5E5E5 !important;
+  border-bottom: 1px solid #E2E8F0 !important;
   font-family: var(--font-sans) !important;
   gap: 1rem !important;
   flex-wrap: wrap !important;
 }
 
-.barcode-print-heading strong {
-  font-size: 14px !important;
-  letter-spacing: 0.08em !important;
-  color: #111111 !important;
-  display: block !important;
-  font-weight: 800 !important;
+.wp-btn-print {
+  background: #111111 !important;
+  color: #FFFFFF !important;
+  border: 1px solid #111111 !important;
+  padding: 8px 18px !important;
+  border-radius: 4px !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  transition: opacity 0.2s, background 0.2s !important;
 }
 
-.barcode-print-heading small {
-  font-size: 11px !important;
-  color: #666666 !important;
+.wp-btn-print:hover {
+  background: #000000 !important;
+  opacity: 0.9 !important;
+}
+
+.wp-btn-back {
+  background: #FFFFFF !important;
+  color: #333333 !important;
+  border: 1px solid #CBD5E1 !important;
+  padding: 8px 16px !important;
+  border-radius: 4px !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  transition: border-color 0.2s, color 0.2s !important;
+}
+
+.wp-btn-back:hover {
+  border-color: #94A3B8 !important;
+  color: #000000 !important;
+}
+
+.wp-barcode-meta-summary {
+  font-size: 12px !important;
+  color: #64748B !important;
   font-family: var(--font-mono, monospace) !important;
-  display: block !important;
-  margin-top: 2px !important;
 }
 
-.barcode-print-heading span {
+.wp-barcode-meta-summary strong {
+  color: #0F172A !important;
+}
+
+.wp-barcode-meta-summary span {
   font-size: 11px !important;
   font-weight: 700 !important;
   color: #E86B32 !important;
   background: #FFF0EA !important;
-  padding: 4px 12px !important;
-  border-radius: 20px !important;
+  padding: 3px 10px !important;
+  border-radius: 12px !important;
   border: 1px solid rgba(232, 107, 50, 0.2) !important;
+  margin-right: 4px !important;
 }
 
-/* Grid of Stickers — Luxury 3-column layout matching standard 70mm label sheets */
+/* Grid of Stickers — Clean 4-column layout matching WordPress */
 .barcode-label-grid {
   display: grid !important;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  gap: 20px !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 14px !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
 
-@media (max-width: 992px) {
+@media (max-width: 1100px) {
+  .barcode-label-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+}
+
+@media (max-width: 768px) {
   .barcode-label-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 16px !important;
+    gap: 10px !important;
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 480px) {
   .barcode-label-grid {
     grid-template-columns: 1fr !important;
-    gap: 14px !important;
+    gap: 10px !important;
   }
 }
 
-/* Authentic Luxury Packaging Sticker */
+/* Authentic WordPress Packaging Sticker (Exact Match to Screenshot) */
 .barcode-sticker {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: space-between !important;
   background: #FFFFFF !important;
-  border: 1px solid #D8D8D8 !important;
-  border-radius: 8px !important;
-  padding: 16px 14px !important;
+  border: 1px dashed #A5ABB8 !important;
+  border-radius: 3px !important;
+  padding: 14px 14px 10px !important;
   box-sizing: border-box !important;
-  min-height: 220px !important;
+  min-height: 185px !important;
   width: 100% !important;
   position: relative !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
-  transition: transform 0.2s, box-shadow 0.2s !important;
+  box-shadow: none !important;
   text-align: center !important;
+  transition: border-color 0.2s !important;
 }
 
 .barcode-sticker:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+  border-color: #64748B !important;
 }
 
-.barcode-sticker-top {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  width: 100% !important;
-  margin-bottom: 6px !important;
-  padding-bottom: 6px !important;
-  border-bottom: 1px solid #F0F0F0 !important;
-}
-
-.barcode-sticker-brand {
-  font-family: var(--font-sans) !important;
-  font-size: 11px !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.12em !important;
-  color: #111111 !important;
-}
-
-.barcode-sticker-origin {
-  font-family: var(--font-mono, monospace) !important;
-  font-size: 8.5px !important;
+.wp-barcode-title {
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
+  font-size: 11.5px !important;
   font-weight: 700 !important;
-  letter-spacing: 0.08em !important;
-  color: #888888 !important;
-}
-
-.barcode-sticker-title {
-  font-family: var(--font-serif, 'DM Serif Display', Georgia, serif) !important;
-  font-size: 15px !important;
-  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
   color: #111111 !important;
-  margin: 6px 0 8px !important;
+  margin: 0 0 6px !important;
   text-align: center !important;
-  white-space: nowrap !important;
-  line-height: 1.2 !important;
+  line-height: 1.25 !important;
+  width: 100% !important;
 }
 
-.barcode-svg-wrapper {
+.wp-barcode-svg-wrap {
   width: 100% !important;
   background: #FFFFFF !important;
-  padding: 8px 4px !important;
+  padding: 4px 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   box-sizing: border-box !important;
 }
 
-.barcode-svg {
+.wp-barcode-svg {
   display: block !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -1021,48 +1038,40 @@ body.admin-body {
   shape-rendering: crispEdges !important;
 }
 
-.barcode-serial-tag {
+.wp-barcode-sku {
   font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
-  font-size: 9.5px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.06em !important;
-  color: #111111 !important;
-  margin: 4px 0 6px !important;
-  text-align: center !important;
-  background: #F4F4F4 !important;
-  padding: 2px 8px !important;
-  border-radius: 4px !important;
-  width: 90% !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-.barcode-compliance-grid {
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  gap: 4px !important;
-  width: 100% !important;
-  padding-top: 6px !important;
-  border-top: 1px solid #EEEEEE !important;
-  font-family: var(--font-mono, monospace) !important;
-  text-align: center !important;
-}
-
-.comp-col span {
-  display: block !important;
-  font-size: 7.5px !important;
-  color: #888888 !important;
-  letter-spacing: 0.05em !important;
+  font-size: 11px !important;
   font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+  color: #111111 !important;
+  margin: 4px 0 10px !important;
+  text-align: center !important;
+  width: 100% !important;
 }
 
-.comp-col strong {
-  display: block !important;
-  font-size: 8.5px !important;
-  color: #222222 !important;
-  font-weight: 700 !important;
-  margin-top: 1px !important;
+.wp-barcode-meta {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-end !important;
+  width: 100% !important;
+  font-size: 9.5px !important;
+  line-height: 1.45 !important;
+  padding-top: 4px !important;
+  box-sizing: border-box !important;
+}
+
+.wp-barcode-meta-left {
+  text-align: left !important;
+  color: #4A5568 !important;
+  font-family: var(--font-sans, sans-serif) !important;
+  font-weight: 400 !important;
+}
+
+.wp-barcode-meta-right {
+  text-align: right !important;
+  color: #111111 !important;
+  font-family: var(--font-sans, sans-serif) !important;
+  font-weight: 600 !important;
 }
 
 /* ==========================================================================
@@ -1272,6 +1281,12 @@ body.admin-body {
     grid-template-columns: 1fr !important;
   }
 
+  /* Shipping & Razorpay form stack on mobile/tablet */
+  #tab-shipping form div[style*="grid-template-columns"],
+  #tab-razorpay form div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
   /* Staff form stack */
   .staff-create-form {
     grid-template-columns: 1fr !important;
@@ -1318,6 +1333,10 @@ body.admin-body {
     box-shadow: none !important;
   }
 
+  .wp-barcode-actions-bar {
+    display: none !important;
+  }
+
   .barcode-sheet-preview {
     box-shadow: none !important;
     border: none !important;
@@ -1326,16 +1345,17 @@ body.admin-body {
   }
 
   .barcode-label-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 6mm !important;
+    grid-template-columns: repeat(var(--label-cols, 4), 1fr) !important;
+    gap: 3mm !important;
   }
 
   .barcode-sticker {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    border: 1px dashed #333333 !important;
+    border: 1px dashed #A5ABB8 !important;
     box-shadow: none !important;
-    min-height: auto !important;
+    min-height: var(--label-height, 35mm) !important;
+    padding: 3mm !important;
   }
 }
 

@@ -7,6 +7,7 @@
   <meta name="description" content="Complete your order. Fast delivery & 100% secure payments via Razorpay or Cash on Delivery (COD).">
   <link rel="stylesheet" href="assets/css/global.css">
   <link rel="stylesheet" href="assets/css/policy.css">
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
 
@@ -58,6 +59,9 @@
         
         <div class="checkout-page-grid">
           <div class="checkout-form-col">
+            <div id="checkout-account-banner" style="display:none; background:rgba(232,107,50,0.08); border:1px solid rgba(232,107,50,0.3); border-radius:6px; padding:0.75rem 1rem; margin-bottom:1.5rem; font-size:0.85rem;">
+              <span style="color:var(--brand-orange); font-weight:700;">Customer Account: </span><span id="chk-logged-in-user"></span> &middot; <a href="my-account.html" style="color:inherit; text-decoration:underline;">Manage Account</a>
+            </div>
             <h3 style="font-family:var(--font-serif); margin-bottom:1.5rem;">1. Shipping Details</h3>
             <form id="checkout-form" onsubmit="processPageOrder(event)" novalidate>
               <div class="form-group-row">
@@ -73,22 +77,21 @@
               </div>
 
               <h3 style="font-family:var(--font-serif); margin:2rem 0 1.5rem;">2. Select Payment Method</h3>
-              <label class="payment-select-card payment-unavailable" aria-disabled="true">
-                <input type="radio" name="payment" value="razorpay" disabled style="margin-top:0.25rem;">
+              <label class="payment-select-card" style="cursor:pointer; display:flex; gap:1rem; align-items:flex-start; margin-bottom:0.8rem; border:1px solid var(--border-color); border-radius:8px; padding:1rem; background:#fff;">
+                <input type="radio" name="payment" value="razorpay" checked style="margin-top:0.25rem;">
                 <div>
-                  <strong>Online Payment (UPI, Cards, Netbanking)</strong>
-                  <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">Temporarily unavailable until secure server-side payment verification is implemented and tested.</p>
+                  <strong style="display:block; font-size:0.95rem;">Online Payment via Razorpay</strong>
+                  <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">Instant checkout with UPI (Google Pay, PhonePe, Paytm), Credit/Debit Cards, NetBanking, and Wallets.</p>
                 </div>
               </label>
 
-              <label class="payment-select-card">
-                <input type="radio" name="payment" value="cod" checked style="margin-top:0.25rem;">
+              <label class="payment-select-card" style="cursor:pointer; display:flex; gap:1rem; align-items:flex-start; margin-bottom:0.8rem; border:1px solid var(--border-color); border-radius:8px; padding:1rem; background:#fff;">
+                <input type="radio" name="payment" value="cod" style="margin-top:0.25rem;">
                 <div>
-                  <strong>Cash on Delivery (COD)</strong>
-                  <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">Pay the courier when your order arrives.</p>
+                  <strong style="display:block; font-size:0.95rem;">Cash on Delivery (COD)</strong>
+                  <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">Pay courier in cash or UPI when your fragrance package arrives at your door.</p>
                 </div>
               </label>
-              <p id="checkout-preview-notice" class="checkout-mode-notice" hidden>Preview mode: checkout requires the ODD server. No order can be placed from a static file preview.</p>
               <button id="checkout-submit" type="submit" class="btn btn-primary btn-lg full-width" style="margin-top:2rem;">Confirm & Place Order</button>
             </form>
           </div>
@@ -112,7 +115,7 @@
             <div style="margin:1.5rem 0; padding-top:0.5rem;">
               <div class="total-row" style="margin-bottom:0.5rem;"><span>Items Total:</span><span id="chk-page-subtotal">₹0</span></div>
               <div class="total-row" id="chk-page-discount-row" style="display:none; margin-bottom:0.5rem; color:var(--brand-orange); font-weight:600;"><span>Coupon Discount:</span><span id="chk-page-discount">-₹0</span></div>
-              <div class="total-row" style="margin-bottom:0.5rem;"><span>Shipping:</span><span style="color:#2E7D32; font-weight:700;">FREE</span></div>
+              <div class="total-row" style="margin-bottom:0.5rem;"><span>Shipping Fee:</span><span id="chk-page-shipping" style="font-weight:600;">₹50</span></div>
               <div class="total-row grand-total" style="font-size:1.2rem; font-weight:700; border-top:1px solid var(--border-color); padding-top:0.8rem; margin-top:0.8rem;"><span>Total Payable:</span><span id="chk-page-total">₹0</span></div>
             </div>
           </div>

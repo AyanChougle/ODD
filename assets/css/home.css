@@ -587,7 +587,7 @@
 }
 /* --- Carousel Slide Adjustments --- */
 .carousel-slide {
-  
+  width: 400px;
 }
 
 .carousel-slide:not(.active) .slide-actions,

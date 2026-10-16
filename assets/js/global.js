@@ -338,6 +338,20 @@ function updateCartUI() {
   oldItems.forEach(el => el.remove());
   cartItemsList.insertAdjacentHTML('beforeend', itemsHtml);
 
+  function getGlobalShippingFee(subtotal) {
+    try {
+      const raw = localStorage.getItem('odd_admin_shipping');
+      if (raw) {
+        const cfg = JSON.parse(raw);
+        if (cfg.enabled === false) return 0;
+        const thresh = Number(cfg.freeThreshold ?? 0);
+        if (thresh > 0 && subtotal >= thresh) return 0;
+        return Number(cfg.standardRate ?? 50);
+      }
+    } catch (e) {}
+    return 50;
+  }
+
   let discountAmount = 0;
   const appliedCouponRecord = appliedCoupon ? ACTIVE_COUPONS.find(coupon => coupon.code === appliedCoupon && coupon.active !== false) : null;
   const appliedTag = document.getElementById('coupon-tag-applied');
@@ -351,7 +365,8 @@ function updateCartUI() {
     if (appliedTag) appliedTag.style.display = 'none';
   }
 
-  const grandTotal = subtotal - discountAmount;
+  const shippingFee = getGlobalShippingFee(subtotal);
+  const grandTotal = Math.max(0, subtotal - discountAmount + shippingFee);
 
   const subElem = document.getElementById('cart-subtotal');
   if (subElem) subElem.textContent = `₹${subtotal.toLocaleString('en-IN')}`;
@@ -365,6 +380,13 @@ function updateCartUI() {
     } else {
       discountRow.style.display = 'none';
     }
+  }
+
+  const shippingRow = document.getElementById('cart-shipping-row');
+  const shippingVal = document.getElementById('cart-shipping-fee');
+  if (shippingVal) {
+    shippingVal.textContent = shippingFee > 0 ? `₹${shippingFee.toLocaleString('en-IN')}` : 'FREE';
+    if (shippingRow) shippingRow.style.display = 'flex';
   }
 
   const totElem = document.getElementById('cart-total');
@@ -405,13 +427,18 @@ function renderCartPage() {
     }).join('');
     const coupon = appliedCoupon ? ACTIVE_COUPONS.find(item => item.code === appliedCoupon && item.active !== false) : null;
     const discount = coupon ? Math.round(subtotal * Number(coupon.discount) / 100) : 0;
+    const shipping = getGlobalShippingFee(subtotal);
     if (subtotalEl) subtotalEl.textContent = `₹${subtotal.toLocaleString('en-IN')}`;
     if (discountRow) {
       discountRow.hidden = discount <= 0;
       discountRow.style.display = discount > 0 ? 'flex' : 'none';
     }
     if (discountEl) discountEl.textContent = `−₹${discount.toLocaleString('en-IN')}`;
-    if (totalEl) totalEl.textContent = `₹${Math.max(0, subtotal - discount).toLocaleString('en-IN')}`;
+    const cartPageShip = document.getElementById('cart-page-shipping');
+    if (cartPageShip) {
+      cartPageShip.textContent = shipping > 0 ? `₹${shipping.toLocaleString('en-IN')}` : 'FREE';
+    }
+    if (totalEl) totalEl.textContent = `₹${Math.max(0, subtotal - discount + shipping).toLocaleString('en-IN')}`;
     if (checkoutLink) { checkoutLink.setAttribute('aria-disabled', String(unavailable)); checkoutLink.classList.toggle('is-disabled', unavailable); }
   }
   if (!container.dataset.cartActionsBound) {
