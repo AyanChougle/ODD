@@ -87,33 +87,28 @@ let appliedCoupon = localStorage.getItem('odd_coupon') || localStorage.getItem('
 let STORE_INVENTORY = {
   phantom: { sku: 'ODD-PH-001', stock: 240, price: 899 },
   lucid: { sku: 'ODD-LC-003', stock: 180, price: 899 },
-  'first-move': { sku: 'ODD-FM-002', stock: 320, price: 899 }
+  'first-move': { sku: 'ODD-FM-002', stock: 0, price: 899 }
 };
 
-// Immediate sync from odd_admin_inventory if present
-(function initLiveStorageInventory() {
+// Sync live inventory from authoritative API backend
+async function syncInventoryFromApi() {
   try {
-    const localInv = JSON.parse(localStorage.getItem('odd_admin_inventory'));
-    if (localInv && typeof localInv === 'object') {
-      const skuMap = { 'ODD-PH-001': 'phantom', 'ODD-LC-003': 'lucid', 'ODD-FM-002': 'first-move' };
-      Object.entries(localInv).forEach(([key, item]) => {
-        const pid = skuMap[key] || key;
-        if (STORE_INVENTORY[pid] && item) {
-          STORE_INVENTORY[pid].stock = Math.max(0, Number(item.stock ?? STORE_INVENTORY[pid].stock));
-          if (item.price) STORE_INVENTORY[pid].price = Number(item.price);
+    const res = await fetch('/api/products');
+    if (res.ok) {
+      const data = await res.json();
+      const products = Array.isArray(data.products) ? data.products : (Array.isArray(data) ? data : []);
+      products.forEach(p => {
+        const pid = p.id;
+        if (STORE_INVENTORY[pid]) {
+          STORE_INVENTORY[pid].stock = Math.max(0, Number(p.stock));
+          if (p.price) STORE_INVENTORY[pid].price = Number(p.price);
         }
       });
-    } else {
-      // Seed odd_admin_inventory for first load
-      const seed = {
-        'ODD-PH-001': { sku: 'ODD-PH-001', name: 'ODD PHANTOM', stock: 240, price: 899, updated: '2026-10-12 10:00' },
-        'ODD-LC-003': { sku: 'ODD-LC-003', name: 'ODD LUCID', stock: 180, price: 899, updated: '2026-10-12 10:00' },
-        'ODD-FM-002': { sku: 'ODD-FM-002', name: 'ODD FIRST MOVE', stock: 320, price: 899, updated: '2026-10-12 10:00' }
-      };
-      localStorage.setItem('odd_admin_inventory', JSON.stringify(seed));
+      if (typeof syncStockStatusUI === 'function') syncStockStatusUI();
     }
   } catch (e) {}
-})();
+}
+syncInventoryFromApi();
 
 let ACTIVE_COUPONS = [
   { code: 'LAUNCH20', discount: 20 },
@@ -969,59 +964,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-/* ==========================================================================
-   SCENT QUIZ ENGINE (find-your-scent.html)
-   ========================================================================== */
 
-let quizAnswers = {};
-let matchedPerfumeId = 'phantom';
-
-function answerQuiz(step, perfumeId) {
-  quizAnswers[step] = perfumeId;
-  const counts = { 'phantom': 0, 'lucid': 0, 'first-move': 0 };
-  Object.values(quizAnswers).forEach(p => { if (counts[p] !== undefined) counts[p]++; });
-  
-  let best = 'phantom';
-  let max = -1;
-  Object.keys(counts).forEach(k => { if (counts[k] > max) { max = counts[k]; best = k; } });
-  matchedPerfumeId = best;
-
-  const currentStep = document.getElementById('quiz-step-' + step);
-  const nextStep = document.getElementById('quiz-step-' + (step + 1));
-  
-  if (currentStep) currentStep.style.display = 'none';
-
-  if (nextStep) {
-    nextStep.style.display = 'block';
-  } else {
-    const resultCard = document.getElementById('quiz-result-card');
-    if (resultCard) {
-      resultCard.style.display = 'block';
-      const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[matchedPerfumeId]) ? PRODUCTS[matchedPerfumeId] : null;
-      if (prod) {
-        const title = resultCard.querySelector('.quiz-result-title');
-        if (title) title.innerText = prod.fullName || prod.name;
-        const desc = resultCard.querySelector('.quiz-result-desc');
-        if (desc) desc.innerText = prod.tagline || '';
-        const img = resultCard.querySelector('.quiz-result-img');
-        if (img) img.src = 'assets/images/' + prod.bottleImage;
-      }
-    }
-  }
-}
-
-function addQuizMatchToCart() {
-  if (typeof addToCart === 'function') addToCart(matchedPerfumeId);
-  if (typeof toggleCartDrawer === 'function') toggleCartDrawer();
-}
-
-function resetQuiz() {
-  quizAnswers = {};
-  matchedPerfumeId = 'phantom';
-  for (let i = 1; i <= 5; i++) {
-    const s = document.getElementById('quiz-step-' + i);
-    if (s) s.style.display = (i === 1) ? 'block' : 'none';
-  }
-  const resultCard = document.getElementById('quiz-result-card');
-  if (resultCard) resultCard.style.display = 'none';
-}

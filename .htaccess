@@ -1,0 +1,24 @@
+# ============================================================================
+# ODD PERFUMES — PRODUCTION APACHE / LITESPEED / HOSTINGER RULES
+# ============================================================================
+
+Options -Indexes -MultiViews
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Protect sensitive files and directories
+  RewriteRule ^(\.env|\.git|storage/|database/|.*\.sqlite|.*\.sql|.*\.log|package\.json|package-lock\.json)$ - [F,L,NC]
+
+  # 2. Route all API calls to api/index.php
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^api/(.*)$ api/index.php [QSA,L]
+</IfModule>
+
+# Security Headers
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

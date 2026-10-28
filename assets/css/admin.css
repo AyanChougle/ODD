@@ -129,6 +129,13 @@ body.admin-body {
   opacity: 0.8;
 }
 
+[hidden],
+.admin-nav-item[hidden],
+.quicktab-btn[hidden],
+.admin-nav-group-title[hidden] {
+  display: none !important;
+}
+
 .admin-nav-item {
   display: flex;
   align-items: center;
@@ -463,14 +470,16 @@ body.admin-body {
 }
 
 /* KPI Cards Grid */
-.kpi-grid {
+.kpi-grid,
+.admin-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1.2rem;
   margin-bottom: 1.8rem;
 }
 
-.kpi-card {
+.kpi-card,
+.admin-kpi-card {
   background: var(--admin-bg-card);
   border: 1px solid var(--admin-border);
   border-radius: var(--admin-radius);
@@ -480,12 +489,14 @@ body.admin-body {
   transition: transform 0.2s, border-color 0.2s;
 }
 
-.kpi-card:hover {
+.kpi-card:hover,
+.admin-kpi-card:hover {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.15);
 }
 
-.kpi-card::before {
+.kpi-card::before,
+.admin-kpi-card::before {
   content: '';
   position: absolute;
   top: 0;
@@ -494,12 +505,19 @@ body.admin-body {
   height: 3px;
 }
 
-.kpi-card.green::before { background: var(--admin-success); }
-.kpi-card.orange::before { background: var(--admin-accent); }
-.kpi-card.amber::before { background: var(--admin-warning); }
-.kpi-card.blue::before { background: var(--admin-info); }
+/* Default color accents for 1st, 2nd, 3rd, 4th cards */
+.kpi-card:nth-child(1)::before, .admin-kpi-card:nth-child(1)::before { background: var(--admin-success); }
+.kpi-card:nth-child(2)::before, .admin-kpi-card:nth-child(2)::before { background: var(--admin-accent); }
+.kpi-card:nth-child(3)::before, .admin-kpi-card:nth-child(3)::before { background: var(--admin-warning); }
+.kpi-card:nth-child(4)::before, .admin-kpi-card:nth-child(4)::before { background: var(--admin-info); }
 
-.kpi-label {
+.kpi-card.green::before, .admin-kpi-card.green::before { background: var(--admin-success); }
+.kpi-card.orange::before, .admin-kpi-card.orange::before { background: var(--admin-accent); }
+.kpi-card.amber::before, .admin-kpi-card.amber::before { background: var(--admin-warning); }
+.kpi-card.blue::before, .admin-kpi-card.blue::before { background: var(--admin-info); }
+
+.kpi-label,
+.admin-kpi-label {
   font-family: var(--font-mono, 'IBM Plex Mono', monospace);
   font-size: 0.72rem;
   color: var(--admin-text-muted);
@@ -509,7 +527,8 @@ body.admin-body {
   margin-bottom: 0.5rem;
 }
 
-.kpi-value {
+.kpi-value,
+.admin-kpi-value {
   font-size: 2rem;
   font-weight: 700;
   color: #FFF;
@@ -518,7 +537,8 @@ body.admin-body {
   letter-spacing: -0.03em;
 }
 
-.kpi-subtext {
+.kpi-subtext,
+.admin-kpi-subtext {
   font-size: 0.78rem;
   color: var(--admin-text-muted);
   line-height: 1.4;
@@ -833,6 +853,127 @@ body.admin-body {
   margin: 1.2rem auto;
 }
 
+/* Camera Scanner Interface */
+.camera-scanner-card {
+  background: #090B10;
+  border: 1px solid rgba(232, 107, 50, 0.25);
+  border-radius: var(--admin-radius);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.camera-viewfinder-box {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  border: 2px solid rgba(232, 107, 50, 0.6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 15px rgba(232, 107, 50, 0.2);
+}
+
+#camera-reader-viewport {
+  width: 100%;
+  min-height: 280px;
+}
+
+#camera-reader-viewport video {
+  width: 100% !important;
+  height: auto !important;
+  display: block;
+  object-fit: cover;
+}
+
+.camera-reticle-overlay {
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  left: 6%;
+  right: 6%;
+  pointer-events: none;
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reticle-center-target {
+  width: min(170px, 62%);
+  height: min(170px, 62%);
+  border: 2px dashed rgba(52, 211, 153, 0.7);
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(52, 211, 153, 0.2);
+  pointer-events: none;
+}
+
+.reticle-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: #34D399;
+  border-style: solid;
+}
+
+.reticle-corner.top-left {
+  top: -2px; left: -2px;
+  border-width: 3.5px 0 0 3.5px;
+  border-top-left-radius: 8px;
+}
+
+.reticle-corner.top-right {
+  top: -2px; right: -2px;
+  border-width: 3.5px 3.5px 0 0;
+  border-top-right-radius: 8px;
+}
+
+.reticle-corner.bottom-left {
+  bottom: -2px; left: -2px;
+  border-width: 0 0 3.5px 3.5px;
+  border-bottom-left-radius: 8px;
+}
+
+.reticle-corner.bottom-right {
+  bottom: -2px; right: -2px;
+  border-width: 0 3.5px 3.5px 0;
+  border-bottom-right-radius: 8px;
+}
+
+.reticle-laser-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--brand-orange), #FF8533, transparent);
+  box-shadow: 0 0 10px var(--brand-orange);
+  animation: laserScan 2s ease-in-out infinite alternate;
+}
+
+@keyframes laserScan {
+  0% { top: 6%; }
+  100% { top: 94%; }
+}
+
+.inventory-stock-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.inventory-stock-subtext {
+  font-size: 0.65rem;
+  color: var(--admin-text-muted);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 3px;
+}
+
 .admin-scan-row {
   display: flex;
   justify-content: space-between;
@@ -984,94 +1125,198 @@ body.admin-body {
   }
 }
 
-/* Authentic WordPress Packaging Sticker (Exact Match to Screenshot) */
+/* Authentic Packaging Sticker — Compact, Professional Layout */
 .barcode-sticker {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: space-between !important;
   background: #FFFFFF !important;
-  border: 1px dashed #A5ABB8 !important;
-  border-radius: 3px !important;
-  padding: 14px 14px 10px !important;
+  color: #000000 !important;
+  border: 1px dashed #2A3040 !important;
+  border-radius: 6px !important;
+  padding: 8px 10px !important;
   box-sizing: border-box !important;
-  min-height: 185px !important;
   width: 100% !important;
   position: relative !important;
-  box-shadow: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
   text-align: center !important;
-  transition: border-color 0.2s !important;
+  gap: 4px !important;
+  overflow: hidden !important;
+  transition: border-color 0.2s, box-shadow 0.2s !important;
 }
 
 .barcode-sticker:hover {
-  border-color: #64748B !important;
+  border-color: #000000 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
 }
 
-.wp-barcode-title {
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
-  font-size: 11.5px !important;
+.sticker-code {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
+  font-size: 11px !important;
   font-weight: 700 !important;
-  letter-spacing: 0.04em !important;
-  text-transform: uppercase !important;
-  color: #111111 !important;
-  margin: 0 0 6px !important;
+  letter-spacing: 0.06em !important;
+  color: #000000 !important;
+  margin: 0 !important;
+  padding: 0 !important;
   text-align: center !important;
-  line-height: 1.25 !important;
   width: 100% !important;
+  line-height: 1.2 !important;
 }
 
-.wp-barcode-svg-wrap {
+.sticker-barcode-box {
   width: 100% !important;
   background: #FFFFFF !important;
-  padding: 4px 0 !important;
+  padding: 2px 0 !important;
+  margin: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   box-sizing: border-box !important;
+  flex: 1 1 auto !important;
 }
 
-.wp-barcode-svg {
+.sticker-barcode-svg {
   display: block !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  height: 52px !important;
+  width: 96% !important;
+  max-width: 96% !important;
+  height: 44px !important;
   shape-rendering: crispEdges !important;
 }
 
-.wp-barcode-sku {
-  font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.08em !important;
-  color: #111111 !important;
-  margin: 4px 0 10px !important;
-  text-align: center !important;
+.sticker-meta-row {
+  display: grid !important;
+  grid-template-columns: 1fr 1.25fr 1.25fr !important;
   width: 100% !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
-.wp-barcode-meta {
+.sticker-meta-item {
   display: flex !important;
-  justify-content: space-between !important;
-  align-items: flex-end !important;
-  width: 100% !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
+  line-height: 1.15 !important;
+}
+
+.sticker-meta-lbl {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
+  font-size: 8px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: #333333 !important;
+  margin-bottom: 1px !important;
+}
+
+.sticker-meta-val {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
   font-size: 9.5px !important;
-  line-height: 1.45 !important;
-  padding-top: 4px !important;
+  font-weight: 700 !important;
+  color: #000000 !important;
+  white-space: nowrap !important;
+}
+
+/* Dual Layout: Small Barcode + QR Code Side-by-Side */
+.sticker-dual-body {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  gap: 8px !important;
+  flex: 1 1 auto !important;
   box-sizing: border-box !important;
 }
 
-.wp-barcode-meta-left {
-  text-align: left !important;
-  color: #4A5568 !important;
-  font-family: var(--font-sans, sans-serif) !important;
-  font-weight: 400 !important;
+.sticker-dual-left {
+  flex: 1 1 65% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3px !important;
+  min-width: 0 !important;
 }
 
-.wp-barcode-meta-right {
-  text-align: right !important;
-  color: #111111 !important;
-  font-family: var(--font-sans, sans-serif) !important;
-  font-weight: 600 !important;
+.sticker-dual-left .sticker-barcode-box {
+  width: 100% !important;
+  padding: 0 !important;
+}
+
+.sticker-dual-left .sticker-barcode-svg {
+  height: 26px !important;
+  width: 98% !important;
+  max-width: 98% !important;
+}
+
+.sticker-dual-right {
+  flex: 0 0 32% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-left: 1px solid #E2E8F0 !important;
+  padding-left: 6px !important;
+}
+
+.sticker-qr-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 0 !important;
+}
+
+.sticker-qr-container canvas,
+.sticker-qr-container img {
+  display: block !important;
+  width: 52px !important;
+  height: 52px !important;
+  max-width: 52px !important;
+  max-height: 52px !important;
+  image-rendering: -webkit-optimize-contrast !important;
+  image-rendering: crisp-edges !important;
+  image-rendering: pixelated !important;
+}
+
+.sticker-qr-caption {
+  font-family: var(--font-mono, monospace) !important;
+  font-size: 7px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  color: #64748B !important;
+  margin-top: 2px !important;
+  text-transform: uppercase !important;
+}
+
+/* Small Barcode Only */
+.sticker-barcode-box-small {
+  padding: 2px 0 !important;
+}
+
+.sticker-barcode-box-small .sticker-barcode-svg {
+  height: 32px !important;
+  width: 90% !important;
+}
+
+/* QR Code Center Box */
+.sticker-qr-center-box {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 1 1 auto !important;
+  padding: 4px 0 !important;
+}
+
+.sticker-qr-center-box .sticker-qr-container canvas,
+.sticker-qr-center-box .sticker-qr-container img {
+  width: 72px !important;
+  height: 72px !important;
+  max-width: 72px !important;
+  max-height: 72px !important;
 }
 
 /* ==========================================================================
@@ -1116,7 +1361,8 @@ body.admin-body {
 
 /* Laptops / Desktops under 1200px */
 @media (max-width: 1200px) {
-  .kpi-grid {
+  .kpi-grid,
+  .admin-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
@@ -1213,17 +1459,20 @@ body.admin-body {
     margin-bottom: 1.2rem;
   }
 
-  .kpi-grid {
+  .kpi-grid,
+  .admin-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.8rem;
     margin-bottom: 1.2rem;
   }
 
-  .kpi-card {
+  .kpi-card,
+  .admin-kpi-card {
     padding: 1rem;
   }
 
-  .kpi-value {
+  .kpi-value,
+  .admin-kpi-value {
     font-size: 1.6rem;
   }
 
@@ -1245,7 +1494,8 @@ body.admin-body {
 
 /* Small Phones under 520px */
 @media (max-width: 520px) {
-  .kpi-grid {
+  .kpi-grid,
+  .admin-kpi-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1345,21 +1595,220 @@ body.admin-body {
   }
 
   .barcode-label-grid {
-    grid-template-columns: repeat(var(--label-cols, 4), 1fr) !important;
+    display: grid !important;
+    grid-template-columns: repeat(var(--label-cols, 3), minmax(0, 1fr)) !important;
     gap: 3mm !important;
+    justify-content: stretch !important;
+    align-content: flex-start !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .barcode-sticker {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    border: 1px dashed #A5ABB8 !important;
+    border: 1px dashed #000000 !important;
+    border-radius: 4px !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
     box-shadow: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: var(--label-height, 35mm) !important;
     min-height: var(--label-height, 35mm) !important;
-    padding: 3mm !important;
+    max-height: var(--label-height, 35mm) !important;
+    box-sizing: border-box !important;
+    padding: 2.2mm 3.2mm !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 0 !important;
+  }
+
+  .sticker-code {
+    font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
+    font-size: 9pt !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.15 !important;
+    color: #000000 !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+
+  .sticker-barcode-box {
+    width: 100% !important;
+    height: calc(var(--label-height, 35mm) - 15mm) !important;
+    min-height: 16mm !important;
+    max-height: calc(var(--label-height, 35mm) - 14mm) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin: 0.5mm 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .sticker-barcode-svg {
+    width: 98% !important;
+    max-width: 98% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    display: block !important;
+    shape-rendering: crispEdges !important;
+  }
+
+  .sticker-meta-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1.25fr 1.25fr !important;
+    width: 100% !important;
+    align-items: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .sticker-meta-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    line-height: 1.1 !important;
+  }
+
+  .sticker-meta-lbl {
+    font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
+    font-size: 6.5pt !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    color: #333333 !important;
+    margin-bottom: 0.5mm !important;
+  }
+
+  .sticker-meta-val {
+    font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
+    font-size: 8pt !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
+  }
+
+  /* Dual Layout (Small Barcode + QR Code Side-by-Side) Print */
+  .sticker-dual-body {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    height: calc(var(--label-height, 35mm) - 8mm) !important;
+    gap: 2mm !important;
+    box-sizing: border-box !important;
+  }
+
+  .sticker-dual-left {
+    flex: 1 1 66% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .sticker-dual-left .sticker-barcode-box {
+    width: 100% !important;
+    height: 10mm !important;
+    min-height: 9mm !important;
+    max-height: 12mm !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .sticker-dual-left .sticker-barcode-svg {
+    width: 98% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+
+  .sticker-dual-left .sticker-meta-lbl {
+    font-size: 5.5pt !important;
+  }
+
+  .sticker-dual-left .sticker-meta-val {
+    font-size: 7pt !important;
+  }
+
+  .sticker-dual-right {
+    flex: 0 0 30% !important;
+    border-left: 1px dashed #000000 !important;
+    padding-left: 1.5mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .sticker-qr-container canvas,
+  .sticker-qr-container img {
+    width: 15mm !important;
+    height: 15mm !important;
+    max-width: 15mm !important;
+    max-height: 15mm !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    display: block !important;
+  }
+
+  .sticker-qr-caption {
+    font-family: var(--font-mono, monospace) !important;
+    font-size: 5pt !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+    margin-top: 0.5mm !important;
+    text-transform: uppercase !important;
+  }
+
+  /* Small Barcode Only Print */
+  .sticker-format-barcode .sticker-barcode-box {
+    width: 100% !important;
+    height: calc(var(--label-height, 35mm) - 17mm) !important;
+    min-height: 11mm !important;
+    max-height: 14mm !important;
+  }
+
+  /* QR Only Print */
+  .sticker-format-qr .sticker-qr-center-box {
+    height: calc(var(--label-height, 35mm) - 15mm) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .sticker-format-qr .sticker-qr-container canvas,
+  .sticker-format-qr .sticker-qr-container img {
+    width: 17mm !important;
+    height: 17mm !important;
+    max-width: 17mm !important;
+    max-height: 17mm !important;
   }
 }
 
 @page {
   size: A4 portrait;
-  margin: 8mm;
+  margin: 6mm 6mm;
 }

@@ -7,7 +7,7 @@
 const DEFAULT_INVENTORY_MAP = {
   'ODD-PH-001': { sku: 'ODD-PH-001', name: 'ODD PHANTOM', stock: 240, price: 899 },
   'ODD-LC-003': { sku: 'ODD-LC-003', name: 'ODD LUCID', stock: 180, price: 899 },
-  'ODD-FM-002': { sku: 'ODD-FM-002', name: 'ODD FIRST MOVE', stock: 320, price: 899 }
+  'ODD-FM-002': { sku: 'ODD-FM-002', name: 'ODD FIRST MOVE', stock: 0, price: 899 }
 };
 
 const SKU_TO_ID = {
@@ -332,13 +332,23 @@ async function processPageOrder(e) {
     return;
   }
 
+  const submitBtn = document.getElementById('checkout-submit');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Processing...';
+  }
+
   // Stock check
   for (let item of cart) {
     const avail = getProductAvailability(item.id);
     if (avail.stock < item.qty) {
-      const msg = `Error: ${avail.name} has only ${avail.stock} in stock.`;
+      const msg = `Error: ${avail.name} has only ${avail.stock} in stock. Please adjust your bag.`;
       if (typeof showToast === 'function') showToast(msg);
       else alert(msg);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm & Place Order';
+      }
       return;
     }
   }
@@ -398,6 +408,10 @@ async function processPageOrder(e) {
     const msg = 'Please fill in your name, mobile number, and delivery address.';
     if (typeof showToast === 'function') showToast(msg);
     else alert(msg);
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Confirm & Place Order';
+    }
     return;
   }
 
@@ -409,12 +423,27 @@ async function processPageOrder(e) {
       const alreadyUsed = usages.some(u => (u.coupon || '').toUpperCase() === coupon.code.toUpperCase() && String(u.email || '').toLowerCase() === email.toLowerCase());
       if (alreadyUsed) {
         alert(`Coupon ${coupon.code} has already been redeemed with ${email}. Please remove the coupon code to place this order.`);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirm & Place Order';
+        }
         return;
       }
     } catch (e) {}
   }
 
-  const orderId = 'ODD-' + Math.floor(100000 + Math.random() * 900000);
+  // Derive clean sequential fallback order ID: ODD-00001, ODD-00002...
+  const localOrders = JSON.parse(localStorage.getItem('odd_orders') || '[]');
+  let maxLocalSeq = 0;
+  localOrders.forEach(o => {
+    const m = String(o.id).match(/^ODD-(\d{1,5})$/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (!isNaN(n) && n > maxLocalSeq) maxLocalSeq = n;
+    }
+  });
+  const fallbackOrderId = 'ODD-' + String(maxLocalSeq + 1).padStart(5, '0');
+  const orderId = fallbackOrderId;
 
   // Subtotal & Shipping calculation
   let subtotal = 0;
@@ -428,18 +457,41 @@ async function processPageOrder(e) {
   const shippingFee = getShippingFee(subtotal);
   const finalTotal = Math.max(0, subtotal - discountAmount + shippingFee);
 
-  // Razorpay Configuration
+  // Live Razorpay Gateway Configuration
   const rzpConfig = (() => {
     try {
       const raw = localStorage.getItem('odd_razorpay_config');
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Automatically migrate legacy test key to user live key
+        if (parsed.keyId === 'rzp_test_51NgQODDPERFUME') {
+          parsed.keyId = 'rzp_live_Ti8AffHarb3tai';
+          parsed.keySecret = 'X4Ws6I0iovvSrTYh18i1nNjl';
+          parsed.env = 'live';
+          parsed.simulate = false;
+          localStorage.setItem('odd_razorpay_config', JSON.stringify(parsed));
+        }
+        return parsed;
+      }
     } catch (e) {}
-    return { enabled: true, env: 'test', keyId: 'rzp_test_51NgQODDPERFUME', brandName: 'ODD Perfume', themeColor: '#E86B32', simulate: true };
+    const def = {
+      enabled: true,
+      env: 'live',
+      keyId: 'rzp_live_Ti8AffHarb3tai',
+      keySecret: 'X4Ws6I0iovvSrTYh18i1nNjl',
+      brandName: 'ODD Perfume',
+      themeColor: '#E86B32',
+      simulate: false
+    };
+    try {
+      localStorage.setItem('odd_razorpay_config', JSON.stringify(def));
+    } catch (e) {}
+    return def;
   })();
 
   if (method === 'razorpay') {
     const amountPaisa = Math.round(finalTotal * 100);
-    const keyId = rzpConfig.keyId || 'rzp_test_51NgQODDPERFUME';
+    const keyId = rzpConfig.keyId || 'rzp_live_Ti8AffHarb3tai';
 
     if (typeof Razorpay !== 'undefined') {
       const options = {
@@ -449,13 +501,28 @@ async function processPageOrder(e) {
         name: rzpConfig.brandName || 'ODD Perfume',
         description: 'Fragrance Order ' + orderId,
         image: 'assets/images/Phantom Single bottle.png',
-        handler: function (response) {
-          completeOrderPlacement(orderId, firstName, lastName, phone, email, address, city, pincode, 'Razorpay Online (' + (response.razorpay_payment_id || 'RZP-' + Math.floor(100000 + Math.random() * 900000)) + ')', cart, shippingFee);
+        handler: async function (response) {
+          const paymentId = response.razorpay_payment_id || ('pay_' + Math.random().toString(36).substring(2, 12));
+          await completeOrderPlacement(
+            orderId, firstName, lastName, phone, email, address, city, pincode,
+            'Razorpay Online (' + paymentId + ')',
+            cart, shippingFee, paymentId
+          );
         },
-        prefill: { name: firstName + ' ' + lastName, email: email, contact: phone },
-        theme: { color: rzpConfig.themeColor || '#E86B32' },
+        prefill: {
+          name: (firstName + ' ' + lastName).trim(),
+          email: email,
+          contact: phone
+        },
+        theme: {
+          color: rzpConfig.themeColor || '#E86B32'
+        },
         modal: {
           ondismiss: function() {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Confirm & Place Order';
+            }
             if (typeof showToast === 'function') showToast('Payment window closed.');
           }
         }
@@ -464,31 +531,121 @@ async function processPageOrder(e) {
       try {
         const rzp = new Razorpay(options);
         rzp.on('payment.failed', function (resp) {
-          alert('Razorpay payment failed: ' + (resp.error.description || 'Transaction declined.'));
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Confirm & Place Order';
+          }
+          const failMsg = resp.error?.description || 'Transaction declined. Please try again.';
+          alert('Razorpay payment failed: ' + failMsg);
         });
         rzp.open();
         return;
       } catch (err) {
-        console.warn('Razorpay invocation fallback:', err);
+        console.warn('Razorpay invocation exception:', err);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirm & Place Order';
+        }
       }
     }
 
-    // Seamless Sandbox Payment Simulation Fallback
-    if (rzpConfig.simulate !== false) {
+    // Sandbox Simulation fallback only if explicitly enabled
+    if (rzpConfig.simulate === true) {
       const simPaymentId = 'pay_sim_' + Math.random().toString(36).substring(2, 10).toUpperCase();
-      completeOrderPlacement(orderId, firstName, lastName, phone, email, address, city, pincode, 'Razorpay Online (' + simPaymentId + ')', cart, shippingFee);
+      await completeOrderPlacement(
+        orderId, firstName, lastName, phone, email, address, city, pincode,
+        'Razorpay Online (' + simPaymentId + ')',
+        cart, shippingFee, simPaymentId
+      );
+      return;
+    } else {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm & Place Order';
+      }
+      alert('Razorpay gateway is not accessible. Please ensure you are connected to the internet.');
       return;
     }
   }
 
   // Complete COD placement
-  completeOrderPlacement(orderId, firstName, lastName, phone, email, address, city, pincode, 'Cash on Delivery (COD)', cart, shippingFee);
+  await completeOrderPlacement(orderId, firstName, lastName, phone, email, address, city, pincode, 'Cash on Delivery (COD)', cart, shippingFee, null);
 }
 
-function completeOrderPlacement(orderId, firstName, lastName, phone, email, address, city, pincode, paymentMethod, cart, shippingFee) {
-  // 1. Deduct Inventory from odd_admin_inventory
-  const inv = getLiveInventory();
+async function completeOrderPlacement(orderId, firstName, lastName, phone, email, address, city, pincode, paymentMethod, cart, shippingFee, razorpayPaymentId = null) {
+  const submitBtn = document.getElementById('checkout-submit') || document.getElementById('place-order-btn') || document.querySelector('button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Processing Order...';
+  }
 
+  const customerName = (firstName + ' ' + lastName).trim();
+  const fullAddress = `${address}${city ? ', ' + city : ''}${pincode ? ' - ' + pincode : ''}`;
+  const coupon = getActiveCouponDetails();
+  const isPaid = paymentMethod.toLowerCase().includes('razorpay');
+
+  // 1. Compute bill breakdown with coupon and shipping
+  let subtotal = 0;
+  cart.forEach(item => {
+    const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[item.id]) ? PRODUCTS[item.id] : null;
+    const price = prod ? prod.price : (item.price || 899);
+    subtotal += price * item.qty;
+  });
+
+  const discountAmount = (coupon && coupon.discount > 0) ? Math.round(subtotal * (coupon.discount / 100)) : 0;
+  const finalShipping = (shippingFee != null) ? Number(shippingFee) : getShippingFee(subtotal);
+  const finalTotal = Math.max(0, subtotal - discountAmount + finalShipping);
+
+  // 2. Persist order directly into backend database (/api/orders)
+  let assignedOrderId = orderId;
+  let serverTotal = finalTotal;
+
+  try {
+    const serverPayload = {
+      customer: customerName,
+      email: email,
+      phone: phone,
+      address: fullAddress,
+      items: cart.map(it => ({
+        sku: ID_TO_SKU[it.id] || it.id,
+        id: it.id,
+        qty: Number(it.qty) || 1
+      })),
+      paymentMethod: paymentMethod,
+      couponCode: coupon ? coupon.code : null,
+      razorpayPaymentId: razorpayPaymentId || null
+    };
+
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(serverPayload)
+    });
+
+    const resData = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const errMsg = resData.error || 'Failed to place order on server.';
+      alert('Order Placement Error: ' + errMsg);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm & Place Order';
+      }
+      return;
+    }
+
+    if (resData.orderId) {
+      assignedOrderId = resData.orderId;
+    }
+    if (resData.totalAmount != null) {
+      serverTotal = resData.totalAmount;
+    }
+  } catch (netErr) {
+    console.warn('Backend /api/orders sync encountered network issue, proceeding with local fallback:', netErr);
+  }
+
+  // 3. Deduct Inventory from odd_admin_inventory (storefront local sync)
+  const inv = getLiveInventory();
   cart.forEach(item => {
     const sku = ID_TO_SKU[item.id] || item.id;
     if (inv[sku]) {
@@ -498,25 +655,11 @@ function completeOrderPlacement(orderId, firstName, lastName, phone, email, addr
   });
   localStorage.setItem('odd_admin_inventory', JSON.stringify(inv));
 
-  // Dispatch custom event so storefront & admin reflect updated stock
   try {
     window.dispatchEvent(new CustomEvent('odd:inventory-updated', { detail: inv }));
   } catch (e) {}
 
-  // 2. Compute bill breakdown with coupon and shipping
-  let subtotal = 0;
-  cart.forEach(item => {
-    const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[item.id]) ? PRODUCTS[item.id] : null;
-    const price = prod ? prod.price : (item.price || 899);
-    subtotal += price * item.qty;
-  });
-
-  const coupon = getActiveCouponDetails();
-  const discountAmount = (coupon && coupon.discount > 0) ? Math.round(subtotal * (coupon.discount / 100)) : 0;
-  const finalShipping = (shippingFee != null) ? Number(shippingFee) : getShippingFee(subtotal);
-  const finalTotal = Math.max(0, subtotal - discountAmount + finalShipping);
-
-  // 3. Record coupon usage linked to customer email
+  // 4. Record coupon usage linked to customer email
   if (coupon && coupon.code) {
     try {
       const usages = JSON.parse(localStorage.getItem('odd_coupon_usages') || '[]');
@@ -524,7 +667,7 @@ function completeOrderPlacement(orderId, firstName, lastName, phone, email, addr
         coupon: coupon.code,
         email: email || 'guest@oddperfume.com',
         phone: phone || '',
-        orderId: orderId,
+        orderId: assignedOrderId,
         discount: discountAmount,
         date: new Date().toISOString()
       });
@@ -532,21 +675,22 @@ function completeOrderPlacement(orderId, firstName, lastName, phone, email, addr
     } catch (e) {}
   }
 
-  // 4. Save Order to odd_orders in localStorage
+  // 5. Save Order to odd_orders in localStorage
   const existingOrders = JSON.parse(localStorage.getItem('odd_orders') || '[]');
-  const isPaid = paymentMethod.toLowerCase().includes('razorpay');
 
   const newOrder = {
-    id: orderId,
+    id: assignedOrderId,
     date: new Date().toISOString(),
-    customer: (firstName + ' ' + lastName).trim(),
+    customer: customerName,
     phone: phone,
     email: email,
-    address: `${address}${city ? ', ' + city : ''}${pincode ? ' - ' + pincode : ''}`,
+    address: fullAddress,
     items: cart.map(it => {
       const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[it.id]) ? PRODUCTS[it.id] : null;
+      const sku = ID_TO_SKU[it.id] || it.id;
       return {
         id: it.id,
+        sku: sku,
         name: prod ? prod.name : (it.name || it.id),
         qty: Number(it.qty) || 1,
         price: prod ? prod.price : (it.price || 899)
@@ -556,24 +700,28 @@ function completeOrderPlacement(orderId, firstName, lastName, phone, email, addr
     coupon: coupon ? coupon.code : null,
     discount: discountAmount,
     shipping: finalShipping,
-    total: finalTotal,
-    amount: finalTotal,
+    total: serverTotal,
+    amount: serverTotal,
     status: 'Confirmed',
     paymentMethod: paymentMethod,
-    paymentStatus: isPaid ? 'Paid' : 'Payment pending'
+    paymentStatus: isPaid ? 'Paid' : 'Payment pending',
+    gateway: isPaid ? 'Razorpay Live' : 'Cash on Delivery (COD)',
+    razorpayPaymentId: razorpayPaymentId || (isPaid ? (paymentMethod.match(/pay_[a-zA-Z0-9]+/)?.[0] || null) : null),
+    stockDeducted: true,
+    createdAt: new Date().toISOString()
   };
 
   existingOrders.unshift(newOrder);
   localStorage.setItem('odd_orders', JSON.stringify(existingOrders));
 
-  // 5. Clear Cart
+  // 6. Clear Cart
   localStorage.setItem('odd_cart', '[]');
   if (typeof cartState !== 'undefined') cartState.length = 0;
   if (typeof updateCartUI === 'function') updateCartUI();
 
-  // 6. Success UI Feedback & Redirect
-  alert(`Order Confirmed! Order ID: ${orderId}\nPayment: ${paymentMethod}\nShipping: ₹${finalShipping}\nTotal Payable: ₹${finalTotal.toLocaleString('en-IN')}\nThank you for shopping with ODD Perfume.`);
-  window.location.href = 'order-tracking.html?orderId=' + encodeURIComponent(orderId);
+  // 7. Success UI Feedback & Redirect
+  alert(`Order Confirmed! Order ID: ${assignedOrderId}\nPayment: ${paymentMethod}\nShipping: ₹${finalShipping}\nTotal Payable: ₹${serverTotal.toLocaleString('en-IN')}\nThank you for shopping with ODD Perfume.`);
+  window.location.href = 'order-tracking.html?orderId=' + encodeURIComponent(assignedOrderId);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -1,0 +1,23 @@
+{
+  "name": "odd-perfume",
+  "version": "2.0.0",
+  "description": "Storefront and staff operations portal for ODD Perfumes Mumbai",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "create-admin": "node scripts/create-admin.js",
+    "test": "node scripts/test-suite.js"
+  },
+  "keywords": [
+    "odd-perfume",
+    "ecommerce",
+    "mumbai",
+    "direct-to-consumer",
+    "perfumery"
+  ],
+  "author": "ODD Perfumes",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

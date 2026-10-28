@@ -3,37 +3,44 @@
 const form = document.getElementById('admin-login-form');
 const errorBox = document.getElementById('login-error');
 
-// Automatically redirect if already authenticated
-(function() {
-  const session = localStorage.getItem('odd_admin_session');
-  if (session) {
-    try {
-      const parsed = JSON.parse(session);
-      if (parsed.authenticated) {
+// Check active server-side session immediately
+(async function checkExistingSession() {
+  try {
+    const res = await fetch('/api/auth/session', { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.authenticated && data.user) {
+        if (data.csrfToken) {
+          sessionStorage.setItem('odd_csrf_token', data.csrfToken);
+        }
         window.location.replace('admin.html');
-        return;
       }
-    } catch (e) {}
+    }
+  } catch (err) {
+    // API server unreachable or offline - stay on login page
   }
 })();
 
 if (form) {
-  form.addEventListener('submit', (event) => {
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (errorBox) errorBox.style.display = 'none';
+    if (errorBox) {
+      errorBox.style.display = 'none';
+      errorBox.textContent = '';
+    }
 
     const submit = form.querySelector('button[type="submit"]');
     if (submit) {
       submit.disabled = true;
-      submit.textContent = 'Signing in…';
+      submit.textContent = 'Authenticating...';
     }
 
-    const email = form.email ? form.email.value.trim() : 'admin@oddperfume.com';
-    const password = form.password ? form.password.value.trim() : 'admin';
+    const email = (form.email ? form.email.value : '').trim();
+    const password = (form.password ? form.password.value : '').trim();
 
     if (!email || !password) {
       if (errorBox) {
-        errorBox.textContent = 'Please enter both email and password.';
+        errorBox.textContent = 'Please provide both email and password.';
         errorBox.style.display = 'block';
       }
       if (submit) {
@@ -43,19 +50,37 @@ if (form) {
       return;
     }
 
-    // Save session in localStorage for Hostinger static deployment
-    const sessionObj = {
-      authenticated: true,
-      email: email,
-      name: email.split('@')[0].toUpperCase(),
-      role: 'admin',
-      permissions: ['*'],
-      token: 'static-hostinger-token-' + Date.now()
-    };
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email, password })
+      });
 
-    localStorage.setItem('odd_admin_session', JSON.stringify(sessionObj));
-    localStorage.setItem('odd_role', 'admin');
+      const data = await response.json().catch(() => ({}));
 
-    window.location.replace('admin.html');
+      if (!response.ok || !data.authenticated) {
+        throw new Error(data.error || 'Invalid credentials or inactive account.');
+      }
+
+      if (data.csrfToken) {
+        sessionStorage.setItem('odd_csrf_token', data.csrfToken);
+      }
+
+      window.location.replace('admin.html');
+    } catch (err) {
+      if (errorBox) {
+        errorBox.textContent = err.message || 'Authentication failed. Please verify credentials.';
+        errorBox.style.display = 'block';
+      }
+      if (submit) {
+        submit.disabled = false;
+        submit.textContent = 'Sign in securely';
+      }
+    }
   });
 }

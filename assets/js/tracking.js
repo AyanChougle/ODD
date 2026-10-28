@@ -45,27 +45,26 @@ async function submitOrderTracking(event) {
       throw new Error('Please enter your Order Reference or checkout mobile number.');
     }
 
-    // 1. Offline Lookup from localStorage
-    const localOrders = JSON.parse(localStorage.getItem('odd_orders') || '[]');
+    // 1. Authoritative Server Lookup
     let order = null;
+    try {
+      const params = new URLSearchParams({ order: id || '', ...(phone ? { phone } : {}) });
+      const response = await fetch(`/api/orders/track?${params.toString()}`, { cache: 'no-store' });
+      if (response.ok) {
+        order = await response.json();
+      }
+    } catch (e) {}
 
-    if (id) {
-      order = localOrders.find(o => String(o.id || '').toUpperCase() === id);
-    }
-    if (!order && phone) {
-      const cleanPhone = phone.replace(/[^0-9]/g, '');
-      order = localOrders.find(o => String(o.phone || '').replace(/[^0-9]/g, '').includes(cleanPhone));
-    }
-
-    // 2. Try online API as graceful fallback if not found locally
+    // 2. Local fallback if offline or unreachable
     if (!order) {
-      try {
-        const params = new URLSearchParams({ order: id || '', ...(phone ? { phone } : {}) });
-        const response = await fetch(`/api/orders/track?${params.toString()}`, { cache: 'no-store' });
-        if (response.ok) {
-          order = await response.json();
-        }
-      } catch (e) {}
+      const localOrders = JSON.parse(localStorage.getItem('odd_orders') || '[]');
+      if (id) {
+        order = localOrders.find(o => String(o.id || '').toUpperCase() === id);
+      }
+      if (!order && phone) {
+        const cleanPhone = phone.replace(/[^0-9]/g, '');
+        order = localOrders.find(o => String(o.phone || '').replace(/[^0-9]/g, '').includes(cleanPhone));
+      }
     }
 
     if (!order) {
