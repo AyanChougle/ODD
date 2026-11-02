@@ -1246,17 +1246,25 @@ const server = http.createServer(async (req, res) => {
             VALUES (?, ?, ?, ?, ?, ?, ?)
           `);
 
+          const SHORT_SKUS = {
+            'ODD-FM-002': 'ODD-FM',
+            'ODD-LC-003': 'ODD-LC',
+            'ODD-PH-001': 'ODD-PH'
+          };
+
           for (const item of productsList) {
             const sku = item.sku;
             const count = Math.min(100, Math.max(1, Number(item.qty) || 1));
             const name = SKU_NAMES[sku] || sku;
+            const prefix = SHORT_SKUS[sku] || (sku.startsWith('ODD-') ? sku.slice(0, 6) : `ODD-${sku}`);
+            const batchNum = (lot.match(/(\d{1,2})$/) || [null, '01'])[1].padStart(2, '0');
 
             // Find current highest index for this lot
             const existingCount = db.prepare('SELECT COUNT(*) as c FROM barcodes WHERE sku = ? AND lot_number = ?').get(sku, lot).c;
 
             for (let i = 1; i <= count; i++) {
-              const serialIndex = String(existingCount + i).padStart(3, '0');
-              const serial = `${sku}-B${lot}-${serialIndex}`;
+              const serialIndex = String(existingCount + i).padStart(2, '0');
+              const serial = `${prefix}-${batchNum}-${serialIndex}`;
 
               insertBarcode.run(serial, sku, name, lot, mfg, expiry, mrp);
               generatedLabels.push({

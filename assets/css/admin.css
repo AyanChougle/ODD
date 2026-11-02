@@ -1125,198 +1125,139 @@ body.admin-body {
   }
 }
 
-/* Authentic Packaging Sticker — Compact, Professional Layout */
+/* Authentic Clean Packaging Sticker — Completely Borderless */
 .barcode-sticker {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
-  justify-content: space-between !important;
+  justify-content: center !important;
   background: #FFFFFF !important;
   color: #000000 !important;
-  border: 1px dashed #2A3040 !important;
-  border-radius: 6px !important;
-  padding: 8px 10px !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 1mm 1.5mm !important;
   box-sizing: border-box !important;
   width: 100% !important;
   position: relative !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
-  text-align: center !important;
-  gap: 4px !important;
   overflow: hidden !important;
-  transition: border-color 0.2s, box-shadow 0.2s !important;
+  transition: none !important;
 }
 
 .barcode-sticker:hover {
-  border-color: #000000 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
-.sticker-code {
-  font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.06em !important;
-  color: #000000 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  text-align: center !important;
-  width: 100% !important;
-  line-height: 1.2 !important;
+.has-print-borders .barcode-sticker {
+  border: none !important;
 }
 
-.sticker-barcode-box {
-  width: 100% !important;
-  background: #FFFFFF !important;
-  padding: 2px 0 !important;
-  margin: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-sizing: border-box !important;
-  flex: 1 1 auto !important;
-}
-
-.sticker-barcode-svg {
-  display: block !important;
-  width: 96% !important;
-  max-width: 96% !important;
-  height: 44px !important;
-  shape-rendering: crispEdges !important;
-}
-
+/* Remove all unwanted headers and footers */
+.sticker-header,
 .sticker-meta-row {
-  display: grid !important;
-  grid-template-columns: 1fr 1.25fr 1.25fr !important;
-  width: 100% !important;
-  align-items: center !important;
-  box-sizing: border-box !important;
-  padding: 0 !important;
-  margin: 0 !important;
+  display: none !important;
 }
 
-.sticker-meta-item {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  text-align: center !important;
-  line-height: 1.15 !important;
-}
-
-.sticker-meta-lbl {
-  font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
-  font-size: 8px !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.08em !important;
-  text-transform: uppercase !important;
-  color: #333333 !important;
-  margin-bottom: 1px !important;
-}
-
-.sticker-meta-val {
-  font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
-  font-size: 9.5px !important;
-  font-weight: 700 !important;
-  color: #000000 !important;
-  white-space: nowrap !important;
-}
-
-/* Dual Layout: Small Barcode + QR Code Side-by-Side */
-.sticker-dual-body {
+/* Body Row for Dual (Barcode + QR) */
+.sticker-body-row {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   justify-content: space-between !important;
   width: 100% !important;
+  height: 100% !important;
   gap: 8px !important;
   flex: 1 1 auto !important;
   box-sizing: border-box !important;
 }
 
-.sticker-dual-left {
-  flex: 1 1 65% !important;
+.sticker-barcode-pane {
+  flex: 1 1 auto !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 3px !important;
   min-width: 0 !important;
-}
-
-.sticker-dual-left .sticker-barcode-box {
-  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
   padding: 0 !important;
 }
 
-.sticker-dual-left .sticker-barcode-svg {
-  height: 26px !important;
-  width: 98% !important;
-  max-width: 98% !important;
+.sticker-barcode-pane.full-width {
+  width: 100% !important;
 }
 
-.sticker-dual-right {
-  flex: 0 0 32% !important;
+.sticker-barcode-svg {
+  display: block !important;
+  width: auto !important;
+  max-width: 95% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  margin: 0 auto !important;
+  shape-rendering: crispEdges !important;
+}
+
+.sticker-qr-pane {
+  flex: 0 0 auto !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  border-left: 1px solid #E2E8F0 !important;
-  padding-left: 6px !important;
+  height: 100% !important;
 }
 
-.sticker-qr-container {
+.sticker-qr-pane.full-center {
+  width: 100% !important;
+  justify-content: center !important;
+}
+
+.sticker-qr-frame {
+  background: #FFFFFF !important;
+  padding: 2px !important;
+  border-radius: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+
+.sticker-qr-box {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   line-height: 0 !important;
 }
 
-.sticker-qr-container canvas,
-.sticker-qr-container img {
+.sticker-qr-box canvas {
+  display: none !important;
+}
+
+.sticker-qr-box img {
   display: block !important;
-  width: 52px !important;
-  height: 52px !important;
-  max-width: 52px !important;
-  max-height: 52px !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: 24mm !important;
+  max-height: 24mm !important;
   image-rendering: -webkit-optimize-contrast !important;
   image-rendering: crisp-edges !important;
   image-rendering: pixelated !important;
 }
 
-.sticker-qr-caption {
-  font-family: var(--font-mono, monospace) !important;
-  font-size: 7px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.08em !important;
-  color: #64748B !important;
-  margin-top: 2px !important;
-  text-transform: uppercase !important;
-}
-
-/* Small Barcode Only */
-.sticker-barcode-box-small {
-  padding: 2px 0 !important;
-}
-
-.sticker-barcode-box-small .sticker-barcode-svg {
-  height: 32px !important;
-  width: 90% !important;
-}
-
-/* QR Code Center Box */
-.sticker-qr-center-box {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex: 1 1 auto !important;
-  padding: 4px 0 !important;
-}
-
-.sticker-qr-center-box .sticker-qr-container canvas,
-.sticker-qr-center-box .sticker-qr-container img {
-  width: 72px !important;
-  height: 72px !important;
-  max-width: 72px !important;
-  max-height: 72px !important;
+.sticker-qr-serial,
+.sticker-code-text {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #000000 !important;
+  text-align: center !important;
+  margin-top: 3px !important;
+  letter-spacing: 1.5px !important;
+  white-space: nowrap !important;
+  width: 100% !important;
+  line-height: 1.2 !important;
 }
 
 /* ==========================================================================
@@ -1607,204 +1548,133 @@ body.admin-body {
   }
 
   .barcode-sticker {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-    border: 1px dashed #000000 !important;
-    border-radius: 4px !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: var(--label-height, 25mm) !important;
+    max-height: var(--label-height, 25mm) !important;
+    padding: 1mm 1.5mm !important; /* Tight padding: NO vast empty space */
+    border: none !important; /* Borderless by default on print */
+    border-radius: 0 !important;
     background: #FFFFFF !important;
     color: #000000 !important;
-    box-shadow: none !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: var(--label-height, 35mm) !important;
-    min-height: var(--label-height, 35mm) !important;
-    max-height: var(--label-height, 35mm) !important;
-    box-sizing: border-box !important;
-    padding: 2.2mm 3.2mm !important;
-    margin: 0 !important;
-    overflow: hidden !important;
     display: flex !important;
     flex-direction: column !important;
-    justify-content: space-between !important;
     align-items: center !important;
-    gap: 0 !important;
-  }
-
-  .sticker-code {
-    font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
-    font-size: 9pt !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.05em !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    line-height: 1.15 !important;
-    color: #000000 !important;
-    text-align: center !important;
-    width: 100% !important;
-  }
-
-  .sticker-barcode-box {
-    width: 100% !important;
-    height: calc(var(--label-height, 35mm) - 15mm) !important;
-    min-height: 16mm !important;
-    max-height: calc(var(--label-height, 35mm) - 14mm) !important;
-    display: flex !important;
     justify-content: center !important;
-    align-items: center !important;
-    margin: 0.5mm 0 !important;
-    padding: 0 !important;
-    box-sizing: border-box !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
-  .sticker-barcode-svg {
-    width: 98% !important;
-    max-width: 98% !important;
+  .has-print-borders .barcode-sticker {
+    border: 0.5pt solid #000000 !important;
+    border-radius: 3px !important;
+  }
+
+  .sticker-header,
+  .sticker-meta-row {
+    display: none !important;
+  }
+
+  .sticker-body-row {
     height: 100% !important;
     max-height: 100% !important;
-    display: block !important;
-    shape-rendering: crispEdges !important;
-  }
-
-  .sticker-meta-row {
-    display: grid !important;
-    grid-template-columns: 1fr 1.25fr 1.25fr !important;
-    width: 100% !important;
-    align-items: center !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  .sticker-meta-item {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    text-align: center !important;
-    line-height: 1.1 !important;
-  }
-
-  .sticker-meta-lbl {
-    font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
-    font-size: 6.5pt !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.08em !important;
-    text-transform: uppercase !important;
-    color: #333333 !important;
-    margin-bottom: 0.5mm !important;
-  }
-
-  .sticker-meta-val {
-    font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
-    font-size: 8pt !important;
-    font-weight: 700 !important;
-    color: #000000 !important;
-    white-space: nowrap !important;
-    margin: 0 !important;
-  }
-
-  /* Dual Layout (Small Barcode + QR Code Side-by-Side) Print */
-  .sticker-dual-body {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
     width: 100% !important;
-    height: calc(var(--label-height, 35mm) - 8mm) !important;
     gap: 2mm !important;
-    box-sizing: border-box !important;
-  }
-
-  .sticker-dual-left {
-    flex: 1 1 66% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    height: 100% !important;
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-  }
-
-  .sticker-dual-left .sticker-barcode-box {
-    width: 100% !important;
-    height: 10mm !important;
-    min-height: 9mm !important;
-    max-height: 12mm !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
     margin: 0 !important;
     padding: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
 
-  .sticker-dual-left .sticker-barcode-svg {
-    width: 98% !important;
+  .sticker-barcode-pane {
+    flex: 1 1 auto !important;
     height: 100% !important;
-    max-height: 100% !important;
-  }
-
-  .sticker-dual-left .sticker-meta-lbl {
-    font-size: 5.5pt !important;
-  }
-
-  .sticker-dual-left .sticker-meta-val {
-    font-size: 7pt !important;
-  }
-
-  .sticker-dual-right {
-    flex: 0 0 30% !important;
-    border-left: 1px dashed #000000 !important;
-    padding-left: 1.5mm !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    height: 100% !important;
-    box-sizing: border-box !important;
+    min-width: 0 !important;
   }
 
-  .sticker-qr-container canvas,
-  .sticker-qr-container img {
-    width: 15mm !important;
-    height: 15mm !important;
-    max-width: 15mm !important;
-    max-height: 15mm !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    display: block !important;
-  }
-
-  .sticker-qr-caption {
-    font-family: var(--font-mono, monospace) !important;
-    font-size: 5pt !important;
-    font-weight: 700 !important;
-    color: #000000 !important;
-    margin-top: 0.5mm !important;
-    text-transform: uppercase !important;
-  }
-
-  /* Small Barcode Only Print */
-  .sticker-format-barcode .sticker-barcode-box {
+  .sticker-barcode-pane.full-width {
     width: 100% !important;
-    height: calc(var(--label-height, 35mm) - 17mm) !important;
-    min-height: 11mm !important;
-    max-height: 14mm !important;
   }
 
-  /* QR Only Print */
-  .sticker-format-qr .sticker-qr-center-box {
-    height: calc(var(--label-height, 35mm) - 15mm) !important;
+  /* 1D Barcode: Compact Width & Height Preserved (Not Stretched Long) */
+  .sticker-barcode-svg {
+    height: 100% !important;
+    max-height: 100% !important;
+    width: auto !important;
+    max-width: 95% !important;
+    margin: 0 auto !important;
+    display: block !important;
+    shape-rendering: crispEdges !important;
+  }
+
+  .sticker-qr-pane {
+    flex: 0 0 16mm !important;
+    width: 16mm !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .sticker-qr-pane.full-center {
+    margin: 0 auto !important;
+    width: 100% !important;
+    flex: 1 1 auto !important;
+  }
+
+  .sticker-qr-frame {
+    background: #FFFFFF !important;
+    border: none !important;
+    padding: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
   }
 
-  .sticker-format-qr .sticker-qr-container canvas,
-  .sticker-format-qr .sticker-qr-container img {
-    width: 17mm !important;
-    height: 17mm !important;
-    max-width: 17mm !important;
-    max-height: 17mm !important;
+  .sticker-qr-box {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .sticker-qr-box canvas {
+    display: none !important;
+  }
+
+  /* 2D QR Code: Scaled to fill sticker without giant empty spaces */
+  .sticker-qr-box img {
+    width: auto !important;
+    height: auto !important;
+    max-width: calc(var(--label-height, 25mm) - 6mm) !important;
+    max-height: calc(var(--label-height, 25mm) - 6mm) !important;
+    display: block !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    image-rendering: pixelated !important;
+  }
+
+  .sticker-qr-serial,
+  .sticker-code-text {
+    font-family: var(--font-mono, monospace) !important;
+    font-size: 10pt !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    letter-spacing: 1pt !important;
+    margin-top: 1.5mm !important;
+    width: 100% !important;
+    line-height: 1.2 !important;
   }
 }
 

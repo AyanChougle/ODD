@@ -711,17 +711,32 @@ try {
         $bStmt = $pdo->prepare('INSERT INTO barcodes (serial, sku, product_name, lot_number, mfg_date, expiry_date, mrp) VALUES (?, ?, ?, ?, ?, ?, ?)');
         $countStmt = $pdo->prepare('SELECT COUNT(*) as c FROM barcodes WHERE sku = ? AND lot_number = ?');
 
+        $skuCodes = [
+            'ODD-FM-002' => 'ODD-FM',
+            'ODD-LC-003' => 'ODD-LC',
+            'ODD-PH-001' => 'ODD-PH'
+        ];
+        $skuNames = [
+            'ODD-FM-002' => 'ODD FIRST MOVE',
+            'ODD-LC-003' => 'ODD LUCID',
+            'ODD-PH-001' => 'ODD PHANTOM'
+        ];
+
         foreach ($prods as $p) {
             $sku = $p['sku'];
+            $pName = $skuNames[$sku] ?? $sku;
+            $prefix = $skuCodes[$sku] ?? (strpos($sku, 'ODD-') === 0 ? substr($sku, 0, 6) : "ODD-{$sku}");
             $qty = min(100, max(1, (int)($p['qty'] ?? 1)));
             $countStmt->execute([$sku, $lot]);
             $existing = (int)$countStmt->fetch()['c'];
 
+            $batchNum = preg_match('/(\d{1,2})$/', $lot, $m) ? str_pad($m[1], 2, '0', STR_PAD_LEFT) : '01';
+
             for ($i = 1; $i <= $qty; $i++) {
-                $idx = str_pad((string)($existing + $i), 3, '0', STR_PAD_LEFT);
-                $serial = "{$sku}-B{$lot}-{$idx}";
-                $bStmt->execute([$serial, $sku, $sku, $lot, $mfg, $expiry, $mrp]);
-                $labels[] = ['sku' => $sku, 'name' => $sku, 'barcode' => $serial, 'serial' => $serial, 'lot' => $lot, 'mfg' => $mfg, 'expiry' => $expiry, 'mrp' => $mrp];
+                $idx = str_pad((string)($existing + $i), 2, '0', STR_PAD_LEFT);
+                $serial = "{$prefix}-{$batchNum}-{$idx}";
+                $bStmt->execute([$serial, $sku, $pName, $lot, $mfg, $expiry, $mrp]);
+                $labels[] = ['sku' => $sku, 'name' => $pName, 'barcode' => $serial, 'serial' => $serial, 'lot' => $lot, 'mfg' => $mfg, 'expiry' => $expiry, 'mrp' => $mrp];
             }
         }
         $pdo->commit();
@@ -935,6 +950,13 @@ try {
     // --- 10. Settings ---
     if (strpos($route, 'settings/') === 0 && $method === 'GET') {
         $key = substr($route, strlen('settings/'));
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS settings (
+                key_name VARCHAR(64) PRIMARY KEY,
+                value_json LONGTEXT NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ');
         $stmt = $pdo->prepare('SELECT value_json FROM settings WHERE key_name = ?');
         $stmt->execute([$key]);
         $row = $stmt->fetch();
@@ -943,8 +965,15 @@ try {
 
     if (strpos($route, 'settings/') === 0 && ($method === 'POST' || $method === 'PUT')) {
         $key = substr($route, strlen('settings/'));
-        requireStaffAuth($key === 'banner' ? 'marketing' : ($key === 'shipping' ? 'shipping' : 'admin'));
+        requireStaffAuth($key === 'banner' ? 'marketing' : 'admin');
         $body = getJsonBody();
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS settings (
+                key_name VARCHAR(64) PRIMARY KEY,
+                value_json LONGTEXT NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ');
         $pdo->prepare('
             INSERT INTO settings (key_name, value_json, updated_at) VALUES (?, ?, NOW())
             ON DUPLICATE KEY UPDATE value_json = VALUES(value_json), updated_at = NOW()

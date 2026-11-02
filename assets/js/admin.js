@@ -402,7 +402,7 @@ async function adminApi(path, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const errorMsg = data.error || `Request failed with status ${response.status}`;
+    const errorMsg = data.details ? `${data.error}: ${data.details}` : (data.error || `Request failed with status ${response.status}`);
     showAdminToast(errorMsg, true);
     throw new Error(errorMsg);
   }
@@ -1312,7 +1312,7 @@ async function loadRecentScans() {
    ========================================================================== */
 const CODE128_PATTERNS = '212222 222122 222221 121223 121322 131222 122213 122312 132212 221213 221312 231212 112232 122132 122231 113222 123122 123221 223211 221132 221231 213212 223112 312131 311222 321122 321221 312212 322112 322211 212123 212321 232121 111323 131123 131321 112313 132113 132311 211313 231113 231311 112133 112331 132131 113123 113321 133121 313121 211331 231131 213113 213311 213131 311123 311321 331121 312113 312311 332111 314111 221411 431111 111224 111422 121124 121421 141122 141221 112214 112412 122114 122411 142112 142211 241211 221114 413111 241112 134111 111242 121142 121241 114212 124112 124211 411212 421112 421211 212141 214121 412121 111143 111341 131141 114113 114311 411113 411311 113141 114131 311141 411131 211412 211214 211232 2331112'.split(' ');
 
-function code128Svg(value, barHeight = 48) {
+function code128Svg(value, barHeight = 45) {
   const text = String(value || '').trim();
   const values = [104]; // Start B
   for (let i = 0; i < text.length; i++) {
@@ -1323,9 +1323,9 @@ function code128Svg(value, barHeight = 48) {
   for (let i = 1; i < values.length; i++) sum += values[i] * i;
   values.push(sum % 103, 106);
 
-  // High precision integer module width & standard 12-module quiet zone
+  // High precision integer module width & standard 6-module quiet zone
   const moduleWidth = 2;
-  const quietZonePx = 12 * moduleWidth;
+  const quietZonePx = 6 * moduleWidth;
   let x = quietZonePx;
   const bars = [];
   values.forEach(valuePart => {
@@ -1341,7 +1341,10 @@ function code128Svg(value, barHeight = 48) {
   });
   const totalWidth = x + quietZonePx;
 
-  return `<svg class="sticker-barcode-svg" style="height:${barHeight}px; max-width:100%;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${barHeight}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Code 128 barcode ${escapeHtml(text)}" shape-rendering="crispEdges"><rect width="${totalWidth}" height="${barHeight}" fill="#FFFFFF"/><g fill="#000000">${bars.join('')}</g></svg>`;
+  return `<svg class="sticker-barcode-svg" viewBox="0 0 ${totalWidth} ${barHeight}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Barcode ${escapeHtml(text)}" shape-rendering="crispEdges">
+    <rect width="${totalWidth}" height="${barHeight}" fill="#FFFFFF"/>
+    <g fill="#000000">${bars.join('')}</g>
+  </svg>`;
 }
 
 function initBarcodeGenerator() {
@@ -1355,8 +1358,10 @@ function applyLabelPreset(preset) {
   if (!widthInput || !heightInput) return;
 
   const presets = {
+    '50x15': { w: 50, h: 15, cols: 3 },
+    '60x20': { w: 60, h: 20, cols: 3 },
+    '70x25': { w: 70, h: 25, cols: 3 },
     '70x35': { w: 70, h: 35, cols: 3 },
-    '60x30': { w: 60, h: 30, cols: 3 },
     '50x25': { w: 50, h: 25, cols: 3 },
     '80x40': { w: 80, h: 40, cols: 2 },
     '100x50': { w: 100, h: 50, cols: 2 }
@@ -1406,7 +1411,7 @@ async function generateBarcodeSheet(event) {
     const width = Number(document.getElementById('batch-label-width')?.value || 70);
     const height = Number(document.getElementById('batch-label-height')?.value || 35);
     const cols = Number(document.getElementById('batch-label-cols')?.value || 4);
-    const lot = document.getElementById('batch-lot-no')?.value.trim() || '77750';
+    const lot = document.getElementById('batch-lot-no')?.value.trim() || '01';
     const mfg = document.getElementById('batch-mfg-date')?.value || new Date().toISOString().slice(0, 10);
     const shelfLife = Number(document.getElementById('batch-shelf-life')?.value || 36);
     const mrp = Number(document.getElementById('batch-mrp')?.value || 899);
@@ -1442,78 +1447,37 @@ async function generateBarcodeSheet(event) {
         ${labels.map(label => {
           if (codeFormat === 'dual') {
             return `
-              <article class="barcode-sticker sticker-format-dual" style="min-height:${height}mm;">
-                <div class="sticker-code">${escapeHtml(label.barcode)}</div>
-                <div class="sticker-dual-body">
-                  <div class="sticker-dual-left">
-                    <div class="sticker-barcode-box">
-                      <svg class="sticker-barcode-svg" data-barcode="${escapeHtml(label.barcode)}"></svg>
-                    </div>
-                    <div class="sticker-meta-row">
-                      <div class="sticker-meta-item">
-                        <span class="sticker-meta-lbl">LOT</span>
-                        <span class="sticker-meta-val">${escapeHtml(label.lot)}</span>
-                      </div>
-                      <div class="sticker-meta-item">
-                        <span class="sticker-meta-lbl">MFG</span>
-                        <span class="sticker-meta-val">${escapeHtml(label.mfg)}</span>
-                      </div>
-                      <div class="sticker-meta-item">
-                        <span class="sticker-meta-lbl">EXP</span>
-                        <span class="sticker-meta-val">${escapeHtml(label.expiry)}</span>
-                      </div>
-                    </div>
+              <article class="barcode-sticker sticker-format-dual" style="height:${height}mm; border:0 !important; outline:0 !important; box-shadow:none !important; border-radius:0 !important; background:#ffffff !important; padding:1.5mm !important;">
+                <div class="sticker-body-row">
+                  <div class="sticker-barcode-pane">
+                    <svg class="sticker-barcode-svg" data-barcode="${escapeHtml(label.barcode)}"></svg>
+                    <div class="sticker-code-text">${escapeHtml(label.barcode)}</div>
                   </div>
-                  <div class="sticker-dual-right">
-                    <div class="sticker-qr-container" data-qr="${escapeHtml(label.barcode)}"></div>
-                    <span class="sticker-qr-caption">SCAN QR</span>
+                  <div class="sticker-qr-pane">
+                    <div class="sticker-qr-frame">
+                      <div class="sticker-qr-box" data-qr="${escapeHtml(label.barcode)}"></div>
+                    </div>
                   </div>
                 </div>
               </article>
             `;
           } else if (codeFormat === 'qr') {
             return `
-              <article class="barcode-sticker sticker-format-qr" style="min-height:${height}mm;">
-                <div class="sticker-code">${escapeHtml(label.barcode)}</div>
-                <div class="sticker-qr-center-box">
-                  <div class="sticker-qr-container" data-qr="${escapeHtml(label.barcode)}"></div>
-                </div>
-                <div class="sticker-meta-row">
-                  <div class="sticker-meta-item">
-                    <span class="sticker-meta-lbl">LOT</span>
-                    <span class="sticker-meta-val">${escapeHtml(label.lot)}</span>
+              <article class="barcode-sticker sticker-format-qr" style="height:${height}mm; border:0 !important; outline:0 !important; box-shadow:none !important; border-radius:0 !important; background:#ffffff !important; padding:1.5mm !important;">
+                <div class="sticker-qr-pane full-center">
+                  <div class="sticker-qr-frame">
+                    <div class="sticker-qr-box" data-qr="${escapeHtml(label.barcode)}"></div>
                   </div>
-                  <div class="sticker-meta-item">
-                    <span class="sticker-meta-lbl">MFG</span>
-                    <span class="sticker-meta-val">${escapeHtml(label.mfg)}</span>
-                  </div>
-                  <div class="sticker-meta-item">
-                    <span class="sticker-meta-lbl">EXP</span>
-                    <span class="sticker-meta-val">${escapeHtml(label.expiry)}</span>
-                  </div>
+                  <div class="sticker-code-text">${escapeHtml(label.barcode)}</div>
                 </div>
               </article>
             `;
           } else {
             return `
-              <article class="barcode-sticker sticker-format-barcode" style="min-height:${height}mm;">
-                <div class="sticker-code">${escapeHtml(label.barcode)}</div>
-                <div class="sticker-barcode-box sticker-barcode-box-small">
+              <article class="barcode-sticker sticker-format-barcode" style="height:${height}mm; border:0 !important; outline:0 !important; box-shadow:none !important; border-radius:0 !important; background:#ffffff !important; padding:1.5mm !important;">
+                <div class="sticker-barcode-pane full-width">
                   <svg class="sticker-barcode-svg" data-barcode="${escapeHtml(label.barcode)}"></svg>
-                </div>
-                <div class="sticker-meta-row">
-                  <div class="sticker-meta-item">
-                    <span class="sticker-meta-lbl">LOT</span>
-                    <span class="sticker-meta-val">${escapeHtml(label.lot)}</span>
-                  </div>
-                  <div class="sticker-meta-item">
-                    <span class="sticker-meta-lbl">MFG</span>
-                    <span class="sticker-meta-val">${escapeHtml(label.mfg)}</span>
-                  </div>
-                  <div class="sticker-meta-item">
-                    <span class="sticker-meta-lbl">EXP</span>
-                    <span class="sticker-meta-val">${escapeHtml(label.expiry)}</span>
-                  </div>
+                  <div class="sticker-code-text">${escapeHtml(label.barcode)}</div>
                 </div>
               </article>
             `;
@@ -1522,10 +1486,14 @@ async function generateBarcodeSheet(event) {
       </div>
     `;
 
-    // 1. Render Barcodes (Small compact vector size)
+    const printBorder = document.getElementById('batch-print-border')?.checked ?? false;
+    preview.classList.toggle('has-print-borders', printBorder);
+
+    // 1. Render Barcodes (Crisp Vector Bars with Visible Bold Text Below)
     const stickerSvgs = preview.querySelectorAll('svg.sticker-barcode-svg[data-barcode]');
-    const barHeight = (codeFormat === 'dual') ? 24 : 30;
-    const barWidth = (codeFormat === 'dual') ? 1.2 : 1.35;
+    const targetBarHeight = Math.max(28, Math.round((height - 7) * 3.78));
+    const barWidth = (codeFormat === 'dual') ? 1.4 : 1.7;
+    const barHeight = targetBarHeight;
     stickerSvgs.forEach(svgEl => {
       const code = svgEl.dataset.barcode;
       let rendered = false;
@@ -1535,8 +1503,8 @@ async function generateBarcodeSheet(event) {
             format: 'CODE128',
             width: barWidth,
             height: barHeight,
-            displayValue: false,
-            margin: 2,
+            displayValue: false, // Clean bold HTML text below ensures 100% visibility!
+            margin: 0,
             background: '#FFFFFF',
             lineColor: '#000000',
             flat: true
@@ -1551,18 +1519,17 @@ async function generateBarcodeSheet(event) {
       }
     });
 
-    // 2. Render QR Codes
-    const qrContainers = preview.querySelectorAll('.sticker-qr-container[data-qr]');
-    const qrPx = (codeFormat === 'dual') ? 56 : 74;
-    qrContainers.forEach(container => {
+    // 2. Render QR Codes (High DPI 256x256, Level M)
+    const qrBoxes = preview.querySelectorAll('.sticker-qr-box[data-qr]');
+    qrBoxes.forEach(container => {
       const qrData = container.dataset.qr;
       if (typeof window.QRCode === 'function') {
         try {
           container.innerHTML = '';
           new window.QRCode(container, {
             text: qrData,
-            width: qrPx,
-            height: qrPx,
+            width: 256,
+            height: 256,
             colorDark: '#000000',
             colorLight: '#FFFFFF',
             correctLevel: window.QRCode.CorrectLevel.M
@@ -1815,9 +1782,16 @@ function getOfflineShipping() {
   };
 }
 
-async function loadShippingSettings() {
+function saveOfflineShipping(cfg) {
   try {
-    const cfg = await adminApi('/api/settings/shipping');
+    localStorage.setItem('odd_admin_shipping', JSON.stringify(cfg));
+    localStorage.setItem('odd_shipping', JSON.stringify(cfg));
+  } catch (e) {}
+}
+
+async function loadShippingSettings() {
+  const local = getOfflineShipping();
+  const applyFields = (cfg) => {
     const enCheck = document.getElementById('shipping-enabled-check');
     const stdRate = document.getElementById('shipping-standard-rate');
     const freeThresh = document.getElementById('shipping-free-threshold');
@@ -1829,8 +1803,18 @@ async function loadShippingSettings() {
     if (freeThresh) freeThresh.value = cfg.freeThreshold ?? 0;
     if (expRate) expRate.value = cfg.expressRate ?? 120;
     if (timeline) timeline.value = cfg.timeline || '3–5 Business Days Across India';
+  };
+
+  applyFields(local);
+
+  try {
+    const cfg = await adminApi('/api/settings/shipping');
+    if (cfg && typeof cfg === 'object' && Object.keys(cfg).length > 0) {
+      applyFields(cfg);
+      saveOfflineShipping(cfg);
+    }
   } catch (err) {
-    console.error('Failed to load shipping settings:', err);
+    console.warn('Using cached local shipping settings:', err.message);
   }
 }
 
@@ -1844,6 +1828,8 @@ async function saveShippingSettings(event) {
     timeline: document.getElementById('shipping-timeline-text')?.value?.trim() || '3–5 Business Days Across India'
   };
 
+  saveOfflineShipping(cfg);
+
   try {
     await adminApi('/api/settings/shipping', { method: 'PUT', body: cfg });
     const msg = document.getElementById('shipping-saved-msg');
@@ -1853,7 +1839,7 @@ async function saveShippingSettings(event) {
     }
     showAdminToast(`Shipping fees updated: Standard ₹${cfg.standardRate}${cfg.freeThreshold > 0 ? ` (Free above ₹${cfg.freeThreshold})` : ''}.`);
   } catch (err) {
-    showAdminToast(err.message || 'Failed to save shipping settings', true);
+    showAdminToast(`Saved locally! (Sync notice: ${err.message})`, false);
   }
 }
 

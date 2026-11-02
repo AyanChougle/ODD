@@ -222,7 +222,8 @@ async function runTests() {
     assert(barcodeBatch.status === 200, 'Barcode batch generation succeeds');
     assert(barcodeBatch.data.labels.length === 3, 'Generates exactly requested 3 labels');
     const firstBarcode = barcodeBatch.data.labels[0].barcode;
-    assert(firstBarcode === `ODD-LC-003-B${testLot}-001`, 'Formatted to specification: ' + firstBarcode);
+    const expectedBatch = (testLot.match(/(\d{1,2})$/) || [null, '01'])[1].padStart(2, '0');
+    assert(firstBarcode === `ODD-LC-${expectedBatch}-01`, 'Formatted to specification: ' + firstBarcode);
 
     // Test warehouse scan in receive mode (+1)
     const initialLucidStock = db.prepare("SELECT stock FROM products WHERE sku = 'ODD-LC-003'").get().stock;

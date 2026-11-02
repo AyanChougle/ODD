@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ODD Admin & Inventory Management Portal</title>
-  <link rel="stylesheet" href="assets/css/global.css?v=2.5">
-  <link rel="stylesheet" href="assets/css/admin.css?v=2.6">
+  <link rel="stylesheet" href="assets/css/global.css?v=3.2">
+  <link rel="stylesheet" href="assets/css/admin.css?v=3.2">
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="assets/js/qrcode.min.js"></script>
   <script>
@@ -465,11 +465,11 @@
                   <div class="admin-form-group" style="margin-bottom:0.9rem;">
                     <label class="admin-label">Preset Label Dimension</label>
                     <select id="batch-label-preset" class="admin-input" onchange="applyLabelPreset(this.value)">
-                      <option value="70x35" selected>70 × 35 mm (Standard Fragrance Box - Recommended)</option>
-                      <option value="60x30">60 × 30 mm (Compact Bottle Sticker)</option>
-                      <option value="50x25">50 × 25 mm (Small Vial / Sample)</option>
-                      <option value="80x40">80 × 40 mm (Large Presentation Box)</option>
-                      <option value="100x50">100 × 50 mm (Warehouse Outer Shipper Carton)</option>
+                      <option value="50x15">50 × 15 mm (Compact 15mm Perfume Sticker - No Empty Space)</option>
+                      <option value="60x20">60 × 20 mm (Standard 20mm Perfume Box)</option>
+                      <option value="70x25" selected>70 × 25 mm (Classic Packaging Label - Recommended)</option>
+                      <option value="70x35">70 × 35 mm (Large Presentation Box)</option>
+                      <option value="50x25">50 × 25 mm (Small Sample Vial)</option>
                       <option value="custom">Custom Dimensions (Enter below)</option>
                     </select>
                   </div>
@@ -480,25 +480,30 @@
                     </div>
                     <div class="admin-form-group" style="margin:0;">
                       <label class="admin-label">Height (mm)</label>
-                      <input type="number" id="batch-label-height" class="admin-input" value="35" min="20" max="200" step="1" oninput="onCustomDimensionInput()">
+                      <input type="number" id="batch-label-height" class="admin-input" value="25" min="12" max="200" step="1" oninput="onCustomDimensionInput()">
                     </div>
                     <div class="admin-form-group" style="margin:0;">
                       <label class="admin-label">Sheet Grid</label>
                       <select id="batch-label-cols" class="admin-input">
-                        <option value="4" selected>4 Columns</option>
-                        <option value="3">3 Columns</option>
-                        <option value="2">2 Columns</option>
-                        <option value="1">1 Column</option>
+                        <option value="3" selected>3 Columns (Recommended)</option>
+                        <option value="2">2 Columns (Wide)</option>
+                        <option value="4">4 Columns (Compact)</option>
+                        <option value="1">1 Column (Single Strip)</option>
                       </select>
                     </div>
                   </div>
-                  <div class="admin-form-group" style="margin-top:0.85rem; margin-bottom:0;">
+                  <div class="admin-form-group" style="margin-top:0.85rem; margin-bottom:0.5rem;">
                     <label class="admin-label">Code Format &amp; Symbology</label>
                     <select id="batch-code-format" class="admin-input">
-                      <option value="dual" selected>Dual: Small Barcode + QR Code (Side-by-Side - Recommended)</option>
-                      <option value="barcode">Small Barcode Only</option>
-                      <option value="qr">QR Code Only</option>
+                      <option value="dual" selected>Dual: Barcode with Text Below + QR Code (Clean)</option>
+                      <option value="barcode">Barcode with Text Below Only (Image 2 Clean Style)</option>
+                      <option value="qr">QR Code Only (Clean Square Style)</option>
                     </select>
+                  </div>
+                  <div class="admin-form-group" style="margin:0.5rem 0 0; display:flex; align-items:center;">
+                    <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.8rem; cursor:pointer; color:var(--admin-text-muted);">
+                      <input type="checkbox" id="batch-print-border"> Print Border Outline (Default: Off for clean borderless stickers)
+                    </label>
                   </div>
                 </div>
               </div>
@@ -509,7 +514,7 @@
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
                 <div class="admin-form-group">
                   <label class="admin-label">Lot & Control No.</label>
-                  <input type="text" id="batch-lot-no" class="admin-input" placeholder="e.g. 77750 or BATCH-01">
+                  <input type="text" id="batch-lot-no" class="admin-input" value="01" placeholder="e.g. 01">
                 </div>
                 <div class="admin-form-group">
                   <label class="admin-label">Manufacturing Date</label>
@@ -784,7 +789,7 @@
     </div>
   </main>
 
-  <script src="assets/js/admin.js?v=2.6"></script>
+  <script src="assets/js/admin.js?v=3.2"></script>
 </body>
 </html>
 
