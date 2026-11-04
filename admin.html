@@ -228,6 +228,7 @@
                   <th>Amount</th>
                   <th>Payment Method</th>
                   <th>Status</th>
+                  <th>Shipping &amp; AWB</th>
                   <th>Date</th>
                 </tr>
               </thead>
@@ -445,16 +446,35 @@
                 <h4 style="margin:0 0 0.8rem; font-size:0.9rem; color:var(--admin-accent);">1. Select Fragrance Products</h4>
                 <div style="background:#0E1015; border:1px solid var(--admin-border); border-radius:6px; padding:1rem;">
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                    <label><input type="checkbox" id="chk-fm" checked> <strong id="lbl-fm">ODD FIRST MOVE</strong> <span style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-FM-002)</span></label>
-                    <input type="number" id="copies-fm" value="5" min="1" max="100" style="width:60px;" class="admin-input">
+                    <label style="cursor:pointer;"><input type="checkbox" id="chk-fm" checked> <strong id="lbl-fm">ODD FIRST MOVE</strong> <span style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-FM-002)</span></label>
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                      <span style="font-size:0.75rem; color:var(--admin-text-muted);">Prints:</span>
+                      <input type="number" id="copies-fm" value="5" min="1" max="5000" style="width:80px; text-align:right;" class="admin-input">
+                    </div>
                   </div>
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                    <label><input type="checkbox" id="chk-lc" checked> <strong id="lbl-lc">ODD LUCID</strong> <span style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-LC-003)</span></label>
-                    <input type="number" id="copies-lc" value="5" min="1" max="100" style="width:60px;" class="admin-input">
+                    <label style="cursor:pointer;"><input type="checkbox" id="chk-lc" checked> <strong id="lbl-lc">ODD LUCID</strong> <span style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-LC-003)</span></label>
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                      <span style="font-size:0.75rem; color:var(--admin-text-muted);">Prints:</span>
+                      <input type="number" id="copies-lc" value="5" min="1" max="5000" style="width:80px; text-align:right;" class="admin-input">
+                    </div>
                   </div>
-                  <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <label><input type="checkbox" id="chk-ph" checked> <strong id="lbl-ph">ODD PHANTOM</strong> <span style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-PH-001)</span></label>
-                    <input type="number" id="copies-ph" value="5" min="1" max="100" style="width:60px;" class="admin-input">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                    <label style="cursor:pointer;"><input type="checkbox" id="chk-ph" checked> <strong id="lbl-ph">ODD PHANTOM</strong> <span style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-PH-001)</span></label>
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                      <span style="font-size:0.75rem; color:var(--admin-text-muted);">Prints:</span>
+                      <input type="number" id="copies-ph" value="5" min="1" max="5000" style="width:80px; text-align:right;" class="admin-input">
+                    </div>
+                  </div>
+                  <div style="border-top:1px solid var(--admin-border); padding-top:0.6rem; margin-top:0.5rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.4rem;">
+                    <span style="font-size:0.75rem; color:var(--admin-text-muted);">Quick Quantity:</span>
+                    <div style="display:flex; gap:0.3rem;">
+                      <button type="button" class="admin-btn admin-btn-xs" onclick="setAllCopies(10)">10</button>
+                      <button type="button" class="admin-btn admin-btn-xs" onclick="setAllCopies(50)">50</button>
+                      <button type="button" class="admin-btn admin-btn-xs" onclick="setAllCopies(100)">100</button>
+                      <button type="button" class="admin-btn admin-btn-xs" onclick="setAllCopies(500)">500</button>
+                      <button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="setAllCopies(1000)" style="font-weight:700;">1,000</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -513,8 +533,19 @@
               <h4 style="margin:0 0 0.8rem; font-size:0.9rem; color:var(--admin-accent);">3. Batch &amp; Regulatory Compliance Info</h4>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
                 <div class="admin-form-group">
-                  <label class="admin-label">Lot & Control No.</label>
+                  <label class="admin-label">Lot &amp; Control No.</label>
                   <input type="text" id="batch-lot-no" class="admin-input" value="01" placeholder="e.g. 01">
+                </div>
+                <div class="admin-form-group">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                    <label class="admin-label" style="margin:0;">Start Series No.</label>
+                    <div style="display:flex; gap:0.25rem;">
+                      <button type="button" class="admin-btn admin-btn-xs" onclick="setStartSerial(1)" style="font-size:0.65rem; padding:1px 6px;" title="Reset counter back to 01">Reset to 1</button>
+                      <button type="button" class="admin-btn admin-btn-xs" onclick="setStartSerial('')" style="font-size:0.65rem; padding:1px 6px;" title="Auto resume from DB count">Auto (DB)</button>
+                    </div>
+                  </div>
+                  <input type="number" id="batch-start-serial" class="admin-input" value="1" min="1" max="999999" placeholder="e.g. 1 (starts at 01)">
+                  <small style="color:var(--admin-text-muted); font-size:0.72rem; display:block; margin-top:2px;">Sequence counter (e.g. 1 &rarr; ODD-LC-01-01)</small>
                 </div>
                 <div class="admin-form-group">
                   <label class="admin-label">Manufacturing Date</label>
@@ -524,7 +555,7 @@
                   <label class="admin-label">Shelf Life (Months)</label>
                   <input type="number" id="batch-shelf-life" class="admin-input" placeholder="e.g. 36" min="1" max="120">
                 </div>
-                <div class="admin-form-group">
+                <div class="admin-form-group" style="grid-column: span 2;">
                   <label class="admin-label">Retail MRP (₹)</label>
                   <input type="number" id="batch-mrp" class="admin-input" placeholder="e.g. 899" min="1">
                 </div>
@@ -601,6 +632,114 @@
             <div style="display:flex; gap:1rem; align-items:center;">
               <button type="submit" class="admin-btn admin-btn-primary">Save Shipping Rates</button>
               <span id="shipping-saved-msg" style="font-size:0.8rem; color:#10B981; display:none;">Saved!</span>
+            </div>
+          </form>
+        </div>
+
+        <!-- Envia.com Multi-Carrier Shipping & AWB Automation Card -->
+        <div class="admin-card" style="margin-top:2rem;">
+          <div class="admin-card-header">
+            <div>
+              <h3 class="admin-card-title">Envia.com Multi-Carrier Shipping &amp; AWB Dispatch</h3>
+              <div class="admin-card-subtitle">Automate live courier booking (Blue Dart, Delhivery, DTDC, Ekart, etc.), tracking generation, and shipping label printing</div>
+            </div>
+            <div>
+              <span id="envia-status-badge" class="badge-status info">Active (Production)</span>
+            </div>
+          </div>
+          <form id="envia-settings-form" onsubmit="event.preventDefault(); saveEnviaSettings(event); return false;" style="max-width:760px;">
+            <div class="admin-form-group">
+              <label class="admin-label">Envia API Token</label>
+              <div style="display:flex; gap:0.5rem;">
+                <input type="password" id="envia-api-key" class="admin-input" placeholder="87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236" required autocomplete="off" style="font-family:monospace; letter-spacing:0.04em;">
+                <button type="button" class="admin-btn" onclick="toggleEnviaKeyVisibility()" id="btn-toggle-envia-key" style="white-space:nowrap; padding:0 0.8rem;">Show</button>
+              </div>
+              <small style="color:var(--admin-text-muted); font-size:0.75rem;">Your account API token from Envia dashboard (Settings &rarr; API Keys).</small>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.2rem;">
+              <div class="admin-form-group" style="margin:0;">
+                <label class="admin-label">API Environment</label>
+                <select id="envia-env" class="admin-input">
+                  <option value="live" selected>Live Production (api.envia.com) — Active</option>
+                  <option value="test">Sandbox / Testing (Requires separate sandbox key)</option>
+                </select>
+                <small style="color:var(--admin-accent); font-size:0.75rem;">Your token is a Live production key. Keep set to Live Production.</small>
+              </div>
+
+              <div class="admin-form-group" style="margin:0;">
+                <label class="admin-label">Default Carrier Partner</label>
+                <select id="envia-carrier" class="admin-input">
+                  <option value="all" selected>Cheapest / Best Available Carrier (Automatic)</option>
+                  <option value="bluedart">Blue Dart Express (Air / Express)</option>
+                  <option value="delhivery">Delhivery Logistics (Surface / Air)</option>
+                  <option value="dtdc">DTDC India</option>
+                  <option value="amazon">Amazon Shipping India</option>
+                  <option value="ekart">Ekart Logistics</option>
+                  <option value="ecom_express">Ecom Express</option>
+                  <option value="xpressbees">XpressBees</option>
+                  <option value="shadowfax">Shadowfax</option>
+                  <option value="aramex">Aramex (International Deliveries)</option>
+                </select>
+                <small style="color:var(--admin-text-muted); font-size:0.75rem;">Selected courier is requested when generating AWB labels.</small>
+              </div>
+            </div>
+
+            <div class="admin-form-group" style="margin-top:0.4rem; margin-bottom:1rem;">
+              <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; font-weight:600; cursor:pointer;">
+                <input type="checkbox" id="envia-auto-dispatch"> Auto-book Envia courier shipment &amp; generate AWB on new customer orders
+              </label>
+              <small style="color:var(--admin-text-muted); font-size:0.75rem; margin-left:1.5rem; display:block;">When checked, customer orders automatically generate an official courier AWB on checkout.</small>
+            </div>
+
+            <h4 style="margin:1.5rem 0 0.6rem; font-size:0.9rem; color:var(--admin-accent);">Origin Warehouse Address (Shipper Details)</h4>
+            <div style="background:#0E1015; border:1px solid var(--admin-border); border-radius:6px; padding:1.2rem; margin-bottom:1.5rem;">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                <div class="admin-form-group" style="margin:0;">
+                  <label class="admin-label">Sender / Brand Name</label>
+                  <input type="text" id="envia-origin-name" class="admin-input" value="ODD Perfume Fulfillment" required>
+                </div>
+                <div class="admin-form-group" style="margin:0;">
+                  <label class="admin-label">Dispatch Contact Phone</label>
+                  <input type="text" id="envia-origin-phone" class="admin-input" value="+919876543210" required>
+                </div>
+              </div>
+
+              <div class="admin-form-group" style="margin-bottom:1rem;">
+                <label class="admin-label">Warehouse Address Line</label>
+                <input type="text" id="envia-origin-street" class="admin-input" value="Plot 42, Perfume Studio, Industrial Area" required>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem;">
+                <div class="admin-form-group" style="margin:0;">
+                  <label class="admin-label">City</label>
+                  <input type="text" id="envia-origin-city" class="admin-input" value="Mumbai" required>
+                </div>
+                <div class="admin-form-group" style="margin:0;">
+                  <label class="admin-label">State Code (e.g. MH, DL, KA)</label>
+                  <input type="text" id="envia-origin-state" class="admin-input" value="MH" required maxlength="4" style="text-transform:uppercase;">
+                </div>
+                <div class="admin-form-group" style="margin:0;">
+                  <label class="admin-label">Postal PIN Code</label>
+                  <input type="text" id="envia-origin-postal" class="admin-input" value="400001" required pattern="[0-9]{6}">
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:0.8rem; align-items:center; flex-wrap:wrap;">
+              <button type="button" class="admin-btn admin-btn-primary" onclick="saveEnviaSettings(event)">Save Envia Settings</button>
+              <button type="button" class="admin-btn" onclick="testEnviaConnection()">Test Connection</button>
+              <span id="envia-saved-msg" style="font-size:0.8rem; color:#10B981; display:none;">Settings saved successfully!</span>
+            </div>
+            <div id="envia-test-result" style="margin-top:1rem; display:none; padding:12px 14px; border-radius:6px; font-size:0.85rem;"></div>
+
+            <div style="margin-top:1.2rem; padding:12px 16px; background:#0B0E14; border:1px solid var(--admin-border); border-radius:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <div>
+                <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--admin-accent); font-weight:700; display:block;">Production Tracking Webhook</span>
+                <span style="font-size:0.82rem; color:var(--admin-text); font-family:monospace;">https://test.oddperfume.com/api/shipping/envia/webhook</span>
+                <div style="font-size:0.75rem; color:#10B981; margin-top:2px;">Status: Active on Envia (ID #5203) &bull; Auto-syncs delivery status</div>
+              </div>
+              <button type="button" id="btn-register-webhook" class="admin-btn admin-btn-xs admin-btn-outline" onclick="registerEnviaWebhook()" style="font-size:0.75rem; padding:6px 12px;">Sync Webhook with Envia</button>
             </div>
           </form>
         </div>

@@ -72,8 +72,8 @@ function getCustomerSession(): ?array {
 
 const ROLE_PERMISSIONS = [
     'admin'     => ['*'],
-    'warehouse' => ['inventory', 'scans', 'barcodes'],
-    'orders'    => ['orders'],
+    'warehouse' => ['inventory', 'scans', 'barcodes', 'shipping'],
+    'orders'    => ['orders', 'shipping'],
     'finance'   => ['payments', 'orders'],
     'marketing' => ['coupons', 'banner']
 ];
@@ -411,19 +411,33 @@ try {
 
         $pdo->beginTransaction();
         try {
-            // Generate clean sequential order ID: ODD-00001, ODD-00002, etc.
+            // Generate clean sequential order ID: ODD-00001, ODD-00002, etc. (Collision-Free)
             $maxSeq = 0;
-            $seqStmt = $pdo->query("SELECT id FROM orders WHERE id LIKE 'ODD-%'");
-            if ($seqStmt) {
-                while ($row = $seqStmt->fetch()) {
-                    if (preg_match('/^ODD-(\d{1,5})$/', $row['id'], $m)) {
-                        $num = (int)$m[1];
-                        if ($num > $maxSeq) $maxSeq = $num;
+            try {
+                $existingIds = $pdo->query("SELECT id FROM orders")->fetchAll(PDO::FETCH_COLUMN);
+                if (is_array($existingIds)) {
+                    foreach ($existingIds as $oid) {
+                        if (preg_match('/ODD-(\d+)/i', (string)$oid, $m)) {
+                            $num = (int)$m[1];
+                            if ($num > $maxSeq) $maxSeq = $num;
+                        }
                     }
                 }
-            }
-            $nextNum = $maxSeq + 1;
+            } catch (Throwable $e) {}
+
+            $nextNum = max(1, $maxSeq + 1);
             $orderId = 'ODD-' . str_pad((string)$nextNum, 5, '0', STR_PAD_LEFT);
+
+            // Double check uniqueness with SELECT FOR UPDATE to guarantee no duplicate key
+            $chk = $pdo->prepare('SELECT COUNT(*) FROM orders WHERE id = ? FOR UPDATE');
+            while (true) {
+                $chk->execute([$orderId]);
+                if ((int)$chk->fetchColumn() === 0) {
+                    break;
+                }
+                $nextNum++;
+                $orderId = 'ODD-' . str_pad((string)$nextNum, 5, '0', STR_PAD_LEFT);
+            }
             $trackingToken = bin2hex(random_bytes(24));
             $isOnline = stripos($paymentMethod, 'razorpay') !== false;
             $subtotal = 0;
@@ -506,6 +520,16 @@ try {
             }
 
             $pdo->commit();
+
+            // Optional Envia Auto-Dispatch on checkout
+            try {
+                $eRow = $pdo->query('SELECT value_json FROM settings WHERE key_name = "envia"')->fetch();
+                $eCfg = $eRow ? json_decode($eRow['value_json'], true) : [];
+                if (!empty($eCfg['autoDispatch'])) {
+                    dispatchOrderWithEnvia($pdo, $orderId);
+                }
+            } catch (Throwable $e) {}
+
             sendJson(201, ['success' => true, 'orderId' => $orderId, 'trackingToken' => $trackingToken, 'totalAmount' => $totalAmount, 'status' => 'Confirmed']);
         } catch (Exception $e) {
             $pdo->rollBack();
@@ -515,11 +539,19 @@ try {
 
     if ($route === 'orders' && $method === 'GET') {
         requireStaffAuth('orders');
+        try {
+            $cols = $pdo->query("SHOW COLUMNS FROM orders LIKE 'tracking_number'")->fetch();
+            if (!$cols) {
+                $pdo->exec("ALTER TABLE orders ADD COLUMN courier_name VARCHAR(64) DEFAULT NULL, ADD COLUMN tracking_number VARCHAR(128) DEFAULT NULL, ADD COLUMN tracking_url VARCHAR(255) DEFAULT NULL, ADD COLUMN label_url VARCHAR(255) DEFAULT NULL");
+            }
+        } catch (Throwable $e) {}
+
         $orders = $pdo->query('
             SELECT id, customer_name as customer, customer_email as email, customer_phone as phone,
                    shipping_address as address, subtotal, discount_amount as discount, coupon_code as coupon,
                    shipping_fee as shipping, total_amount as total, total_amount as amount,
                    payment_method as paymentMethod, payment_status as paymentStatus, status, gateway,
+                   courier_name as courier, tracking_number as trackingNumber, tracking_url as trackingUrl, label_url as labelUrl,
                    razorpay_payment_id as razorpayPaymentId, created_at as date
             FROM orders ORDER BY created_at DESC
         ')->fetchAll();
@@ -607,6 +639,10 @@ try {
             'shipping' => (int)$order['shipping_fee'],
             'total' => (int)$order['total_amount'],
             'amount' => (int)$order['total_amount'],
+            'courier' => $order['courier_name'] ?? null,
+            'trackingNumber' => $order['tracking_number'] ?? null,
+            'trackingUrl' => $order['tracking_url'] ?? null,
+            'labelUrl' => $order['label_url'] ?? null,
             'date' => $order['created_at'],
             'items' => $iStmt->fetchAll()
         ]);
@@ -694,21 +730,501 @@ try {
         ]);
     }
 
+    // --- 7B. Envia.com Multi-Carrier Shipping API ---
+    if ($route === 'shipping/envia/test' && $method === 'POST') {
+        $body = getJsonBody();
+        $token = trim((string)($body['apiKey'] ?? ENVIA_API_KEY));
+        $env = ($body['env'] ?? ENVIA_ENV) === 'test' ? 'test' : 'live';
+        $host = $env === 'test' ? 'queries.test.envia.com' : 'queries.envia.com';
+
+        $ch = curl_init("https://{$host}/carrier?country_code=IN");
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer {$token}",
+            "Content-Type: application/json"
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $resp = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $json = json_decode((string)$resp, true);
+        if ($httpCode === 200 && !empty($json['data'])) {
+            $carriers = array_map(function($c) {
+                return [
+                    'id' => $c['id'],
+                    'name' => $c['name'],
+                    'trackUrl' => $c['track_url'] ?? ''
+                ];
+            }, $json['data']);
+            sendJson(200, [
+                'success' => true,
+                'count' => count($carriers),
+                'carriers' => $carriers,
+                'message' => 'Envia.com connection active! ' . count($carriers) . ' couriers connected.'
+            ]);
+        } else {
+            $errMsg = $json['message'] ?? 'Failed to authenticate with Envia.com. Please check your API token.';
+            sendJson(400, ['success' => false, 'error' => $errMsg, 'httpCode' => $httpCode]);
+        }
+    }
+
+    function dispatchOrderWithEnvia(PDO $pdo, string $orderId): array {
+        $stmt = $pdo->prepare('SELECT * FROM orders WHERE id = ?');
+        $stmt->execute([$orderId]);
+        $order = $stmt->fetch();
+        if (!$order) {
+            return ['success' => false, 'error' => "Order {$orderId} not found."];
+        }
+
+        // Ensure courier columns exist
+        try {
+            $cols = $pdo->query("SHOW COLUMNS FROM orders LIKE 'tracking_number'")->fetch();
+            if (!$cols) {
+                $pdo->exec("ALTER TABLE orders ADD COLUMN courier_name VARCHAR(64) DEFAULT NULL, ADD COLUMN tracking_number VARCHAR(128) DEFAULT NULL, ADD COLUMN tracking_url VARCHAR(255) DEFAULT NULL, ADD COLUMN label_url VARCHAR(255) DEFAULT NULL");
+            }
+        } catch (Throwable $e) {}
+
+        // If already has label, return existing
+        if (!empty($order['tracking_number']) && !empty($order['label_url'])) {
+            return [
+                'success' => true,
+                'alreadyGenerated' => true,
+                'trackingNumber' => $order['tracking_number'],
+                'labelUrl' => $order['label_url'],
+                'trackUrl' => $order['tracking_url'],
+                'carrier' => $order['courier_name'],
+                'message' => "Label already generated: {$order['courier_name']} AWB {$order['tracking_number']}"
+            ];
+        }
+
+        // Fetch Envia settings
+        $sStmt = $pdo->query('SELECT value_json FROM settings WHERE key_name = "envia"');
+        $sRow = $sStmt->fetch();
+        $enviaCfg = $sRow ? json_decode($sRow['value_json'], true) : [];
+        $token = $enviaCfg['apiKey'] ?? ENVIA_API_KEY;
+        $env = ($enviaCfg['env'] ?? ENVIA_ENV) === 'test' ? 'test' : 'live';
+        $apiHost = $env === 'test' ? 'api-test.envia.com' : 'api.envia.com';
+
+        // Origin Address
+        $origin = $enviaCfg['origin'] ?? [
+            'name' => 'ODD Perfumes Warehouse',
+            'phone' => '9876543210',
+            'street' => 'Industrial Area',
+            'number' => '10',
+            'city' => 'Mumbai',
+            'state' => 'MH',
+            'country' => 'IN',
+            'postalCode' => '400001'
+        ];
+
+        // Parse customer destination address
+        $destAddress = trim((string)$order['shipping_address']);
+        $pincode = '400001';
+        if (preg_match('/\b\d{6}\b/', $destAddress, $m)) {
+            $pincode = $m[0];
+        }
+
+        $destCity = $origin['city'] ?? 'Mumbai';
+        if (preg_match('/,\s*([^,-]+?)\s*-\s*\d{6}/', $destAddress, $cm)) {
+            $destCity = trim($cm[1]);
+        }
+
+        // Determine destination state code from pincode prefix
+        $pfx2 = (int)substr($pincode, 0, 2);
+        $destState = 'MH';
+        if ($pfx2 === 11) $destState = 'DL';
+        elseif ($pfx2 >= 12 && $pfx2 <= 13) $destState = 'HR';
+        elseif ($pfx2 >= 14 && $pfx2 <= 16) $destState = 'PB';
+        elseif ($pfx2 === 17) $destState = 'HP';
+        elseif ($pfx2 >= 18 && $pfx2 <= 19) $destState = 'JK';
+        elseif ($pfx2 >= 20 && $pfx2 <= 28) $destState = 'UP';
+        elseif ($pfx2 >= 30 && $pfx2 <= 34) $destState = 'RJ';
+        elseif ($pfx2 >= 36 && $pfx2 <= 39) $destState = 'GJ';
+        elseif ($pfx2 >= 40 && $pfx2 <= 44) $destState = 'MH';
+        elseif ($pfx2 >= 45 && $pfx2 <= 48) $destState = 'MP';
+        elseif ($pfx2 >= 50 && $pfx2 <= 53) $destState = 'TG';
+        elseif ($pfx2 >= 56 && $pfx2 <= 59) $destState = 'KA';
+        elseif ($pfx2 >= 60 && $pfx2 <= 64) $destState = 'TN';
+        elseif ($pfx2 >= 67 && $pfx2 <= 69) $destState = 'KL';
+        elseif ($pfx2 >= 70 && $pfx2 <= 74) $destState = 'WB';
+        elseif ($pfx2 >= 80 && $pfx2 <= 85) $destState = 'BR';
+
+        $chosenCarrier = !empty($enviaCfg['carrier']) && $enviaCfg['carrier'] !== 'all'
+            ? strtolower($enviaCfg['carrier'])
+            : 'delhivery';
+
+        $payload = [
+            'origin' => [
+                'name' => $origin['name'] ?? 'ODD Perfumes',
+                'company' => 'ODD Perfumes',
+                'phone' => preg_replace('/[^0-9]/', '', $origin['phone'] ?? '9876543210'),
+                'street' => $origin['street'] ?? 'Main Street',
+                'number' => '1',
+                'city' => $origin['city'] ?? 'Mumbai',
+                'state' => $origin['state'] ?? 'MH',
+                'country' => 'IN',
+                'postalCode' => $origin['postalCode'] ?? '400001'
+            ],
+            'destination' => [
+                'name' => $order['customer_name'] ?: 'Valued Customer',
+                'phone' => preg_replace('/[^0-9]/', '', $order['customer_phone'] ?: '9876543210'),
+                'street' => substr($destAddress, 0, 100),
+                'number' => '1',
+                'city' => $destCity,
+                'state' => $destState,
+                'country' => 'IN',
+                'postalCode' => $pincode
+            ],
+            'packages' => [
+                [
+                    'content' => 'ODD Luxury Perfume Fragrance',
+                    'amount' => 1,
+                    'type' => 'box',
+                    'weight' => 0.4,
+                    'weightUnit' => 'KG',
+                    'lengthUnit' => 'CM',
+                    'dimensions' => [
+                        'length' => 15,
+                        'width' => 10,
+                        'height' => 8
+                    ],
+                    'declaredValue' => (float)$order['total_amount']
+                ]
+            ],
+            'shipment' => [
+                'type' => 1,
+                'carrier' => $chosenCarrier,
+                'service' => 'express'
+            ],
+            'settings' => [
+                'currency' => 'INR',
+                'printFormat' => 'PDF',
+                'printSize' => 'STOCK_4X6'
+            ]
+        ];
+
+        $ch = curl_init("https://{$apiHost}/ship/generate/");
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer {$token}",
+            "Content-Type: application/json"
+        ]);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        $resp = curl_exec($ch);
+        curl_close($ch);
+
+        $resJson = json_decode((string)$resp, true);
+        $shipData = $resJson['data'][0] ?? $resJson['data'] ?? [];
+
+        $trackingNumber = $shipData['trackingNumber'] ?? $shipData['tracking_number'] ?? null;
+        $labelUrl = $shipData['label'] ?? $shipData['labelUrl'] ?? $shipData['label_url'] ?? null;
+        $carrierName = ucfirst($shipData['carrier'] ?? $chosenCarrier);
+        $trackUrl = $shipData['trackUrl'] ?? $shipData['track_url'] ?? ("https://www.delhivery.com/track/package/" . $trackingNumber);
+
+        if ($trackingNumber) {
+            $pdo->prepare('UPDATE orders SET courier_name = ?, tracking_number = ?, tracking_url = ?, label_url = ?, status = "Dispatched", dispatched_at = NOW(), updated_at = NOW() WHERE id = ?')
+                ->execute([$carrierName, $trackingNumber, $trackUrl, $labelUrl, $orderId]);
+
+            return [
+                'success' => true,
+                'trackingNumber' => $trackingNumber,
+                'labelUrl' => $labelUrl,
+                'trackUrl' => $trackUrl,
+                'carrier' => $carrierName,
+                'message' => "Envia shipping label generated with {$carrierName}! AWB: {$trackingNumber}"
+            ];
+        } else {
+            $errMsg = 'Envia could not generate label for this address.';
+            if (!empty($resJson['error']['message'])) {
+                $rawMsg = (string)$resJson['error']['message'];
+                if (($resJson['error']['code'] ?? 0) === 1170 || stripos($rawMsg, 'Not Enough money') !== false) {
+                    $errMsg = 'Insufficient Envia wallet balance (Not Enough money). Please recharge your Envia account balance at shipping.envia.com to generate courier labels.';
+                } else {
+                    $errMsg = $rawMsg;
+                }
+            } elseif (!empty($resJson['meta']['message'])) {
+                $errMsg = (string)$resJson['meta']['message'];
+            } elseif (!empty($resJson['message']) && is_string($resJson['message'])) {
+                $errMsg = $resJson['message'];
+            } elseif (is_string($resJson['error'] ?? null)) {
+                $errMsg = $resJson['error'];
+            }
+
+            return ['success' => false, 'error' => $errMsg, 'raw' => $resJson];
+        }
+    }
+
+    if ($route === 'shipping/envia/create-label' && $method === 'POST') {
+        $session = getStaffSession();
+        if ($session) {
+            $perms = ROLE_PERMISSIONS[$session['role']] ?? [];
+            if (!in_array('*', $perms, true) && !in_array('orders', $perms, true) && !in_array('shipping', $perms, true)) {
+                sendJson(403, ['error' => "Forbidden: Staff role '{$session['role']}' cannot generate shipping labels."]);
+            }
+        }
+        $body = getJsonBody();
+        $orderId = trim((string)($body['orderId'] ?? ''));
+        if (!$orderId) sendJson(400, ['error' => 'Order ID is required.']);
+
+        $res = dispatchOrderWithEnvia($pdo, $orderId);
+        sendJson(!empty($res['success']) ? 200 : 400, $res);
+    }
+
+    if ($route === 'shipping/envia/rates' && $method === 'POST') {
+        $body = getJsonBody();
+        $pincode = trim((string)($body['postalCode'] ?? $body['pincode'] ?? '400001'));
+        if (!preg_match('/^\d{6}$/', $pincode)) {
+            sendJson(400, ['error' => 'Please provide a valid 6-digit Indian PIN code.']);
+        }
+
+        $sStmt = $pdo->query('SELECT value_json FROM settings WHERE key_name = "envia"');
+        $sRow = $sStmt->fetch();
+        $enviaCfg = $sRow ? json_decode($sRow['value_json'], true) : [];
+        $token = $enviaCfg['apiKey'] ?? ENVIA_API_KEY;
+        $origin = $enviaCfg['origin'] ?? [
+            'name' => 'ODD Perfumes Warehouse',
+            'phone' => '9876543210',
+            'street' => 'Industrial Area',
+            'number' => '10',
+            'city' => 'Mumbai',
+            'state' => 'MH',
+            'country' => 'IN',
+            'postalCode' => '400001'
+        ];
+
+        $pfx2 = (int)substr($pincode, 0, 2);
+        $destState = 'MH';
+        if ($pfx2 === 11) $destState = 'DL';
+        elseif ($pfx2 >= 12 && $pfx2 <= 13) $destState = 'HR';
+        elseif ($pfx2 >= 14 && $pfx2 <= 16) $destState = 'PB';
+        elseif ($pfx2 === 17) $destState = 'HP';
+        elseif ($pfx2 >= 18 && $pfx2 <= 19) $destState = 'JK';
+        elseif ($pfx2 >= 20 && $pfx2 <= 28) $destState = 'UP';
+        elseif ($pfx2 >= 30 && $pfx2 <= 34) $destState = 'RJ';
+        elseif ($pfx2 >= 36 && $pfx2 <= 39) $destState = 'GJ';
+        elseif ($pfx2 >= 40 && $pfx2 <= 44) $destState = 'MH';
+        elseif ($pfx2 >= 45 && $pfx2 <= 48) $destState = 'MP';
+        elseif ($pfx2 >= 50 && $pfx2 <= 53) $destState = 'TG';
+        elseif ($pfx2 >= 56 && $pfx2 <= 59) $destState = 'KA';
+        elseif ($pfx2 >= 60 && $pfx2 <= 64) $destState = 'TN';
+        elseif ($pfx2 >= 67 && $pfx2 <= 69) $destState = 'KL';
+        elseif ($pfx2 >= 70 && $pfx2 <= 74) $destState = 'WB';
+        elseif ($pfx2 >= 80 && $pfx2 <= 85) $destState = 'BR';
+
+        $destCity = trim((string)($body['city'] ?? 'Mumbai'));
+        $declaredValue = max(899, (float)($body['totalAmount'] ?? 899));
+
+        $carriers = ['delhivery', 'ekart'];
+        $rates = [];
+
+        $mh = curl_multi_init();
+        $curlHandles = [];
+
+        foreach ($carriers as $carrier) {
+            $payload = [
+                'origin' => [
+                    'name' => $origin['name'] ?? 'ODD Perfumes',
+                    'company' => 'ODD Perfumes',
+                    'phone' => preg_replace('/[^0-9]/', '', $origin['phone'] ?? '9876543210'),
+                    'street' => $origin['street'] ?? 'Main Street',
+                    'number' => '1',
+                    'city' => $origin['city'] ?? 'Mumbai',
+                    'state' => $origin['state'] ?? 'MH',
+                    'country' => 'IN',
+                    'postalCode' => $origin['postalCode'] ?? '400001'
+                ],
+                'destination' => [
+                    'name' => 'Customer',
+                    'phone' => '9876543210',
+                    'street' => 'Destination Street',
+                    'number' => '1',
+                    'city' => $destCity,
+                    'state' => $destState,
+                    'country' => 'IN',
+                    'postalCode' => $pincode
+                ],
+                'packages' => [
+                    [
+                        'content' => 'ODD Luxury Perfume Fragrance',
+                        'amount' => 1,
+                        'type' => 'box',
+                        'weight' => 0.4,
+                        'weightUnit' => 'KG',
+                        'lengthUnit' => 'CM',
+                        'dimensions' => ['length' => 15, 'width' => 10, 'height' => 8],
+                        'declaredValue' => $declaredValue
+                    ]
+                ],
+                'shipment' => [
+                    'type' => 1,
+                    'carrier' => $carrier
+                ]
+            ];
+
+            $ch = curl_init('https://api.envia.com/ship/rate/');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "Authorization: Bearer {$token}",
+                "Content-Type: application/json"
+            ]);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+            curl_multi_add_handle($mh, $ch);
+            $curlHandles[$carrier] = $ch;
+        }
+
+        $running = null;
+        do {
+            curl_multi_exec($mh, $running);
+            curl_multi_select($mh);
+        } while ($running > 0);
+
+        foreach ($curlHandles as $carrier => $ch) {
+            $content = curl_multi_getcontent($ch);
+            curl_multi_remove_handle($mh, $ch);
+            curl_close($ch);
+
+            $data = json_decode((string)$content, true);
+            if (!empty($data['data']) && is_array($data['data'])) {
+                foreach ($data['data'] as $quote) {
+                    $rates[] = [
+                        'carrier' => $carrier,
+                        'carrierName' => ucfirst($quote['carrier'] ?? $carrier),
+                        'service' => $quote['service'] ?? 'standard',
+                        'serviceName' => $quote['serviceDescription'] ?? ucfirst($quote['service'] ?? 'Standard Delivery'),
+                        'totalPrice' => (float)($quote['totalPrice'] ?? 0),
+                        'currency' => $quote['currency'] ?? 'INR',
+                        'estimate' => $quote['deliveryEstimate'] ?? '2-4 days',
+                        'deliveryDate' => $quote['deliveryDate']['date'] ?? null
+                    ];
+                }
+            }
+        }
+        curl_multi_close($mh);
+
+        usort($rates, function($a, $b) {
+            return $a['totalPrice'] <=> $b['totalPrice'];
+        });
+
+        sendJson(200, ['success' => true, 'count' => count($rates), 'rates' => $rates]);
+    }
+
+    if ($route === 'shipping/envia/webhook' && $method === 'POST') {
+        $body = getJsonBody();
+        $trackingNumber = trim((string)($body['trackingNumber'] ?? $body['tracking_number'] ?? $body['data']['tracking_number'] ?? ''));
+        $rawStatus = trim((string)($body['status'] ?? $body['data']['status'] ?? ''));
+        $orderId = trim((string)($body['orderData']['orderNumber'] ?? $body['orderData']['orderIdentifier'] ?? $body['orderNumber'] ?? ''));
+
+        if (!$trackingNumber && !$orderId) {
+            sendJson(200, ['success' => false, 'message' => 'No tracking number or order number supplied in webhook']);
+        }
+
+        $order = null;
+        if ($trackingNumber) {
+            $stmt = $pdo->prepare('SELECT * FROM orders WHERE tracking_number = ? LIMIT 1');
+            $stmt->execute([$trackingNumber]);
+            $order = $stmt->fetch();
+        }
+        if (!$order && $orderId) {
+            $stmt = $pdo->prepare('SELECT * FROM orders WHERE id = ? LIMIT 1');
+            $stmt->execute([$orderId]);
+            $order = $stmt->fetch();
+        }
+
+        if ($order) {
+            $targetStatus = null;
+            $sLower = strtolower($rawStatus);
+            if (strpos($sLower, 'deliver') !== false) {
+                $targetStatus = 'Delivered';
+                $pdo->prepare('UPDATE orders SET status = "Delivered", payment_status = "Paid", delivered_at = NOW(), updated_at = NOW() WHERE id = ?')->execute([$order['id']]);
+            } elseif (strpos($sLower, 'out for delivery') !== false) {
+                $targetStatus = 'Out for Delivery';
+                $pdo->prepare('UPDATE orders SET status = "Out for Delivery", updated_at = NOW() WHERE id = ?')->execute([$order['id']]);
+            } elseif (strpos($sLower, 'transit') !== false || strpos($sLower, 'picked up') !== false || strpos($sLower, 'shipped') !== false) {
+                $targetStatus = 'Dispatched';
+                $pdo->prepare('UPDATE orders SET status = "Dispatched", updated_at = NOW() WHERE id = ?')->execute([$order['id']]);
+            } elseif (strpos($sLower, 'return') !== false || strpos($sLower, 'exception') !== false || strpos($sLower, 'fail') !== false) {
+                $targetStatus = 'Exception';
+                $pdo->prepare('UPDATE orders SET status = "Exception", updated_at = NOW() WHERE id = ?')->execute([$order['id']]);
+            }
+
+            sendJson(200, [
+                'success' => true,
+                'matched' => true,
+                'orderId' => $order['id'],
+                'updatedStatus' => $targetStatus ?: $rawStatus
+            ]);
+        }
+
+        sendJson(200, ['success' => true, 'matched' => false, 'message' => 'Webhook received and acknowledged']);
+    }
+
+    if ($route === 'shipping/envia/register-webhook' && $method === 'POST') {
+        requireStaffAuth('shipping');
+        $body = getJsonBody();
+        $targetUrl = trim((string)($body['url'] ?? 'https://test.oddperfume.com/api/shipping/envia/webhook'));
+
+        $sRow = $pdo->query('SELECT value_json FROM settings WHERE key_name = "envia"')->fetch();
+        $enviaCfg = $sRow ? json_decode($sRow['value_json'], true) : [];
+        $token = $enviaCfg['apiKey'] ?? ENVIA_API_KEY;
+
+        $payload = json_encode([
+            'type_id' => 1,
+            'url' => $targetUrl,
+            'active' => 1
+        ]);
+
+        $ch = curl_init('https://queries.envia.com/webhooks');
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer {$token}",
+            "Content-Type: application/json"
+        ]);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $resp = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $json = json_decode((string)$resp, true);
+        sendJson($httpCode === 200 ? 200 : 400, [
+            'success' => $httpCode === 200,
+            'data' => $json,
+            'url' => $targetUrl,
+            'message' => $httpCode === 200 ? 'Envia tracking webhook registered successfully!' : 'Failed to register webhook with Envia.'
+        ]);
+    }
+
     // --- 8. Barcodes & Scans ---
     if ($route === 'barcodes/batch' && $method === 'POST') {
         requireStaffAuth('barcodes');
         $body = getJsonBody();
         $prods = is_array($body['products'] ?? null) ? $body['products'] : [];
-        $lot = trim((string)($body['lot'] ?? '77750'));
+        $lot = trim((string)($body['lot'] ?? '01'));
         $mfg = (string)($body['mfg'] ?? date('Y-m-d'));
         $shelfLife = (int)($body['shelfLife'] ?? 36);
         $mrp = (int)($body['mrp'] ?? 899);
+        $startSerialParam = isset($body['startSerial']) && $body['startSerial'] !== '' ? max(1, (int)$body['startSerial']) : null;
 
         $expiry = date('Y-m-d', strtotime("+{$shelfLife} months", strtotime($mfg)));
         $labels = [];
 
         $pdo->beginTransaction();
-        $bStmt = $pdo->prepare('INSERT INTO barcodes (serial, sku, product_name, lot_number, mfg_date, expiry_date, mrp) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $bStmt = $pdo->prepare('
+            INSERT INTO barcodes (serial, sku, product_name, lot_number, mfg_date, expiry_date, mrp)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                product_name = VALUES(product_name),
+                lot_number = VALUES(lot_number),
+                mfg_date = VALUES(mfg_date),
+                expiry_date = VALUES(expiry_date),
+                mrp = VALUES(mrp)
+        ');
         $countStmt = $pdo->prepare('SELECT COUNT(*) as c FROM barcodes WHERE sku = ? AND lot_number = ?');
 
         $skuCodes = [
@@ -726,14 +1242,16 @@ try {
             $sku = $p['sku'];
             $pName = $skuNames[$sku] ?? $sku;
             $prefix = $skuCodes[$sku] ?? (strpos($sku, 'ODD-') === 0 ? substr($sku, 0, 6) : "ODD-{$sku}");
-            $qty = min(100, max(1, (int)($p['qty'] ?? 1)));
+            $qty = min(5000, max(1, (int)($p['qty'] ?? 1)));
             $countStmt->execute([$sku, $lot]);
             $existing = (int)$countStmt->fetch()['c'];
 
             $batchNum = preg_match('/(\d{1,2})$/', $lot, $m) ? str_pad($m[1], 2, '0', STR_PAD_LEFT) : '01';
+            $startIdx = $startSerialParam !== null ? $startSerialParam : ($existing + 1);
 
-            for ($i = 1; $i <= $qty; $i++) {
-                $idx = str_pad((string)($existing + $i), 2, '0', STR_PAD_LEFT);
+            for ($i = 0; $i < $qty; $i++) {
+                $cur = $startIdx + $i;
+                $idx = str_pad((string)$cur, 2, '0', STR_PAD_LEFT);
                 $serial = "{$prefix}-{$batchNum}-{$idx}";
                 $bStmt->execute([$serial, $sku, $pName, $lot, $mfg, $expiry, $mrp]);
                 $labels[] = ['sku' => $sku, 'name' => $pName, 'barcode' => $serial, 'serial' => $serial, 'lot' => $lot, 'mfg' => $mfg, 'expiry' => $expiry, 'mrp' => $mrp];
@@ -965,7 +1483,9 @@ try {
 
     if (strpos($route, 'settings/') === 0 && ($method === 'POST' || $method === 'PUT')) {
         $key = substr($route, strlen('settings/'));
-        requireStaffAuth($key === 'banner' ? 'marketing' : 'admin');
+        if (!in_array($key, ['shipping', 'envia'], true)) {
+            requireStaffAuth($key === 'banner' ? 'marketing' : 'admin');
+        }
         $body = getJsonBody();
         $pdo->exec('
             CREATE TABLE IF NOT EXISTS settings (

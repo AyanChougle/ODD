@@ -131,6 +131,16 @@ async function submitOrderTracking(event) {
             <small>${order.date ? new Date(order.date).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : ''}</small>
           </div>
         </header>
+        ${order.tracking_number ? `
+          <div class="tracking-courier-banner" style="background:#f8f9fa; border:1px solid #e5e7eb; border-radius:8px; padding:12px 16px; margin:16px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+              <span style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; display:block; margin-bottom:2px;">Dispatched via Official Courier</span>
+              <strong style="font-size:1rem; color:#111827;">${trackingEscape(order.courier_name || 'Envia Logistics')}</strong>
+              <div style="font-size:0.82rem; color:#4b5563; margin-top:2px;">AWB Tracking: <span style="font-family:monospace; font-weight:700;">${trackingEscape(order.tracking_number)}</span></div>
+            </div>
+            ${order.tracking_url ? `<a href="${trackingEscape(order.tracking_url)}" target="_blank" rel="noopener" class="btn btn-outline" style="font-size:0.8rem; padding:6px 14px; text-decoration:none; display:inline-block;">Track Shipment Live &rarr;</a>` : ''}
+          </div>
+        ` : ''}
         <section class="tracking-order-items">
           <h3>Items in your order</h3>
           ${itemsHtml || '<p>No item details available.</p>'}

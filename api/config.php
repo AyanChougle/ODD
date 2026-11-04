@@ -43,5 +43,9 @@ define('RAZORPAY_KEY_ID', getenv('RAZORPAY_KEY_ID') ?: 'rzp_live_Ti8AffHarb3tai'
 define('RAZORPAY_KEY_SECRET', getenv('RAZORPAY_KEY_SECRET') ?: 'X4Ws6I0iovvSrTYh18i1nNjl');
 define('RAZORPAY_WEBHOOK_SECRET', getenv('RAZORPAY_WEBHOOK_SECRET') ?: '');
 
+// Envia.com Multi-Carrier Shipping API
+define('ENVIA_API_KEY', getenv('ENVIA_API_KEY') ?: '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236');
+define('ENVIA_ENV', getenv('ENVIA_ENV') ?: 'live');
+
 // Session Lifetime
 define('SESSION_LIFETIME', 7 * 86400); // 7 days

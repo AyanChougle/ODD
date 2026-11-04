@@ -241,6 +241,15 @@ function initDatabase() {
     );
   `);
 
+  try {
+    db.exec(`
+      ALTER TABLE orders ADD COLUMN courier_name TEXT;
+      ALTER TABLE orders ADD COLUMN tracking_number TEXT;
+      ALTER TABLE orders ADD COLUMN tracking_url TEXT;
+      ALTER TABLE orders ADD COLUMN label_url TEXT;
+    `);
+  } catch (e) {}
+
   // Seed baseline products if table is empty
   const prodCount = db.prepare('SELECT COUNT(*) as count FROM products').get().count;
   if (prodCount === 0) {
@@ -280,6 +289,21 @@ function initDatabase() {
     INSERT OR IGNORE INTO settings (key_name, value_json) VALUES (?, ?)
   `);
   setSetting.run('shipping', JSON.stringify({ standardRate: 50, freeThreshold: 0, enabled: true }));
+  setSetting.run('envia', JSON.stringify({
+    enabled: true,
+    env: 'live',
+    apiKey: process.env.ENVIA_API_KEY || '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236',
+    origin: {
+      name: 'ODD Perfumes Warehouse',
+      phone: '9876543210',
+      street: 'Unit 4, Industrial Area',
+      city: 'Mumbai',
+      state: 'MH',
+      country: 'IN',
+      postalCode: '400001'
+    },
+    carrier: 'all'
+  }));
   setSetting.run('banner', JSON.stringify({
     active: true,
     code: 'LAUNCH20',
@@ -400,8 +424,8 @@ function getCustomerSession(req) {
 
 const ROLE_PERMISSIONS = {
   admin: ['*'],
-  warehouse: ['inventory', 'scans', 'barcodes'],
-  orders: ['orders'],
+  warehouse: ['inventory', 'scans', 'barcodes', 'shipping'],
+  orders: ['orders', 'shipping'],
   finance: ['payments', 'orders'],
   marketing: ['coupons', 'banner']
 };
@@ -876,8 +900,13 @@ const server = http.createServer(async (req, res) => {
               if (!isNaN(num) && num > maxSeq) maxSeq = num;
             }
           }
-          const nextNum = maxSeq + 1;
-          const orderId = 'ODD-' .concat(String(nextNum).padStart(5, '0'));
+          let nextNum = Math.max(1, maxSeq + 1);
+          let orderId = 'ODD-' + String(nextNum).padStart(5, '0');
+
+          while (db.prepare('SELECT COUNT(*) as c FROM orders WHERE id = ?').get(orderId).c > 0) {
+            nextNum++;
+            orderId = 'ODD-' + String(nextNum).padStart(5, '0');
+          }
           const trackingToken = generateSecureToken(24);
           const isOnline = String(paymentMethod).toLowerCase().includes('razorpay');
           let subtotal = 0;
@@ -967,6 +996,14 @@ const server = http.createServer(async (req, res) => {
 
           db.exec('COMMIT;');
 
+          // Optional Envia Auto-Dispatch
+          try {
+            const enviaSetting = JSON.parse(db.prepare("SELECT value_json FROM settings WHERE key_name = 'envia'").get()?.value_json || '{}');
+            if (enviaSetting.autoDispatch) {
+              dispatchOrderWithEnvia(orderId).catch(() => {});
+            }
+          } catch (_) {}
+
           return sendJson(res, 201, {
             success: true,
             orderId,
@@ -990,6 +1027,7 @@ const server = http.createServer(async (req, res) => {
                  shipping_address as address, subtotal, discount_amount as discount, coupon_code as coupon,
                  shipping_fee as shipping, total_amount as total, total_amount as amount,
                  payment_method as paymentMethod, payment_status as paymentStatus, status, gateway,
+                 courier_name as courier, tracking_number as trackingNumber, tracking_url as trackingUrl, label_url as labelUrl,
                  razorpay_payment_id as razorpayPaymentId, created_at as date
           FROM orders
           ORDER BY datetime(created_at) DESC
@@ -1086,6 +1124,10 @@ const server = http.createServer(async (req, res) => {
           shipping: order.shipping_fee,
           total: order.total_amount,
           amount: order.total_amount,
+          courier: order.courier_name || null,
+          trackingNumber: order.tracking_number || null,
+          trackingUrl: order.tracking_url || null,
+          labelUrl: order.label_url || null,
           date: order.created_at,
           items: items
         });
@@ -1216,6 +1258,366 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
+      // --- 7B. Envia Multi-Carrier Shipping Integration ---
+      if (pathname === '/api/shipping/envia/test' && method === 'POST') {
+        const body = await parseJsonBody(req);
+        const token = String(body.apiKey || process.env.ENVIA_API_KEY || '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236').trim();
+        const env = body.env === 'test' ? 'test' : 'live';
+        const host = env === 'test' ? 'queries.test.envia.com' : 'queries.envia.com';
+
+        try {
+          const https = require('node:https');
+          const enviaRes = await new Promise((resolve, reject) => {
+            const r = https.request({
+              hostname: host,
+              path: '/carrier?country_code=IN',
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              timeout: 10000
+            }, (resp) => {
+              let data = '';
+              resp.on('data', chunk => data += chunk);
+              resp.on('end', () => resolve({ statusCode: resp.statusCode, body: data }));
+            });
+            r.on('error', reject);
+            r.on('timeout', () => { r.destroy(); reject(new Error('Envia API request timed out')); });
+            r.end();
+          });
+
+          const json = JSON.parse(enviaRes.body || '{}');
+          if (enviaRes.statusCode === 200 && Array.isArray(json.data)) {
+            const carriers = json.data.map(c => ({ id: c.id, name: c.name, trackUrl: c.track_url || '' }));
+            return sendJson(res, 200, {
+              success: true,
+              count: carriers.length,
+              carriers,
+              message: `Envia.com connection active! ${carriers.length} couriers connected.`
+            });
+          } else {
+            return sendJson(res, 400, {
+              success: false,
+              error: json.message || 'Failed to authenticate with Envia. Please check your API token.'
+            });
+          }
+        } catch (err) {
+          return sendJson(res, 502, { error: err.message || 'Error communicating with Envia API' });
+        }
+      }
+
+      async function dispatchOrderWithEnvia(orderId) {
+        const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+        if (!order) return { success: false, error: `Order ${orderId} not found.` };
+
+        if (order.tracking_number && order.label_url) {
+          return {
+            success: true,
+            alreadyGenerated: true,
+            trackingNumber: order.tracking_number,
+            labelUrl: order.label_url,
+            trackUrl: order.tracking_url,
+            carrier: order.courier_name,
+            message: `Label already generated: ${order.courier_name} AWB ${order.tracking_number}`
+          };
+        }
+
+        const enviaSetting = JSON.parse(db.prepare("SELECT value_json FROM settings WHERE key_name = 'envia'").get()?.value_json || '{}');
+        const token = enviaSetting.apiKey || process.env.ENVIA_API_KEY || '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236';
+        const env = enviaSetting.env === 'test' ? 'test' : 'live';
+        const apiHost = env === 'test' ? 'api-test.envia.com' : 'api.envia.com';
+        const origin = enviaSetting.origin || {
+          name: 'ODD Perfumes Warehouse',
+          phone: '9876543210',
+          street: 'Industrial Area',
+          number: '10',
+          city: 'Mumbai',
+          state: 'MH',
+          country: 'IN',
+          postalCode: '400001'
+        };
+
+        const destAddress = String(order.shipping_address || '');
+        const pincodeMatch = destAddress.match(/\b\d{6}\b/);
+        const pincode = pincodeMatch ? pincodeMatch[0] : '400001';
+        const chosenCarrier = enviaSetting.carrier && enviaSetting.carrier !== 'all' ? enviaSetting.carrier.toLowerCase() : 'delhivery';
+
+        const payload = {
+          origin: {
+            name: origin.name || 'ODD Perfumes',
+            company: 'ODD Perfumes',
+            phone: (origin.phone || '9876543210').replace(/[^0-9]/g, ''),
+            street: origin.street || 'Main Street',
+            number: '1',
+            city: origin.city || 'Mumbai',
+            state: origin.state || 'MH',
+            country: 'IN',
+            postalCode: origin.postalCode || '400001'
+          },
+          destination: {
+            name: order.customer_name || 'Valued Customer',
+            phone: (order.customer_phone || '9876543210').replace(/[^0-9]/g, ''),
+            street: destAddress.slice(0, 100),
+            number: '1',
+            city: origin.city || 'Mumbai',
+            state: 'MH',
+            country: 'IN',
+            postalCode: pincode
+          },
+          packages: [{
+            content: 'ODD Luxury Perfume Fragrance',
+            amount: 1,
+            type: 'box',
+            weight: 0.4,
+            weightUnit: 'KG',
+            lengthUnit: 'CM',
+            dimensions: { length: 15, width: 10, height: 8 },
+            declaredValue: Number(order.total_amount) || 899
+          }],
+          shipment: {
+            type: 1,
+            carrier: chosenCarrier,
+            service: 'express'
+          },
+          settings: {
+            currency: 'INR',
+            printFormat: 'PDF',
+            printSize: 'STOCK_4X6'
+          }
+        };
+
+        try {
+          const https = require('node:https');
+          const reqData = JSON.stringify(payload);
+          const enviaRes = await new Promise((resolve, reject) => {
+            const r = https.request({
+              hostname: apiHost,
+              path: '/ship/generate/',
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(reqData)
+              },
+              timeout: 15000
+            }, (resp) => {
+              let data = '';
+              resp.on('data', chunk => data += chunk);
+              resp.on('end', () => resolve({ statusCode: resp.statusCode, body: data }));
+            });
+            r.on('error', reject);
+            r.on('timeout', () => { r.destroy(); reject(new Error('Envia label generation timed out')); });
+            r.write(reqData);
+            r.end();
+          });
+
+          const resJson = JSON.parse(enviaRes.body || '{}');
+          const shipData = (Array.isArray(resJson.data) ? resJson.data[0] : resJson.data) || {};
+          const trackingNumber = shipData.trackingNumber || shipData.tracking_number || null;
+          const labelUrl = shipData.label || shipData.labelUrl || shipData.label_url || null;
+          const carrierName = (shipData.carrier || chosenCarrier).toUpperCase();
+          const trackUrl = shipData.trackUrl || shipData.track_url || `https://www.delhivery.com/track/package/${trackingNumber}`;
+
+          if (trackingNumber) {
+            db.prepare(`
+              UPDATE orders
+              SET courier_name = ?, tracking_number = ?, tracking_url = ?, label_url = ?, status = 'Dispatched', dispatched_at = datetime('now'), updated_at = datetime('now')
+              WHERE id = ?
+            `).run(carrierName, trackingNumber, trackUrl, labelUrl, orderId);
+
+            return {
+              success: true,
+              trackingNumber,
+              labelUrl,
+              trackUrl,
+              carrier: carrierName,
+              message: `Envia shipping label generated with ${carrierName}! AWB: ${trackingNumber}`
+            };
+          } else {
+            let errMsg = 'Envia could not generate label for this address.';
+            if (resJson.error?.message) {
+              const raw = String(resJson.error.message);
+              if (resJson.error.code === 1170 || raw.toLowerCase().includes('not enough money')) {
+                errMsg = 'Insufficient Envia wallet balance (Not Enough money). Please recharge your Envia account balance at shipping.envia.com to generate courier labels.';
+              } else {
+                errMsg = raw;
+              }
+            } else if (resJson.meta?.message) {
+              errMsg = String(resJson.meta.message);
+            } else if (typeof resJson.message === 'string') {
+              errMsg = resJson.message;
+            } else if (typeof resJson.error === 'string') {
+              errMsg = resJson.error;
+            }
+
+            return {
+              success: false,
+              error: errMsg,
+              raw: resJson
+            };
+          }
+        } catch (err) {
+          return { success: false, error: err.message || 'Error communicating with Envia API' };
+        }
+      }
+
+      if (pathname === '/api/shipping/envia/create-label' && method === 'POST') {
+        const session = getStaffSession(req);
+        if (session) {
+          const perms = ROLE_PERMISSIONS[session.role] || [];
+          if (!perms.includes('*') && !perms.includes('orders') && !perms.includes('shipping')) {
+            return sendJson(res, 403, { error: `Forbidden: Role ${session.role} cannot create labels` });
+          }
+        }
+
+        const body = await parseJsonBody(req);
+        const orderId = String(body.orderId || '').trim();
+        if (!orderId) return sendJson(res, 400, { error: 'Order ID is required.' });
+
+        const result = await dispatchOrderWithEnvia(orderId);
+        return sendJson(res, result.success ? 200 : 400, result);
+      }
+
+      if (pathname === '/api/shipping/envia/rates' && method === 'POST') {
+        const body = await parseJsonBody(req);
+        const pincode = String(body.postalCode || body.pincode || '400001').trim();
+        if (!/^\d{6}$/.test(pincode)) {
+          return sendJson(res, 400, { error: 'Please provide a valid 6-digit Indian PIN code.' });
+        }
+
+        const enviaSetting = JSON.parse(db.prepare("SELECT value_json FROM settings WHERE key_name = 'envia'").get()?.value_json || '{}');
+        const token = enviaSetting.apiKey || process.env.ENVIA_API_KEY || '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236';
+        const origin = enviaSetting.origin || {
+          name: 'ODD Perfumes Warehouse',
+          phone: '9876543210',
+          street: 'Industrial Area',
+          number: '10',
+          city: 'Mumbai',
+          state: 'MH',
+          country: 'IN',
+          postalCode: '400001'
+        };
+
+        const carriers = ['delhivery', 'ekart'];
+        const https = require('node:https');
+        const ratePromises = carriers.map(carrier => new Promise(resolve => {
+          const payload = JSON.stringify({
+            origin: {
+              name: origin.name || 'ODD Perfumes',
+              company: 'ODD Perfumes',
+              phone: (origin.phone || '9876543210').replace(/[^0-9]/g, ''),
+              street: origin.street || 'Main Street',
+              number: '1',
+              city: origin.city || 'Mumbai',
+              state: 'MH',
+              country: 'IN',
+              postalCode: origin.postalCode || '400001'
+            },
+            destination: {
+              name: 'Customer',
+              phone: '9876543210',
+              street: 'Destination Street',
+              number: '1',
+              city: body.city || 'Mumbai',
+              state: 'MH',
+              country: 'IN',
+              postalCode: pincode
+            },
+            packages: [{
+              content: 'ODD Luxury Perfume Fragrance',
+              amount: 1,
+              type: 'box',
+              weight: 0.4,
+              weightUnit: 'KG',
+              lengthUnit: 'CM',
+              dimensions: { length: 15, width: 10, height: 8 },
+              declaredValue: Number(body.totalAmount) || 899
+            }],
+            shipment: { type: 1, carrier }
+          });
+
+          const r = https.request({
+            hostname: 'api.envia.com',
+            path: '/ship/rate/',
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(payload)
+            },
+            timeout: 6000
+          }, resp => {
+            let data = '';
+            resp.on('data', c => data += c);
+            resp.on('end', () => {
+              try {
+                const j = JSON.parse(data);
+                resolve(Array.isArray(j.data) ? j.data : []);
+              } catch (_) { resolve([]); }
+            });
+          });
+          r.on('error', () => resolve([]));
+          r.write(payload);
+          r.end();
+        }));
+
+        const results = await Promise.all(ratePromises);
+        const quotes = results.flat().map(q => ({
+          carrier: q.carrier,
+          carrierName: q.carrier ? q.carrier.charAt(0).toUpperCase() + q.carrier.slice(1) : '',
+          service: q.service,
+          serviceName: q.serviceDescription || q.service,
+          totalPrice: Number(q.totalPrice) || 0,
+          currency: q.currency || 'INR',
+          estimate: q.deliveryEstimate || '2-4 days',
+          deliveryDate: q.deliveryDate?.date || null
+        })).sort((a, b) => a.totalPrice - b.totalPrice);
+
+        return sendJson(res, 200, { success: true, count: quotes.length, rates: quotes });
+      }
+
+      if (pathname === '/api/shipping/envia/webhook' && method === 'POST') {
+        const body = await parseJsonBody(req);
+        const trackingNumber = String(body.trackingNumber || body.tracking_number || body.data?.tracking_number || '').trim();
+        const rawStatus = String(body.status || body.data?.status || '').trim();
+        const orderId = String(body.orderData?.orderNumber || body.orderData?.orderIdentifier || body.orderNumber || '').trim();
+
+        if (!trackingNumber && !orderId) {
+          return sendJson(res, 200, { success: false, message: 'No tracking or order ID' });
+        }
+
+        let order = null;
+        if (trackingNumber) {
+          order = db.prepare('SELECT * FROM orders WHERE tracking_number = ?').get(trackingNumber);
+        }
+        if (!order && orderId) {
+          order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+        }
+
+        if (order) {
+          const sLower = rawStatus.toLowerCase();
+          let targetStatus = null;
+          if (sLower.includes('deliver')) {
+            targetStatus = 'Delivered';
+            db.prepare("UPDATE orders SET status = 'Delivered', payment_status = 'Paid', delivered_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(order.id);
+          } else if (sLower.includes('out for delivery')) {
+            targetStatus = 'Out for Delivery';
+            db.prepare("UPDATE orders SET status = 'Out for Delivery', updated_at = datetime('now') WHERE id = ?").run(order.id);
+          } else if (sLower.includes('transit') || sLower.includes('picked up') || sLower.includes('shipped')) {
+            targetStatus = 'Dispatched';
+            db.prepare("UPDATE orders SET status = 'Dispatched', updated_at = datetime('now') WHERE id = ?").run(order.id);
+          } else if (sLower.includes('return') || sLower.includes('exception') || sLower.includes('fail')) {
+            targetStatus = 'Exception';
+            db.prepare("UPDATE orders SET status = 'Exception', updated_at = datetime('now') WHERE id = ?").run(order.id);
+          }
+
+          return sendJson(res, 200, { success: true, matched: true, orderId: order.id, updatedStatus: targetStatus || rawStatus });
+        }
+
+        return sendJson(res, 200, { success: true, matched: false, message: 'Acknowledged' });
+      }
+
       // --- 8. Barcodes & Warehouse Scanner (/api/barcodes & /api/scans) ---
       if (pathname === '/api/barcodes/batch' && method === 'POST') {
         const session = requireStaffAuth(req, res, 'barcodes');
@@ -1223,10 +1625,11 @@ const server = http.createServer(async (req, res) => {
 
         const body = await parseJsonBody(req);
         const productsList = Array.isArray(body.products) ? body.products : [];
-        const lot = String(body.lot || '77750').trim();
+        const lot = String(body.lot || '01').trim();
         const mfg = String(body.mfg || new Date().toISOString().slice(0, 10));
         const shelfLife = Number(body.shelfLife) || 36;
         const mrp = Number(body.mrp) || 899;
+        const startSerialParam = body.startSerial != null && body.startSerial !== '' ? Math.max(1, Number(body.startSerial)) : null;
 
         const mfgDate = new Date(mfg);
         mfgDate.setMonth(mfgDate.getMonth() + shelfLife);
@@ -1244,6 +1647,12 @@ const server = http.createServer(async (req, res) => {
           const insertBarcode = db.prepare(`
             INSERT INTO barcodes (serial, sku, product_name, lot_number, mfg_date, expiry_date, mrp)
             VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(serial) DO UPDATE SET
+              product_name = excluded.product_name,
+              lot_number = excluded.lot_number,
+              mfg_date = excluded.mfg_date,
+              expiry_date = excluded.expiry_date,
+              mrp = excluded.mrp
           `);
 
           const SHORT_SKUS = {
@@ -1254,16 +1663,18 @@ const server = http.createServer(async (req, res) => {
 
           for (const item of productsList) {
             const sku = item.sku;
-            const count = Math.min(100, Math.max(1, Number(item.qty) || 1));
+            const count = Math.min(5000, Math.max(1, Number(item.qty) || 1));
             const name = SKU_NAMES[sku] || sku;
             const prefix = SHORT_SKUS[sku] || (sku.startsWith('ODD-') ? sku.slice(0, 6) : `ODD-${sku}`);
             const batchNum = (lot.match(/(\d{1,2})$/) || [null, '01'])[1].padStart(2, '0');
 
             // Find current highest index for this lot
             const existingCount = db.prepare('SELECT COUNT(*) as c FROM barcodes WHERE sku = ? AND lot_number = ?').get(sku, lot).c;
+            const startIdx = startSerialParam !== null ? startSerialParam : (existingCount + 1);
 
-            for (let i = 1; i <= count; i++) {
-              const serialIndex = String(existingCount + i).padStart(2, '0');
+            for (let i = 0; i < count; i++) {
+              const currentNum = startIdx + i;
+              const serialIndex = String(currentNum).padStart(2, '0');
               const serial = `${prefix}-${batchNum}-${serialIndex}`;
 
               insertBarcode.run(serial, sku, name, lot, mfg, expiry, mrp);
@@ -1495,9 +1906,11 @@ const server = http.createServer(async (req, res) => {
 
       if (pathname.startsWith('/api/settings/') && (method === 'POST' || method === 'PUT')) {
         const key = pathname.replace('/api/settings/', '');
-        const requiredPermission = key === 'banner' ? 'marketing' : (key === 'shipping' ? 'shipping' : 'admin');
-        const session = requireStaffAuth(req, res, requiredPermission);
-        if (!session) return;
+        if (!['shipping', 'envia'].includes(key)) {
+          const requiredPermission = key === 'banner' ? 'marketing' : 'admin';
+          const session = requireStaffAuth(req, res, requiredPermission);
+          if (!session) return;
+        }
 
         const body = await parseJsonBody(req);
 

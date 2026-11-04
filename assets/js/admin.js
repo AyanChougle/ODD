@@ -402,9 +402,22 @@ async function adminApi(path, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const errorMsg = data.details ? `${data.error}: ${data.details}` : (data.error || `Request failed with status ${response.status}`);
+    let errorMsg = `Request failed with status ${response.status}`;
+    if (data.details) {
+      errorMsg = typeof data.details === 'string' ? `${data.error}: ${data.details}` : JSON.stringify(data.details);
+    } else if (data.error) {
+      if (typeof data.error === 'string') {
+        errorMsg = data.error;
+      } else if (data.error.message) {
+        errorMsg = data.error.message;
+      } else {
+        errorMsg = JSON.stringify(data.error);
+      }
+    }
     showAdminToast(errorMsg, true);
-    throw new Error(errorMsg);
+    const err = new Error(errorMsg);
+    err.toastShown = true;
+    throw err;
   }
 
   return data;
@@ -587,6 +600,7 @@ async function loadTab(tab) {
   }
   if (tab === 'shipping') {
     loadShippingSettings();
+    loadEnviaSettings();
   }
   if (tab === 'access-links') await loadStaff();
   if (tab === 'launch-offer') {
@@ -686,7 +700,7 @@ function renderOrdersTable() {
   if (!tbody) return;
 
   if (!ordersData.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="admin-empty-state">No customer orders yet. Orders placed at checkout will appear here in real time.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="admin-empty-state">No customer orders yet. Orders placed at checkout will appear here in real time.</td></tr>';
     return;
   }
 
@@ -710,6 +724,21 @@ function renderOrdersTable() {
         </select>`
       : `<span class="badge-status ${order.status === 'Cancelled' ? 'danger' : 'info'}">${escapeHtml(order.status)}</span>`;
 
+    let shippingCell = '<span style="color:var(--admin-text-muted); font-size:0.75rem;">—</span>';
+    if (order.tracking_number) {
+      shippingCell = `
+        <div style="font-size:0.8rem; line-height:1.3;">
+          <span class="badge-status info" style="display:inline-block; margin-bottom:3px; font-size:0.7rem; padding:1px 6px;">${escapeHtml(order.courier_name || 'Envia')}</span>
+          <div style="font-family:monospace; font-size:0.75rem;"><a href="${escapeHtml(order.tracking_url || '#')}" target="_blank" rel="noopener" style="color:var(--admin-accent); text-decoration:underline;" title="Track package online">${escapeHtml(order.tracking_number)}</a></div>
+          ${order.label_url ? `<a href="${escapeHtml(order.label_url)}" target="_blank" rel="noopener" class="admin-btn admin-btn-xs" style="margin-top:4px; display:inline-block; font-size:0.68rem; padding:2px 8px;">Print Label</a>` : ''}
+        </div>
+      `;
+    } else if (order.status !== 'Cancelled' && order.status !== 'Delivered') {
+      shippingCell = (hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
+        ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithEnvia('${escapeHtml(order.id)}', this)" style="font-size:0.72rem; padding:4px 8px; white-space:nowrap;">Ship with Envia</button>`
+        : '<span style="color:var(--admin-text-muted); font-size:0.75rem;">Ready to Ship</span>';
+    }
+
     return `
       <tr>
         <td><strong>${escapeHtml(order.id)}</strong><small class="admin-cell-subtext">${escapeHtml(order.phone)}</small></td>
@@ -724,6 +753,7 @@ function renderOrdersTable() {
           <small class="admin-cell-subtext">${escapeHtml(order.paymentStatus)}</small>
         </td>
         <td>${statusControl}</td>
+        <td>${shippingCell}</td>
         <td class="admin-muted-cell">${escapeHtml(formatDate(order.date))}</td>
       </tr>
     `;
@@ -1386,6 +1416,28 @@ function backToBarcodeSelection() {
   }
 }
 
+function setAllCopies(qty) {
+  ['copies-fm', 'copies-lc', 'copies-ph'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = qty;
+  });
+  showAdminToast(`All fragrance print quantities set to ${qty}.`);
+}
+
+function setStartSerial(val) {
+  const el = document.getElementById('batch-start-serial');
+  if (el) {
+    el.value = val;
+    if (val === 1 || val === '1') {
+      showAdminToast('Series counter reset to 01.');
+    } else if (val === '') {
+      showAdminToast('Series counter set to Auto (DB resume).');
+    } else {
+      showAdminToast(`Series start counter set to ${val}.`);
+    }
+  }
+}
+
 async function generateBarcodeSheet(event) {
   event?.preventDefault();
   const selected = [
@@ -1416,10 +1468,12 @@ async function generateBarcodeSheet(event) {
     const shelfLife = Number(document.getElementById('batch-shelf-life')?.value || 36);
     const mrp = Number(document.getElementById('batch-mrp')?.value || 899);
     const codeFormat = document.getElementById('batch-code-format')?.value || 'dual';
+    const startSerialVal = document.getElementById('batch-start-serial')?.value.trim();
+    const startSerial = (startSerialVal !== '' && startSerialVal != null) ? Number(startSerialVal) : null;
 
     const result = await adminApi('/api/barcodes/batch', {
       method: 'POST',
-      body: { products: selected, lot, mfg, shelfLife, mrp }
+      body: { products: selected, lot, mfg, shelfLife, mrp, startSerial }
     });
 
     const labels = result.labels || [];
@@ -1440,7 +1494,7 @@ async function generateBarcodeSheet(event) {
           <button type="button" class="wp-btn-back" onclick="backToBarcodeSelection()">Back to Selection</button>
         </div>
         <div class="wp-barcode-meta-summary">
-          <span>${labels.length} labels</span> · Format: <strong>${formatDesc}</strong> · Size: <strong>${width} × ${height} mm</strong> (${cols} cols) · Lot No: <strong>${escapeHtml(lot)}</strong> · Mfg: <strong>${escapeHtml(mfg)}</strong> · Exp: <strong>${escapeHtml(expiry)}</strong>
+          <span>${labels.length} labels</span> · Format: <strong>${formatDesc}</strong> · Size: <strong>${width} × ${height} mm</strong> (${cols} cols) · Series: <strong>${labels[0]?.serial ? escapeHtml(labels[0].serial) + ' … ' + escapeHtml(labels[labels.length - 1].serial) : 'Generated'}</strong> · Lot: <strong>${escapeHtml(lot)}</strong> · Exp: <strong>${escapeHtml(expiry)}</strong>
         </div>
       </div>
       <div class="barcode-label-grid" style="grid-template-columns: repeat(${cols}, minmax(0, 1fr)) !important;">
@@ -1844,6 +1898,270 @@ async function saveShippingSettings(event) {
 }
 
 /* ==========================================================================
+   Tab 7B: Envia.com Multi-Carrier Shipping & AWB Automation
+   ========================================================================== */
+function getOfflineEnvia() {
+  try {
+    const raw = localStorage.getItem('odd_admin_envia');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return {
+    apiKey: '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236',
+    env: 'live',
+    carrier: 'all',
+    origin: {
+      name: 'ODD Perfume Fulfillment',
+      phone: '+919876543210',
+      street: 'Plot 42, Perfume Studio, Industrial Area',
+      city: 'Mumbai',
+      state: 'MH',
+      postalCode: '400001',
+      country: 'IN'
+    }
+  };
+}
+
+function saveOfflineEnvia(cfg) {
+  try {
+    localStorage.setItem('odd_admin_envia', JSON.stringify(cfg));
+    localStorage.setItem('odd_envia_settings', JSON.stringify(cfg));
+  } catch (e) {}
+}
+
+function toggleEnviaKeyVisibility() {
+  const input = document.getElementById('envia-api-key');
+  const btn = document.getElementById('btn-toggle-envia-key');
+  if (!input || !btn) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = 'Hide';
+  } else {
+    input.type = 'password';
+    btn.textContent = 'Show';
+  }
+}
+
+async function loadEnviaSettings() {
+  const keyInput = document.getElementById('envia-api-key');
+  const envSelect = document.getElementById('envia-env');
+  const carrierSelect = document.getElementById('envia-carrier');
+  const origName = document.getElementById('envia-origin-name');
+  const origPhone = document.getElementById('envia-origin-phone');
+  const origStreet = document.getElementById('envia-origin-street');
+  const origCity = document.getElementById('envia-origin-city');
+  const origState = document.getElementById('envia-origin-state');
+  const origPostal = document.getElementById('envia-origin-postal');
+  const badge = document.getElementById('envia-status-badge');
+
+  const applyEnviaFields = (data) => {
+    if (!data || typeof data !== 'object') return;
+    if (keyInput) keyInput.value = data.apiKey || '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236';
+    if (envSelect) envSelect.value = data.env || 'live';
+    if (carrierSelect) carrierSelect.value = data.carrier || 'all';
+    const autoDispatchEl = document.getElementById('envia-auto-dispatch');
+    if (autoDispatchEl) autoDispatchEl.checked = data.autoDispatch === true;
+    if (data.origin) {
+      if (origName && data.origin.name) origName.value = data.origin.name;
+      if (origPhone && data.origin.phone) origPhone.value = data.origin.phone;
+      if (origStreet && data.origin.street) origStreet.value = data.origin.street;
+      if (origCity && data.origin.city) origCity.value = data.origin.city;
+      if (origState && data.origin.state) origState.value = data.origin.state;
+      if (origPostal && data.origin.postalCode) origPostal.value = data.origin.postalCode;
+    }
+    if (badge) {
+      badge.textContent = 'Active (Live Production)';
+      badge.className = 'badge-status info';
+    }
+  };
+
+  // 1. Immediately apply cached/offline settings so fields never remain blank
+  const local = getOfflineEnvia();
+  applyEnviaFields(local);
+
+  // 2. Fetch authoritative configuration from server if connected
+  try {
+    const data = await adminApi('/api/settings/envia');
+    if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+      applyEnviaFields(data);
+      saveOfflineEnvia(data);
+    }
+  } catch (e) {
+    if (badge) {
+      badge.textContent = 'Active (Live Production)';
+      badge.className = 'badge-status info';
+    }
+  }
+}
+
+function saveEnviaSettings(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const apiKey = document.getElementById('envia-api-key')?.value.trim() || '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236';
+  const env = document.getElementById('envia-env')?.value || 'live';
+  const carrier = document.getElementById('envia-carrier')?.value || 'all';
+  const autoDispatch = document.getElementById('envia-auto-dispatch')?.checked ?? false;
+  const origin = {
+    name: document.getElementById('envia-origin-name')?.value.trim() || 'ODD Perfume Fulfillment',
+    phone: document.getElementById('envia-origin-phone')?.value.trim() || '+919876543210',
+    street: document.getElementById('envia-origin-street')?.value.trim() || 'Plot 42, Perfume Studio, Industrial Area',
+    city: document.getElementById('envia-origin-city')?.value.trim() || 'Mumbai',
+    state: document.getElementById('envia-origin-state')?.value.trim().toUpperCase() || 'MH',
+    postalCode: document.getElementById('envia-origin-postal')?.value.trim() || '400001',
+    country: 'IN'
+  };
+
+  const cfg = { apiKey, env, carrier, origin, autoDispatch };
+  saveOfflineEnvia(cfg);
+
+  const badge = document.getElementById('envia-status-badge');
+  if (badge) {
+    badge.textContent = 'Active (Saved)';
+    badge.className = 'badge-status info';
+  }
+
+  const msg = document.getElementById('envia-saved-msg');
+  if (msg) {
+    msg.style.display = 'inline';
+    setTimeout(() => { msg.style.display = 'none'; }, 3000);
+  }
+
+  showAdminToast('Envia shipping configuration saved successfully.');
+
+  adminApi('/api/settings/envia', {
+    method: 'PUT',
+    body: cfg
+  }).catch(err => {
+    console.warn('Sync note:', err.message);
+  });
+
+  return false;
+}
+
+async function testEnviaConnection() {
+  const resultDiv = document.getElementById('envia-test-result');
+  const badge = document.getElementById('envia-status-badge');
+  const apiKey = document.getElementById('envia-api-key')?.value.trim() || '';
+  const env = document.getElementById('envia-env')?.value || 'live';
+
+  if (resultDiv) {
+    resultDiv.style.display = 'block';
+    resultDiv.style.background = '#1E232D';
+    resultDiv.style.color = '#F3F4F6';
+    resultDiv.style.border = '1px solid var(--admin-border)';
+    resultDiv.innerHTML = 'Connecting to Envia.com API…';
+  }
+
+  try {
+    const res = await adminApi('/api/shipping/envia/test', {
+      method: 'POST',
+      body: { apiKey, env }
+    });
+
+    if (res.success) {
+      if (badge) {
+        badge.textContent = `Connected (${res.count} Couriers)`;
+        badge.className = 'badge-status info';
+      }
+      if (resultDiv) {
+        const names = (res.carriers || []).map(c => `<span style="display:inline-block; background:#0E1015; border:1px solid #374151; padding:3px 8px; border-radius:4px; margin:2px 4px 2px 0; font-size:0.75rem;">${escapeHtml(c.name)}</span>`).join('');
+        resultDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+        resultDiv.style.color = '#10B981';
+        resultDiv.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+        resultDiv.innerHTML = `
+          <strong>Connection Active!</strong> ${escapeHtml(res.message)}
+          <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">
+            ${names}
+          </div>
+        `;
+      }
+      showAdminToast(`Envia connected! ${res.count} couriers verified.`);
+    } else {
+      throw new Error(res.error || 'Authentication failed');
+    }
+  } catch (err) {
+    if (badge) {
+      badge.textContent = 'Disconnected';
+      badge.className = 'badge-status danger';
+    }
+    const isSandboxError = env === 'test' && (err.message || '').toLowerCase().includes('token is invalid');
+    if (resultDiv) {
+      resultDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+      resultDiv.style.color = '#EF4444';
+      resultDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+      if (isSandboxError) {
+        resultDiv.innerHTML = `
+          <strong>Notice:</strong> Your API token is a <strong>Live Production</strong> key. Envia Sandbox rejects live keys.<br>
+          <div style="margin-top:8px;">
+            <button type="button" class="admin-btn admin-btn-sm admin-btn-primary" onclick="switchToLiveAndTest()">Switch to Live Production &amp; Test Now</button>
+          </div>
+        `;
+      } else {
+        resultDiv.innerHTML = `<strong>Connection Failed:</strong> ${escapeHtml(err.message)}`;
+      }
+    }
+    showAdminToast(isSandboxError ? 'Your token is for Live Production. Switch API Environment to Live.' : err.message, true);
+  }
+}
+
+function switchToLiveAndTest() {
+  const envSelect = document.getElementById('envia-env');
+  if (envSelect) envSelect.value = 'live';
+  testEnviaConnection();
+}
+
+async function registerEnviaWebhook() {
+  const btn = document.getElementById('btn-register-webhook');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Registering…';
+  }
+  try {
+    const res = await adminApi('/api/shipping/envia/register-webhook', { method: 'POST' });
+    showAdminToast(res.message || 'Webhook registered with Envia!');
+  } catch (err) {
+    if (!err.toastShown) showAdminToast(`Webhook registration error: ${err.message}`, true);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Sync Webhook with Envia';
+    }
+  }
+}
+
+async function shipWithEnvia(orderId, btn) {
+  if (!confirm(`Generate official Envia courier shipping label & AWB for order ${orderId}?`)) return;
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Generating label…';
+  }
+
+  try {
+    const res = await adminApi('/api/shipping/envia/create-label', {
+      method: 'POST',
+      body: { orderId }
+    });
+
+    if (res.success) {
+      showAdminToast(`Shipped via ${res.courierName}! AWB: ${res.trackingNumber}`);
+      await loadOrders();
+    } else {
+      throw new Error(res.error || 'Failed to generate shipment label');
+    }
+  } catch (err) {
+    if (!err.toastShown) {
+      showAdminToast(`Shipping error: ${err.message}`, true);
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Ship with Envia';
+    }
+  }
+}
+
+/* ==========================================================================
    Tab 8: Customer Coupon Usages Log
    ========================================================================== */
 async function loadCouponUsages() {
@@ -2047,6 +2365,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const shippingForm = document.getElementById('shipping-settings-form');
     shippingForm?.addEventListener('submit', saveShippingSettings);
 
+    const enviaForm = document.getElementById('envia-settings-form');
+    enviaForm?.addEventListener('submit', saveEnviaSettings);
+
     const razorpayForm = document.getElementById('razorpay-settings-form');
     razorpayForm?.addEventListener('submit', saveRazorpaySettings);
 
@@ -2090,9 +2411,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.onCustomDimensionInput = onCustomDimensionInput;
     window.backToBarcodeSelection = backToBarcodeSelection;
     window.printBarcodeSheet = printBarcodeSheet;
+    window.setAllCopies = setAllCopies;
+    window.setStartSerial = setStartSerial;
     window.quickScanSimulate = quickScanSimulate;
     window.quickScanLatestOrder = quickScanLatestOrder;
     window.clearScanLog = clearScanLog;
+    window.toggleEnviaKeyVisibility = toggleEnviaKeyVisibility;
+    window.testEnviaConnection = testEnviaConnection;
+    window.switchToLiveAndTest = switchToLiveAndTest;
+    window.saveEnviaSettings = saveEnviaSettings;
+    window.registerEnviaWebhook = registerEnviaWebhook;
+    window.shipWithEnvia = shipWithEnvia;
 
   } catch (error) {
     console.error('Admin initialization error:', error);
