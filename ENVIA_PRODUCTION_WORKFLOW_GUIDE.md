@@ -1,6 +1,6 @@
 # ODD Perfumes — Envia Multi-Carrier Shipping Production Integration Guide
 
-This guide details the complete architecture, API contracts, automated webhooks, and step-by-step production setup for Envia Multi-Carrier Shipping (`shipping.envia.com`) integrated into ODD Perfumes.
+This guide details the complete architecture, API contracts, automated webhooks, audit findings, and step-by-step production deployment instructions for Envia Multi-Carrier Shipping (`shipping.envia.com`) integrated into ODD Perfumes (`test.oddperfume.com`).
 
 ---
 
@@ -24,9 +24,9 @@ sequenceDiagram
     Backend->>Backend: Inserts order into MySQL
     
     alt If Auto-Dispatch Enabled
-        Backend->>Envia: POST /ship/generate/ (Delhivery / Ekart)
+        Backend->>Envia: POST /ship/generate/ (Delhivery / Ekart / Blue Dart)
         Envia-->>Backend: Returns AWB Tracking Number & PDF Label URL
-        Backend->>Backend: Sets status = 'Dispatched' & attaches AWB
+        Backend->>Backend: Sets status = 'Dispatched' & records courier + AWB + label URL
     else Manual 1-Click Dispatch
         Admin->>Backend: POST /api/shipping/envia/create-label
         Backend->>Envia: POST /ship/generate/
@@ -34,8 +34,8 @@ sequenceDiagram
         Backend-->>Admin: Displays AWB link & 'Print Label' button
     end
 
-    Customer->>Tracking: Views Order Tracking (order-tracking.html?orderId=ODD-00002)
-    Tracking-->>Customer: Displays Courier Name (e.g. Delhivery) & Live Tracking Button
+    Customer->>Tracking: Views Order Tracking (order-tracking.html?order=ODD-00001&phone=7208533219)
+    Tracking-->>Customer: Displays Courier Name (e.g. Delhivery), AWB & Live Tracking Button
 
     Note over Envia,Backend: Real-Time Courier Webhook Sync
     Envia->>Backend: POST /api/shipping/envia/webhook (Delivered / Out for Delivery)
@@ -44,139 +44,157 @@ sequenceDiagram
 
 ---
 
-## 2. API Endpoints Reference
+## 2. Issues Audited & Resolved
 
-All routes are implemented in [api/index.php](file:///D:/AYAN/odd-perfume/api/index.php) for Hostinger production and mirrored in [server.js](file:///D:/AYAN/odd-perfume/server.js) for local development.
+### Issue 1: "Ship with Envia" button remained visible after dispatch (Screenshot 7)
+* **Root Cause:** In [api/index.php](file:///D:/AYAN/odd-perfume/api/index.php), `GET /api/orders` aliased columns as camelCase (`tracking_number as trackingNumber`, `courier_name as courier`, `label_url as labelUrl`, `tracking_url as trackingUrl`). However, in [assets/js/admin.js](file:///D:/AYAN/odd-perfume/assets/js/admin.js), line 728 evaluated `if (order.tracking_number)`. Because `order.tracking_number` was `undefined`, it branched to the fallback condition and kept re-rendering the orange `Ship with Envia` button instead of displaying the courier name badge, AWB tracking link, and printable label button.
+* **Fix Applied:**
+  1. Updated `GET /api/orders` in both [api/index.php](file:///D:/AYAN/odd-perfume/api/index.php) and [server.js](file:///D:/AYAN/odd-perfume/server.js) to return both camelCase and snake_case properties (`trackingNumber`, `tracking_number`, `courier`, `courier_name`, `labelUrl`, `label_url`, `trackingUrl`, `tracking_url`).
+  2. Updated `renderOrdersTable()` in [assets/js/admin.js](file:///D:/AYAN/odd-perfume/assets/js/admin.js) to check `order.tracking_number || order.trackingNumber` and use safe fallbacks for courier, tracking URL, and label URL.
 
-### 2.1 Test Connection & Carrier Discovery
-* **Endpoint:** `POST /api/shipping/envia/test`
-* **Access:** Staff / Admin
-* **Payload:** `{"apiKey": "...", "env": "live"}`
-* **Upstream:** `GET https://queries.envia.com/carrier?country_code=IN`
-* **Returns:** Connected Indian courier partners (Delhivery, Ekart, DTDC, Blue Dart).
+### Issue 2: Red Error Toast `SQLSTATE[42S22] Unknown column 'used_at'` (Screenshot 3)
+* **Root Cause:** The database schema for table `coupon_usages` specifies column `created_at`, but the older coupon usages endpoint in `api/index.php` executed `SELECT ..., used_at as date FROM coupon_usages`. When loading the Launch Offer & Coupon Codes manager tab, MySQL threw a 1054 error.
+* **Fix Applied:** In [api/index.php](file:///D:/AYAN/odd-perfume/api/index.php) and [server.js](file:///D:/AYAN/odd-perfume/server.js), updated the query to `SELECT ..., created_at as date FROM coupon_usages` and wrapped the database call in a defensive `try { ... } catch (Throwable $e) { $usages = []; }` block.
 
-### 2.2 Live Multi-Carrier Rate Estimation (Step 2 of Envia Docs)
-* **Endpoint:** `POST /api/shipping/envia/rates`
-* **Access:** Public / Checkout
-* **Payload:**
-```json
-{
-  "postalCode": "400710",
-  "city": "Navi Mumbai",
-  "totalAmount": 979
-}
-```
-* **Upstream:** Parallel `POST https://api.envia.com/ship/rate/` for `delhivery` and `ekart`.
-* **Returns:** Sorted rates by lowest cost:
-```json
-{
-  "success": true,
-  "count": 2,
-  "rates": [
-    {
-      "carrier": "ekart",
-      "carrierName": "Ekart",
-      "service": "ground",
-      "serviceName": "Ekart Surface",
-      "totalPrice": 38.18,
-      "currency": "INR",
-      "estimate": "1-4 days"
-    },
-    {
-      "carrier": "delhivery",
-      "carrierName": "Delhivery",
-      "service": "express",
-      "serviceName": "Delhivery Air",
-      "totalPrice": 49.72,
-      "currency": "INR",
-      "estimate": "1-2 days"
-    }
-  ]
-}
-```
+### Issue 3: Console ReferenceErrors `toggleEnviaKeyVisibility is not defined` (Screenshots 4 & 5)
+* **Root Cause:** Inline `onclick` handlers in [admin.html](file:///D:/AYAN/odd-perfume/admin.html) were calling functions that were either bound after `DOMContentLoaded` or failed to execute due to cached scripts without version busting.
+* **Fix Applied:**
+  1. Forwarded global function references (`window.toggleEnviaKeyVisibility`, `window.saveEnviaSettings`, `window.testEnviaConnection`, `window.registerEnviaWebhook`, `window.shipWithEnvia`) at the very top of [assets/js/admin.js](file:///D:/AYAN/odd-perfume/assets/js/admin.js) before any execution can be interrupted.
+  2. Added unobtrusive DOM event listeners in `DOMContentLoaded` for `#btn-toggle-envia-key`, `#btn-save-envia`, `#btn-test-envia`, and `#btn-register-webhook`.
+  3. Bumped script cache-buster in [admin.html](file:///D:/AYAN/odd-perfume/admin.html) to `assets/js/admin.js?v=3.5`.
 
-### 2.3 Generate Shipping Label & Courier AWB (Step 3 of Envia Docs)
-* **Endpoint:** `POST /api/shipping/envia/create-label`
-* **Access:** Admin / Staff (`shipping` or `orders` role)
-* **Payload:** `{"orderId": "ODD-00001"}`
-* **Upstream:** `POST https://api.envia.com/ship/generate/`
-* **Settings Sent to Envia:**
-  * `printFormat`: `"PDF"`
-  * `printSize`: `"STOCK_4X6"`
-  * `service`: `"express"` (or `"ground"`)
-  * `declaredValue`: Order total in INR
-* **Database Updates:**
-  * `courier_name = carrierName` (e.g. `Delhivery`)
-  * `tracking_number = trackingNumber` (e.g. `140123456789`)
-  * `tracking_url = trackUrl` (Official direct tracking link)
-  * `label_url = labelUrl` (Printable thermal / standard PDF shipping label)
-  * `status = "Dispatched"`
+### Issue 4: Live Production vs. Sandbox Test Account & Wallet Balances (Screenshots 1 & 6)
+* **Background:**
+  * Envia separates environments:
+    * **Live Production:** `shipping.envia.com` / `api.envia.com` (Your Company #897395, wallet balance ₹0.00).
+    * **Sandbox Testing:** `shipping.test.envia.com` / `api-test.envia.com` (Your Company #883014, test wallet balance ₹93,698.54).
+  * In live production, Envia charges real courier freight fees (e.g. ₹43.66 for Delhivery). If the live wallet balance is ₹0.00, Envia returns error 1170 (`Not Enough money`).
+* **Fix Applied:**
+  * In [api/index.php](file:///D:/AYAN/odd-perfume/api/index.php) and [server.js](file:///D:/AYAN/odd-perfume/server.js), added clear error parsing: when error 1170 occurs, the admin toast clearly instructs:
+    `Insufficient Envia wallet balance (Not Enough money). Please recharge your Envia account balance at shipping.envia.com to generate courier labels.`
+  * The Admin portal supports both modes:
+    * To test without cost: Select `Sandbox / Testing` and use your Sandbox API token (from `shipping.test.envia.com` -> Settings -> Developers / API Keys) which draws from the ₹93,698.54 test balance.
+    * For real customer orders: Select `Live Production`, keep your live key, and top up the wallet balance on `shipping.envia.com`.
 
-### 2.4 Automatic Real-Time Tracking Webhook (Step 4 of Envia Docs)
-* **Endpoint:** `POST /api/shipping/envia/webhook`
-* **Public URL:** `https://test.oddperfume.com/api/shipping/envia/webhook`
-* **Status on Envia:** Registered under ID `#5203`
-* **Trigger:** Courier scans parcel at transit hubs or delivers to customer door.
-* **Payload Handled:**
-```json
-{
-  "carrierName": "delhivery",
-  "trackingNumber": "140123456789",
-  "status": "Delivered"
-}
-```
-* **Database Transitions:**
-  * Status contains `deliver` -> Sets `status = 'Delivered'`, `payment_status = 'Paid'`, `delivered_at = NOW()`.
-  * Status contains `out for delivery` -> Sets `status = 'Out for Delivery'`.
-  * Status contains `transit` / `picked up` -> Sets `status = 'Dispatched'`.
-  * Status contains `return` / `exception` -> Sets `status = 'Exception'`.
+### Issue 5: Blank Columns in Envia Dashboard ("Order Ref", "Total value", "Estimated delivery", "Delivered Pending")
+* **Why "Order Ref" was blank:** Envia's shipping table looks for `shipment.orderReference` and `orderData.orderNumber` in the generation payload. Previously, the payload sent the package dimensions and courier details but omitted `orderReference`.
+* **Why "Total value of the order" was blank:** Envia's table looks for `shipment.totalValue` and package `declaredValue`.
+* **Why "Shipped: Pending", "Estimated delivery: blank", "Delivered: Pending":**
+  * When a label is initially generated, Delhivery assigns the AWB and returns the PDF label. At that instant, the package is in "Created / Pending" state because the physical box is still in the warehouse awaiting courier pickup.
+  * Once the courier driver physically collects the package and performs the origin hub pickup scan:
+    * Delhivery's live routing engine calculates the transit schedule and populates the official **Estimated Delivery Date**.
+    * Envia's registered tracking webhook (`/api/shipping/envia/webhook`) notifies our server and automatically updates the order status and milestone timestamps.
+  * In Sandbox testing (`shipping.test.envia.com`), shipments are virtual, so no physical driver scans them.
+* **Fix Applied:**
+  * Updated both [api/index.php](file:///D:/AYAN/odd-perfume/api/index.php) and [server.js](file:///D:/AYAN/odd-perfume/server.js) to pass `orderReference: $orderId`, `totalValue: $total`, and `orderData: { orderNumber: $orderId, total: $total, store: 'ODD Perfumes' }` directly into Envia.
+  * Updated [assets/js/tracking.js](file:///D:/AYAN/odd-perfume/assets/js/tracking.js) to compute and display the customer's Estimated Delivery Window (e.g. `5 Nov – 7 Nov 2026`) immediately upon dispatch, along with real dates for each milestone in the delivery progress timeline.
 
 ---
 
 ## 3. What to Implement Where (Files & Deployment Map)
 
-To activate this entire workflow on your live site, upload these 4 modified files to Hostinger File Manager in their corresponding folders:
+To ensure your production site (`test.oddperfume.com`) runs this updated workflow, upload the following files from your local directory `D:\AYAN\odd-perfume` to Hostinger via Hostinger File Manager or FTP:
 
-| File Path on Local | Target Location in Hostinger `public_html/` | Purpose |
+| Local Source File | Target Path in Hostinger `public_html/` | What Was Changed |
 | :--- | :--- | :--- |
-| `api/index.php` | `api/index.php` | Order ID collision lock, Envia label creation, live rates, and tracking webhook |
-| `api/config.php` | `api/config.php` | Production Envia API key and environment constants |
-| `admin.html` | `admin.html` | Envia settings form, Auto-dispatch toggle, Webhook status card, and 1-click dispatch buttons |
-| `assets/js/admin.js` | `assets/js/admin.js` | Webhook synchronization, unwrap error messages, and label rendering |
-| `assets/js/tracking.js` | `assets/js/tracking.js` | Displays official carrier badge and live tracking link on customer order page |
+| [api/index.php](file:///D:/AYAN/odd-perfume/api/index.php) | `public_html/api/index.php` | Dual property naming for courier & AWB, `created_at` in coupon usages, auto-dispatch on checkout, Envia live rates & webhook handler, orderReference & totalValue in Envia payload, all date milestone outputs |
+| [api/config.php](file:///D:/AYAN/odd-perfume/api/config.php) | `public_html/api/config.php` | Production Envia API key, Live environment setting, direct access guards |
+| [admin.html](file:///D:/AYAN/odd-perfume/admin.html) | `public_html/admin.html` | Unique IDs for Envia buttons, script version bumped to `?v=3.5` for cache-busting |
+| [assets/js/admin.js](file:///D:/AYAN/odd-perfume/assets/js/admin.js) | `public_html/assets/js/admin.js` | Dual property evaluation (`tracking_number || trackingNumber`), top-level window exposures, explicit event listeners, Shipped & Delivered milestone dates in orders table |
+| [order-tracking.html](file:///D:/AYAN/odd-perfume/order-tracking.html) | `public_html/order-tracking.html` | Script version bumped to `tracking.js?v=2.1` for cache-busting |
+| [assets/js/tracking.js](file:///D:/AYAN/odd-perfume/assets/js/tracking.js) | `public_html/assets/js/tracking.js` | Real milestone timestamps for Confirmed, Dispatched, Delivered, and Estimated Delivery Date banner |
+| [.env](file:///D:/AYAN/odd-perfume/.env) | `public_html/.env` | Secure environment secrets for Razorpay, Envia, and MySQL |
 
 ---
 
-## 4. Production Checklist on Envia (`shipping.envia.com`)
+## 4. API Endpoints Reference
 
-1. **Top-Up Wallet Balance**:
-   * Navigate to `https://shipping.envia.com/home`.
-   * Under Quick Actions, click **Top-Up Wallet**.
-   * Add a balance (e.g. ₹200 to ₹500) via UPI or Card.
-   * *Reason:* Envia charges real courier freight fees (e.g. ₹45.36 per Delhivery shipment). A balance of ₹0.00 blocks label creation with error `1170 Not Enough money`.
-2. **Verify Billing**:
-   * Complete the **Verify your billing information** step in Envia so your tax receipts and invoices generate properly.
-3. **Verify Registered Webhook**:
-   * We already executed the registration API:
-     * Webhook ID: `#5203`
-     * Type: `onShipmentStatusUpdate`
-     * Target: `https://test.oddperfume.com/api/shipping/envia/webhook`
-     * Active: `1`
+### 4.1 Test Connection & Carrier Discovery
+* **Endpoint:** `POST /api/shipping/envia/test`
+* **Access:** Admin / Staff (`shipping` or `admin` role)
+* **Payload:** `{"apiKey": "...", "env": "live"}`
+* **Upstream:** `GET https://queries.envia.com/carrier?country_code=IN`
+* **Returns:** Verified list of 9 connected Indian courier partners (Delhivery, Blue Dart, DTDC, Amazon, Ekart, Ecom Express, XpressBees, Shadowfax, Aramex).
+
+### 4.2 Multi-Carrier Rate Estimation (Step 2 of Envia Docs)
+* **Endpoint:** `POST /api/shipping/envia/rates`
+* **Access:** Public / Checkout
+* **Payload:**
+```json
+{
+  "postalCode": "400001",
+  "city": "Mumbai",
+  "totalAmount": 979
+}
+```
+* **Upstream:** Parallel `POST https://api.envia.com/ship/rate/` for `delhivery` and `ekart`.
+* **Returns:** Sorted rates from lowest cost to highest cost.
+
+### 4.3 Generate Shipping Label & Courier AWB (Step 3 of Envia Docs)
+* **Endpoint:** `POST /api/shipping/envia/create-label`
+* **Access:** Admin / Staff (`shipping` or `orders` role)
+* **Payload:** `{"orderId": "ODD-00001"}`
+* **Upstream:** `POST https://api.envia.com/ship/generate/`
+* **Payload Parameters:**
+  * `origin`: Shipper warehouse address (configured in Admin -> Shipping & Delivery).
+  * `destination`: Customer address, city, state code, and 6-digit postal code.
+  * `packages`: Standard perfume dimensions (`15 x 10 x 8 cm`, `0.40 kg`, declared value).
+  * `shipment`: `type: 1`, `carrier: "delhivery"` (or chosen courier), `service: "express"`.
+  * `settings`: `currency: "INR"`, `printFormat: "PDF"`, `printSize: "STOCK_4X6"`.
+* **Database Updates on Order:**
+  * `courier_name = "Delhivery"`
+  * `tracking_number = "5151110028184"`
+  * `tracking_url = "https://www.delhivery.com/track/package/5151110028184"`
+  * `label_url = "https://s3.amazonaws.com/..."`
+  * `status = "Dispatched"`
+
+### 4.4 Courier Tracking Webhook (Step 4 of Envia Docs)
+* **Endpoint:** `POST /api/shipping/envia/webhook`
+* **Production Webhook URL:** `https://test.oddperfume.com/api/shipping/envia/webhook`
+* **Envia Registration ID:** `#5203`
+* **Behavior:** When courier scans parcel or updates status (Delivered, Out for Delivery, etc.), Envia posts to this webhook and the system updates the order status in real time.
 
 ---
 
 ## 5. Daily Fulfillment Operations
 
-### Manual 1-Click Fulfillment
+### Manual 1-Click Dispatch:
 1. Open `https://test.oddperfume.com/admin.html` and click **ODD Orders**.
-2. Click **Ship with Envia** on any new order.
-3. The table immediately updates with:
-   * Carrier Name (`DELHIVERY`)
-   * AWB tracking number link
-   * **Print Label** button (opens official PDF shipping sticker for the package).
+2. Click **Ship with Envia** on any confirmed order.
+3. The row updates instantly:
+   * Courier badge (e.g. `Delhivery`)
+   * Clickable AWB tracking number link
+   * **Print Label** button (opens the official printable courier label PDF in a new tab).
 
-### Automated Fulfillment (Hands-Free)
-1. In Admin Portal -> **Shipping & Delivery**.
-2. Check: `[x] Auto-book Envia courier shipment & generate AWB on new customer orders`.
-3. Click **Save Envia Settings**.
-4. Every time a customer places an order on `checkout.html`, the system books the courier and attaches the label automatically.
+---
+
+## 6. Mobile & Phone UI Optimization, CSS Overhaul & Stability Updates
+
+### 6.1 RangeError Infinite Recursion Resolved (`admin.js:32-34`)
+* **Issue:** Clicking buttons in Admin settings triggered `Uncaught RangeError: Maximum call stack size exceeded`.
+* **Root Cause:** Forwarding stubs `window.toggleEnviaKeyVisibility = function(...args) { return toggleEnviaKeyVisibility(...args); }` evaluated back to `window.toggleEnviaKeyVisibility` itself in non-module browser scripts.
+* **Fix:** Stubs now delegate to distinct internal functions (`handleSaveEnviaSettings`, `handleTestEnviaConnection`, etc.) and `toggleEnviaKeyVisibility` executes inline. Recursion is eliminated.
+
+### 6.2 Mobile Phone UI Overhaul (`admin.html`, `admin.css`)
+* **Touch-friendly Order Cards:** On mobile phones and screens under 768px, orders render as native vertical cards rather than requiring horizontal scrolling.
+  * Card header shows order ID, payment badge, and status dropdown.
+  * Customer details include tap-to-call phone links (`tel:`) and email.
+  * Items purchased and total amount formatted clearly.
+  * One-tap **Ship with Envia** button or courier AWB link + **Print Label** button.
+  * Full date milestones (Placed & Shipped).
+* **View Switcher:** Sleek toggle (`Cards` | `Table`) in the Customer Orders header so mobile users can choose between cards and full table view.
+* **Sticky Column in Table View:** The `Order ID` column stays pinned to the left edge with a shadow divider when scrolling horizontally, ensuring the order identifier is never lost.
+* **Badge & Order ID Wrapping Prevented:** Added `white-space: nowrap !important;` to `.badge-status`, `.admin-order-id-cell`, and `.admin-order-id-code`.
+* **Payment Method Badges:** Clean, compact badges: `COD` (`.badge-cod` with warm amber tone) and `Razorpay` (`.badge-razorpay` with clean indigo tone), followed by `Paid` (emerald) or `Pending` (amber) status text.
+* **Asset Cache Busters:** Bumped to `admin.css?v=3.8` and `admin.js?v=3.8`.
+
+---
+
+## 7. Files to Deploy to Hostinger (`test.oddperfume.com`)
+1. `admin.html`
+2. `assets/js/admin.js`
+3. `assets/css/admin.css`
+4. `api/index.php`
+5. `assets/js/tracking.js`
+6. `order-tracking.html`
+

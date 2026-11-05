@@ -8,8 +8,8 @@ Options -Indexes -MultiViews
   RewriteEngine On
   RewriteBase /
 
-  # 1. Protect sensitive files and directories
-  RewriteRule ^(\.env|\.git|storage/|database/|.*\.sqlite|.*\.sql|.*\.log|package\.json|package-lock\.json)$ - [F,L,NC]
+  # 1. Protect sensitive files, directories and maintenance scripts
+  RewriteRule ^(\.env|\.git|storage/|database/|scripts/|api/config\.php|api/db\.php|.*\.sqlite|.*\.sql|.*\.log|package\.json|package-lock\.json)$ - [F,L,NC]
 
   # 2. Route all API calls to api/index.php
   RewriteCond %{REQUEST_FILENAME} !-f

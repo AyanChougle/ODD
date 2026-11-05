@@ -5,6 +5,11 @@
 
 declare(strict_types=1);
 
+if (basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'config.php') {
+    http_response_code(403);
+    exit('Direct access not permitted.');
+}
+
 // Error reporting for production
 error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED);
 ini_set('display_errors', '0');
@@ -21,7 +26,7 @@ if (file_exists($envFile)) {
             [$k, $v] = explode('=', $line, 2);
             $k = trim($k);
             $v = trim($v, " \t\n\r\0\x0B\"'");
-            if ($k !== '' && getenv($k) === false) {
+            if ($k !== '') {
                 putenv("{$k}={$v}");
                 $_ENV[$k] = $v;
                 $_SERVER[$k] = $v;
@@ -47,5 +52,6 @@ define('RAZORPAY_WEBHOOK_SECRET', getenv('RAZORPAY_WEBHOOK_SECRET') ?: '');
 define('ENVIA_API_KEY', getenv('ENVIA_API_KEY') ?: '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236');
 define('ENVIA_ENV', getenv('ENVIA_ENV') ?: 'live');
 
-// Session Lifetime
+// Session Lifetime & Secrets
+define('SESSION_SECRET', getenv('SESSION_SECRET') ?: '38c6dfef5c36c359974c53677a1598ccc604729db7670a28825b827fd247aeb3');
 define('SESSION_LIFETIME', 7 * 86400); // 7 days

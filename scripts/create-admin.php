@@ -7,14 +7,21 @@
 
 declare(strict_types=1);
 
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=utf-8');
+    die("Access Denied: This script can only be run via command line interface (CLI).\n");
+}
+
 require_once __DIR__ . '/../api/db.php';
 
-$email = strtolower(trim((string)($argv[1] ?? 'admin@oddperfume.com')));
-$password = (string)($argv[2] ?? 'admin123');
+$email = strtolower(trim((string)($argv[1] ?? '')));
+$password = (string)($argv[2] ?? '');
 $name = trim((string)($argv[3] ?? 'Store Administrator'));
 
 if (!$email || !$password) {
     echo "Usage: php scripts/create-admin.php <email> <password> [name]\n";
+    echo "Example: php scripts/create-admin.php admin@oddperfume.com SecurePassword123 \"Store Admin\"\n";
     exit(1);
 }
 

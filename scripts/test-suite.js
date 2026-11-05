@@ -275,6 +275,32 @@ async function runTests() {
     assert(typeof paySummary.data.totalOrders === 'number', 'Reports total orders count');
     assert(Array.isArray(paySummary.data.recentOrders), 'Returns recent transactions list for dashboard table');
 
+    // 11. Testing Hardened Security Controls
+    console.log('\n[11] Testing Hardened Security Controls:');
+    const unauthLabel = await request('/api/shipping/envia/create-label', {
+      method: 'POST',
+      body: { orderId: 'ODD-00001' }
+    });
+    assert(unauthLabel.status === 401, 'Unauthenticated Envia create-label rejected with HTTP 401');
+
+    const unauthGetEnvia = await request('/api/settings/envia');
+    assert(unauthGetEnvia.status === 401, 'Unauthenticated GET /api/settings/envia rejected with HTTP 401');
+
+    const unauthPostEnvia = await request('/api/settings/envia', {
+      method: 'POST',
+      body: { apiKey: 'hacked' }
+    });
+    assert(unauthPostEnvia.status === 401, 'Unauthenticated POST /api/settings/envia rejected with HTTP 401');
+
+    const unauthPostShipping = await request('/api/settings/shipping', {
+      method: 'POST',
+      body: { standardRate: 0 }
+    });
+    assert(unauthPostShipping.status === 401, 'Unauthenticated POST /api/settings/shipping rejected with HTTP 401');
+
+    const enumOrder = await request('/api/orders/track?order=ODD-00001');
+    assert(enumOrder.status === 404, 'Public order tracking by ID alone without phone rejected with HTTP 404');
+
   } catch (err) {
     console.error('Test execution error:', err);
     failed++;

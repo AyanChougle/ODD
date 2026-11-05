@@ -553,10 +553,26 @@ body.admin-body {
   border-radius: var(--admin-radius-sm);
   border: 1px solid var(--admin-border);
   background: #0D0F14;
+  width: 100%;
+  position: relative;
+}
+
+.admin-table-scroll-hint {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.8rem;
+  background: rgba(232, 107, 50, 0.08);
+  border-bottom: 1px solid rgba(232, 107, 50, 0.2);
+  color: #FB923C;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .admin-table {
   width: 100%;
+  min-width: 880px;
   border-collapse: collapse;
   text-align: left;
   font-size: 0.88rem;
@@ -580,12 +596,56 @@ body.admin-body {
   vertical-align: middle;
 }
 
+/* Sticky first column in tables so order identifier is never lost during horizontal scroll */
+.admin-table th:first-child,
+.admin-table td:first-child {
+  position: sticky;
+  left: 0;
+  background: #0D0F14;
+  z-index: 2;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.45);
+  white-space: nowrap !important;
+}
+
+.admin-table th:first-child {
+  background: #11131A;
+  z-index: 3;
+}
+
+.admin-order-id-cell {
+  white-space: nowrap !important;
+}
+
+.admin-order-id-code {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em !important;
+  color: #FFFFFF !important;
+  white-space: nowrap !important;
+  font-size: 0.88rem !important;
+}
+
+.admin-phone-link {
+  color: var(--admin-text-muted) !important;
+  text-decoration: none !important;
+  transition: color 0.15s ease;
+}
+
+.admin-phone-link:hover {
+  color: var(--admin-accent) !important;
+  text-decoration: underline !important;
+}
+
 .admin-table tbody tr {
   transition: background 0.15s;
 }
 
 .admin-table tbody tr:hover {
   background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-table tbody tr:hover td:first-child {
+  background: #131720;
 }
 
 .admin-table tbody tr:last-child td {
@@ -612,6 +672,16 @@ body.admin-body {
   font-weight: 400;
 }
 
+.admin-pay-status-paid {
+  color: #10B981 !important;
+  font-weight: 600 !important;
+}
+
+.admin-pay-status-pending {
+  color: #F59E0B !important;
+  font-weight: 500 !important;
+}
+
 .admin-empty-state {
   padding: 2.5rem 1.5rem !important;
   color: var(--admin-text-muted) !important;
@@ -622,39 +692,243 @@ body.admin-body {
 
 /* Status Badges */
 .badge-status {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.65rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-family: var(--font-mono, monospace);
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0.24rem 0.6rem !important;
+  border-radius: 4px !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  font-family: var(--font-mono, monospace) !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
+}
+
+.badge-status:empty {
+  display: none !important;
 }
 
 .badge-status.success {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34D399;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #34D399 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
 }
 
 .badge-status.warning {
-  background: rgba(245, 158, 11, 0.15);
-  color: #FBBF24;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #FBBF24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+.badge-status.badge-cod {
+  background: rgba(245, 158, 11, 0.16) !important;
+  color: #FBBF24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
+}
+
+.badge-status.badge-razorpay {
+  background: rgba(99, 102, 241, 0.18) !important;
+  color: #A5B4FC !important;
+  border: 1px solid rgba(99, 102, 241, 0.4) !important;
 }
 
 .badge-status.danger {
-  background: rgba(239, 68, 68, 0.15);
-  color: #F87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #F87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
 }
 
 .badge-status.info {
-  background: rgba(59, 130, 246, 0.15);
-  color: #60A5FA;
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #60A5FA !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+}
+
+/* View Switcher Controls (Cards vs Table on Mobile) */
+.admin-view-toggle {
+  display: inline-flex;
+  background: #141720;
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.view-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--admin-text-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.view-toggle-btn.active {
+  background: var(--admin-accent);
+  color: #FFF;
+  box-shadow: 0 1px 4px rgba(232, 107, 50, 0.35);
+}
+
+/* Touch-optimized Mobile Order Cards */
+.admin-mobile-orders-cards {
+  display: none;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+}
+
+.admin-order-card {
+  background: #0F1219;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.15s ease;
+}
+
+.admin-order-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.order-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.order-card-id-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.order-card-id {
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #FFF;
+  letter-spacing: 0.02em;
+}
+
+.order-card-paystatus {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.order-card-paystatus.paid {
+  color: #10B981;
+}
+
+.order-card-paystatus.pending {
+  color: #F59E0B;
+}
+
+.order-card-customer-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #F3F4F6;
+}
+
+.order-card-customer-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--admin-text-muted);
+  margin-top: 0.2rem;
+  flex-wrap: wrap;
+}
+
+.order-card-phone {
+  color: var(--admin-accent);
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.order-card-items-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+}
+
+.order-card-items-text {
+  font-size: 0.84rem;
+  color: #E2E8F0;
+  font-weight: 500;
+}
+
+.order-card-amount-total {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.order-card-total-val {
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  font-size: 1rem;
+  color: #FFF;
+}
+
+.order-card-discount-val {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--admin-warning);
+}
+
+.order-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding-top: 0.2rem;
+}
+
+.order-card-tracking-block {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.order-card-awb-link {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--admin-accent);
+  text-decoration: underline;
+}
+
+.order-card-dates {
+  font-size: 0.75rem;
+  color: var(--admin-text-muted);
+  text-align: right;
+}
+
+.order-card-date-shipped {
+  color: #10B981;
+  font-weight: 600;
+  margin-top: 2px;
 }
 
 /* ==========================================================================
@@ -712,6 +986,32 @@ body.admin-body {
 .admin-btn-sm {
   padding: 0.4rem 0.8rem;
   font-size: 0.78rem;
+}
+
+.admin-btn-xs {
+  padding: 0.28rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.admin-btn-print {
+  background: #181C26;
+  color: #E5E7EB;
+  border: 1px solid #374151;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.admin-btn-print:hover {
+  background: #252B3A;
+  border-color: var(--admin-accent);
+  color: #FFF;
+  box-shadow: 0 2px 8px rgba(232, 107, 50, 0.25);
 }
 
 .admin-btn.full-width {
@@ -1300,6 +1600,22 @@ body.admin-body {
    Responsive Adaptations (Laptops, Tablets, and Phones)
    ========================================================================== */
 
+/* Desktop & Laptops above 768px: Table View Active, Mobile Cards Hidden */
+@media (min-width: 769px) {
+  .admin-mobile-orders-cards {
+    display: none !important;
+  }
+  .admin-table-wrapper#orders-table-wrapper {
+    display: block !important;
+  }
+  .admin-view-toggle {
+    display: none !important;
+  }
+  .admin-table-scroll-hint {
+    display: none !important;
+  }
+}
+
 /* Laptops / Desktops under 1200px */
 @media (max-width: 1200px) {
   .kpi-grid,
@@ -1389,15 +1705,75 @@ body.admin-body {
 
   .admin-mobile-quicktabs {
     display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.5rem 0.7rem;
+    gap: 0.45rem;
+    border-bottom: 1px solid var(--admin-border);
+    background: #0B0E14;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .admin-mobile-quicktabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .quicktab-btn {
+    padding: 0.42rem 0.82rem !important;
+    font-size: 0.76rem !important;
+    border-radius: 999px !important;
+  }
+
+  /* Show touch-optimized cards on mobile devices by default */
+  .admin-mobile-orders-cards {
+    display: flex !important;
+  }
+
+  .admin-table-wrapper#orders-table-wrapper {
+    display: none;
+  }
+
+  .admin-table-scroll-hint {
+    display: flex;
+  }
+
+  .admin-view-toggle {
+    display: inline-flex !important;
+  }
+
+  .admin-table-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    width: 100% !important;
+    margin-top: 0.6rem;
+    border-radius: 6px;
+  }
+
+  .admin-table {
+    min-width: 880px !important;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.8rem 0.85rem !important;
+    font-size: 0.84rem !important;
   }
 
   .admin-container {
-    padding: 1rem;
+    padding: 0.75rem 0.6rem !important;
   }
 
   .admin-card {
-    padding: 1.2rem;
-    margin-bottom: 1.2rem;
+    padding: 1rem 0.85rem !important;
+    margin-bottom: 1rem !important;
+    border-radius: 8px !important;
+  }
+
+  .admin-card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.6rem !important;
   }
 
   .kpi-grid,

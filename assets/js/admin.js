@@ -28,6 +28,36 @@ const SKU_LABELS = {
   'ODD-PH-001': 'ODD PHANTOM'
 };
 
+// Immediate global exposure with distinct delegate names to guarantee zero ReferenceErrors and zero RangeError recursions
+window.toggleEnviaKeyVisibility = function() {
+  const input = document.getElementById('envia-api-key');
+  const btn = document.getElementById('btn-toggle-envia-key');
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (btn) btn.textContent = 'Hide';
+  } else {
+    input.type = 'password';
+    if (btn) btn.textContent = 'Show';
+  }
+};
+window.saveEnviaSettings = function(event) {
+  if (event) { event.preventDefault(); event.stopPropagation(); }
+  if (typeof handleSaveEnviaSettings === 'function') return handleSaveEnviaSettings(event);
+};
+window.testEnviaConnection = function() {
+  if (typeof handleTestEnviaConnection === 'function') return handleTestEnviaConnection();
+};
+window.switchToLiveAndTest = function() {
+  if (typeof handleSwitchToLiveAndTest === 'function') return handleSwitchToLiveAndTest();
+};
+window.registerEnviaWebhook = function() {
+  if (typeof handleRegisterEnviaWebhook === 'function') return handleRegisterEnviaWebhook();
+};
+window.shipWithEnvia = function(orderId, btn) {
+  if (typeof handleShipWithEnvia === 'function') return handleShipWithEnvia(orderId, btn);
+};
+
 const DEFAULT_INVENTORY = {
   'ODD-PH-001': { sku: 'ODD-PH-001', name: 'ODD PHANTOM', stock: 240, price: 899, updated: '2026-10-12 10:00' },
   'ODD-LC-003': { sku: 'ODD-LC-003', name: 'ODD LUCID', stock: 180, price: 899, updated: '2026-10-12 10:00' },
@@ -673,7 +703,11 @@ async function loadPaymentDashboard() {
             </td>
             <td><span class="badge-status ${payStatusClass}">${escapeHtml(order.paymentStatus || 'Pending')}</span></td>
             <td><span class="badge-status ${orderStatusClass}">${escapeHtml(order.status || 'Confirmed')}</span></td>
-            <td class="admin-muted-cell">${escapeHtml(formatDate(order.date))}</td>
+            <td class="admin-muted-cell">
+          <div>${escapeHtml(formatDate(order.date))}</div>
+          ${(order.dispatchedAt || order.dispatched_at) ? `<small class="admin-cell-subtext" style="color:#10B981; font-weight:600;" title="Dispatched timestamp">Shipped: ${escapeHtml(formatDate(order.dispatchedAt || order.dispatched_at))}</small>` : ''}
+          ${(order.deliveredAt || order.delivered_at) ? `<small class="admin-cell-subtext" style="color:#3B82F6; font-weight:600;" title="Delivered timestamp">Delivered: ${escapeHtml(formatDate(order.deliveredAt || order.delivered_at))}</small>` : ''}
+        </td>
           </tr>
         `;
       }).join('');
@@ -697,10 +731,16 @@ async function loadOrders() {
 
 function renderOrdersTable() {
   const tbody = document.getElementById('orders-tbody');
-  if (!tbody) return;
+  const mobileContainer = document.getElementById('orders-mobile-cards');
+  if (!tbody && !mobileContainer) return;
 
   if (!ordersData.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="admin-empty-state">No customer orders yet. Orders placed at checkout will appear here in real time.</td></tr>';
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="8" class="admin-empty-state">No customer orders yet. Orders placed at checkout will appear here in real time.</td></tr>';
+    }
+    if (mobileContainer) {
+      mobileContainer.innerHTML = '<div class="admin-empty-state">No customer orders yet. Orders placed at checkout will appear here in real time.</div>';
+    }
     return;
   }
 
@@ -713,53 +753,170 @@ function renderOrdersTable() {
     Cancelled: []
   };
 
-  tbody.innerHTML = ordersData.map(order => {
-    const items = (order.items || []).map(item => `${item.name} × ${item.qty}`).join(', ');
-    const nextStatuses = [order.status, ...(transitions[order.status] || ['Confirmed', 'Processing', 'Packed', 'Dispatched', 'Delivered', 'Cancelled'])];
-    const uniqueStatuses = [...new Set(nextStatuses)];
+  // Render standard responsive data table
+  if (tbody) {
+    tbody.innerHTML = ordersData.map(order => {
+      const items = (order.items || []).map(item => `${item.name} × ${item.qty}`).join(', ');
+      const nextStatuses = [order.status, ...(transitions[order.status] || ['Confirmed', 'Processing', 'Packed', 'Dispatched', 'Delivered', 'Cancelled'])];
+      const uniqueStatuses = [...new Set(nextStatuses)];
 
-    const statusControl = hasPermission('orders:write')
-      ? `<select class="admin-order-status" data-order-status="${escapeHtml(order.id)}" aria-label="Status for ${escapeHtml(order.id)}">
-          ${uniqueStatuses.map(status => `<option ${status === order.status ? 'selected' : ''} value="${status}">${status}</option>`).join('')}
-        </select>`
-      : `<span class="badge-status ${order.status === 'Cancelled' ? 'danger' : 'info'}">${escapeHtml(order.status)}</span>`;
+      const statusControl = hasPermission('orders:write')
+        ? `<select class="admin-order-status" data-order-status="${escapeHtml(order.id)}" aria-label="Status for ${escapeHtml(order.id)}">
+            ${uniqueStatuses.map(status => `<option ${status === order.status ? 'selected' : ''} value="${status}">${status}</option>`).join('')}
+          </select>`
+        : `<span class="badge-status ${order.status === 'Cancelled' ? 'danger' : 'info'}">${escapeHtml(order.status)}</span>`;
 
-    let shippingCell = '<span style="color:var(--admin-text-muted); font-size:0.75rem;">—</span>';
-    if (order.tracking_number) {
-      shippingCell = `
-        <div style="font-size:0.8rem; line-height:1.3;">
-          <span class="badge-status info" style="display:inline-block; margin-bottom:3px; font-size:0.7rem; padding:1px 6px;">${escapeHtml(order.courier_name || 'Envia')}</span>
-          <div style="font-family:monospace; font-size:0.75rem;"><a href="${escapeHtml(order.tracking_url || '#')}" target="_blank" rel="noopener" style="color:var(--admin-accent); text-decoration:underline;" title="Track package online">${escapeHtml(order.tracking_number)}</a></div>
-          ${order.label_url ? `<a href="${escapeHtml(order.label_url)}" target="_blank" rel="noopener" class="admin-btn admin-btn-xs" style="margin-top:4px; display:inline-block; font-size:0.68rem; padding:2px 8px;">Print Label</a>` : ''}
+      let shippingCell = '<span style="color:var(--admin-text-muted); font-size:0.75rem;">—</span>';
+      const trackingNum = order.tracking_number || order.trackingNumber;
+      const courier = order.courier_name || order.courier || 'Envia';
+      const trackUrl = order.tracking_url || order.trackingUrl || '#';
+      const labelUrl = order.label_url || order.labelUrl;
+
+      if (trackingNum) {
+        shippingCell = `
+          <div style="font-size:0.8rem; line-height:1.4;">
+            <span class="badge-status info" style="display:inline-block; margin-bottom:4px; font-size:0.7rem; padding:2px 7px;">${escapeHtml(courier)}</span>
+            <div style="font-family:monospace; font-size:0.75rem;"><a href="${escapeHtml(trackUrl)}" target="_blank" rel="noopener" style="color:var(--admin-accent); text-decoration:underline; font-weight:600;" title="Track package online">${escapeHtml(trackingNum)}</a></div>
+            ${labelUrl ? `<a href="${escapeHtml(labelUrl)}" target="_blank" rel="noopener" class="admin-btn admin-btn-xs admin-btn-print" style="margin-top:6px; display:inline-flex;" title="Open official shipping label PDF">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              Print Label
+            </a>` : ''}
+          </div>
+        `;
+      } else if (order.status !== 'Cancelled' && order.status !== 'Delivered') {
+        shippingCell = (hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
+          ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithEnvia('${escapeHtml(order.id)}', this)" style="font-size:0.72rem; padding:5px 10px; white-space:nowrap;">Ship with Envia</button>`
+          : '<span style="color:var(--admin-text-muted); font-size:0.75rem;">Ready to Ship</span>';
+      }
+
+      const rawMethod = order.paymentMethod || order.method || order.gateway || (order.paymentStatus === 'Paid' ? 'Razorpay' : 'COD');
+      const lowerMethod = String(rawMethod).toLowerCase();
+      const isCod = lowerMethod.includes('cash') || lowerMethod.includes('cod');
+      const isRazorpay = lowerMethod.includes('razorpay') || lowerMethod.includes('online') || lowerMethod.includes('upi') || lowerMethod.includes('card');
+      const methodBadge = isCod ? 'COD' : (isRazorpay ? 'Razorpay' : (rawMethod ? String(rawMethod).toUpperCase() : 'COD'));
+      const isPaid = (String(order.paymentStatus).toLowerCase() === 'paid' || (!isCod && isRazorpay && String(order.paymentStatus).toLowerCase() !== 'pending'));
+      const payStatusText = order.paymentStatus || (isPaid ? 'Paid' : 'Pending');
+      const payStatusClass = String(payStatusText).toLowerCase() === 'paid' ? 'paid' : 'pending';
+
+      return `
+        <tr>
+          <td class="admin-order-id-cell">
+            <span class="admin-order-id-code">${escapeHtml(order.id)}</span>
+            <small class="admin-cell-subtext"><a href="tel:${escapeHtml(order.phone)}" class="admin-phone-link">${escapeHtml(order.phone)}</a></small>
+          </td>
+          <td>${escapeHtml(order.customer)}<small class="admin-cell-subtext">${escapeHtml(order.email)}</small></td>
+          <td>${escapeHtml(items || '—')}</td>
+          <td>
+            <strong>${formatINR(order.amount)}</strong>
+            ${order.discount ? `<small class="admin-cell-subtext" style="color:var(--admin-warning, #d97706); font-size:0.75rem;">-${formatINR(order.discount)} (${escapeHtml(order.coupon || 'PROMO')})</small>` : ''}
+          </td>
+          <td>
+            <span class="badge-status ${isPaid ? 'success' : (isCod ? 'badge-cod' : 'badge-razorpay')}">${escapeHtml(methodBadge)}</span>
+            <small class="admin-cell-subtext admin-pay-status-${payStatusClass}">${escapeHtml(payStatusText)}</small>
+          </td>
+          <td>${statusControl}</td>
+          <td>${shippingCell}</td>
+          <td class="admin-muted-cell">
+            <div>${escapeHtml(formatDate(order.date))}</div>
+            ${(order.dispatchedAt || order.dispatched_at) ? `<small class="admin-cell-subtext" style="color:#10B981; font-weight:600;" title="Dispatched timestamp">Shipped: ${escapeHtml(formatDate(order.dispatchedAt || order.dispatched_at))}</small>` : ''}
+            ${(order.deliveredAt || order.delivered_at) ? `<small class="admin-cell-subtext" style="color:#3B82F6; font-weight:600;" title="Delivered timestamp">Delivered: ${escapeHtml(formatDate(order.deliveredAt || order.delivered_at))}</small>` : ''}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // Render touch-optimized mobile order cards for phones & tablets
+  if (mobileContainer) {
+    mobileContainer.innerHTML = ordersData.map(order => {
+      const items = (order.items || []).map(item => `${item.name} × ${item.qty}`).join(', ');
+      const nextStatuses = [order.status, ...(transitions[order.status] || ['Confirmed', 'Processing', 'Packed', 'Dispatched', 'Delivered', 'Cancelled'])];
+      const uniqueStatuses = [...new Set(nextStatuses)];
+
+      const statusControl = hasPermission('orders:write')
+        ? `<select class="admin-order-status" data-order-status="${escapeHtml(order.id)}" aria-label="Status for ${escapeHtml(order.id)}">
+            ${uniqueStatuses.map(status => `<option ${status === order.status ? 'selected' : ''} value="${status}">${status}</option>`).join('')}
+          </select>`
+        : `<span class="badge-status ${order.status === 'Cancelled' ? 'danger' : 'info'}">${escapeHtml(order.status)}</span>`;
+
+      const trackingNum = order.tracking_number || order.trackingNumber;
+      const courier = order.courier_name || order.courier || 'Envia';
+      const trackUrl = order.tracking_url || order.trackingUrl || '#';
+      const labelUrl = order.label_url || order.labelUrl;
+
+      let shippingAction = '';
+      if (trackingNum) {
+        shippingAction = `
+          <div class="order-card-tracking-block">
+            <span class="badge-status info" style="font-size:0.68rem; padding:2px 6px;">${escapeHtml(courier)}</span>
+            <a href="${escapeHtml(trackUrl)}" target="_blank" rel="noopener" class="order-card-awb-link">${escapeHtml(trackingNum)}</a>
+            ${labelUrl ? `
+              <a href="${escapeHtml(labelUrl)}" target="_blank" rel="noopener" class="admin-btn admin-btn-xs admin-btn-print" title="Open official shipping label PDF">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                Print Label
+              </a>` : ''}
+          </div>
+        `;
+      } else if (order.status !== 'Cancelled' && order.status !== 'Delivered') {
+        shippingAction = (hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
+          ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithEnvia('${escapeHtml(order.id)}', this)" style="white-space:nowrap;">Ship with Envia</button>`
+          : '<span style="color:var(--admin-text-muted); font-size:0.75rem;">Ready to Ship</span>';
+      }
+
+      const rawMethod = order.paymentMethod || order.method || order.gateway || (order.paymentStatus === 'Paid' ? 'Razorpay' : 'COD');
+      const lowerMethod = String(rawMethod).toLowerCase();
+      const isCod = lowerMethod.includes('cash') || lowerMethod.includes('cod');
+      const isRazorpay = lowerMethod.includes('razorpay') || lowerMethod.includes('online') || lowerMethod.includes('upi') || lowerMethod.includes('card');
+      const methodBadge = isCod ? 'COD' : (isRazorpay ? 'Razorpay' : (rawMethod ? String(rawMethod).toUpperCase() : 'COD'));
+      const isPaid = (String(order.paymentStatus).toLowerCase() === 'paid' || (!isCod && isRazorpay && String(order.paymentStatus).toLowerCase() !== 'pending'));
+      const payStatusText = order.paymentStatus || (isPaid ? 'Paid' : 'Pending');
+      const payStatusClass = String(payStatusText).toLowerCase() === 'paid' ? 'paid' : 'pending';
+
+      return `
+        <div class="admin-order-card" data-order-id="${escapeHtml(order.id)}">
+          <div class="order-card-top">
+            <div class="order-card-id-group">
+              <span class="order-card-id">${escapeHtml(order.id)}</span>
+              <span class="badge-status ${isPaid ? 'success' : (isCod ? 'badge-cod' : 'badge-razorpay')}">${escapeHtml(methodBadge)}</span>
+              <span class="order-card-paystatus ${payStatusClass}">${escapeHtml(payStatusText)}</span>
+            </div>
+            <div class="order-card-status-ctrl">
+              ${statusControl}
+            </div>
+          </div>
+
+          <div class="order-card-customer">
+            <div class="order-card-customer-name">${escapeHtml(order.customer)}</div>
+            <div class="order-card-customer-meta">
+              ${order.phone ? `<a href="tel:${escapeHtml(order.phone)}" class="order-card-phone">${escapeHtml(order.phone)}</a>` : ''}
+              ${order.email ? `<span class="order-card-email">${escapeHtml(order.email)}</span>` : ''}
+            </div>
+          </div>
+
+          <div class="order-card-items-block">
+            <div class="order-card-items-text">${escapeHtml(items || '—')}</div>
+            <div class="order-card-amount-total">
+              <span class="order-card-total-val">${formatINR(order.amount)}</span>
+              ${order.discount ? `<span class="order-card-discount-val">-${formatINR(order.discount)}</span>` : ''}
+            </div>
+          </div>
+
+          <div class="order-card-bottom">
+            <div class="order-card-shipping-cell">
+              ${shippingAction}
+            </div>
+            <div class="order-card-dates">
+              <div class="order-card-date-placed">${escapeHtml(formatDate(order.date))}</div>
+              ${(order.dispatchedAt || order.dispatched_at) ? `<div class="order-card-date-shipped">Shipped: ${escapeHtml(formatDate(order.dispatchedAt || order.dispatched_at))}</div>` : ''}
+            </div>
+          </div>
         </div>
       `;
-    } else if (order.status !== 'Cancelled' && order.status !== 'Delivered') {
-      shippingCell = (hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
-        ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithEnvia('${escapeHtml(order.id)}', this)" style="font-size:0.72rem; padding:4px 8px; white-space:nowrap;">Ship with Envia</button>`
-        : '<span style="color:var(--admin-text-muted); font-size:0.75rem;">Ready to Ship</span>';
-    }
+    }).join('');
+  }
 
-    return `
-      <tr>
-        <td><strong>${escapeHtml(order.id)}</strong><small class="admin-cell-subtext">${escapeHtml(order.phone)}</small></td>
-        <td>${escapeHtml(order.customer)}<small class="admin-cell-subtext">${escapeHtml(order.email)}</small></td>
-        <td>${escapeHtml(items || '—')}</td>
-        <td>
-          <strong>${formatINR(order.amount)}</strong>
-          ${order.discount ? `<small class="admin-cell-subtext" style="color:var(--admin-warning, #d97706); font-size:0.75rem;">-${formatINR(order.discount)} (${escapeHtml(order.coupon || 'PROMO')})</small>` : ''}
-        </td>
-        <td>
-          <span class="badge-status ${order.method === 'Razorpay' || order.paymentStatus === 'Paid' ? 'info' : 'warning'}">${escapeHtml(order.method)}</span>
-          <small class="admin-cell-subtext">${escapeHtml(order.paymentStatus)}</small>
-        </td>
-        <td>${statusControl}</td>
-        <td>${shippingCell}</td>
-        <td class="admin-muted-cell">${escapeHtml(formatDate(order.date))}</td>
-      </tr>
-    `;
-  }).join('');
-
-  tbody.querySelectorAll('[data-order-status]').forEach(select => {
+  // Bind order status dropdown listeners for both views
+  document.querySelectorAll('[data-order-status]').forEach(select => {
     select.addEventListener('change', async () => {
       const orderId = select.dataset.orderStatus;
       const status = select.value;
@@ -1993,7 +2150,7 @@ async function loadEnviaSettings() {
   }
 }
 
-function saveEnviaSettings(event) {
+function handleSaveEnviaSettings(event) {
   if (event) {
     event.preventDefault();
     event.stopPropagation();
@@ -2038,8 +2195,9 @@ function saveEnviaSettings(event) {
 
   return false;
 }
+function saveEnviaSettings(event) { return handleSaveEnviaSettings(event); }
 
-async function testEnviaConnection() {
+async function handleTestEnviaConnection() {
   const resultDiv = document.getElementById('envia-test-result');
   const badge = document.getElementById('envia-status-badge');
   const apiKey = document.getElementById('envia-api-key')?.value.trim() || '';
@@ -2104,14 +2262,16 @@ async function testEnviaConnection() {
     showAdminToast(isSandboxError ? 'Your token is for Live Production. Switch API Environment to Live.' : err.message, true);
   }
 }
+function testEnviaConnection() { return handleTestEnviaConnection(); }
 
-function switchToLiveAndTest() {
+function handleSwitchToLiveAndTest() {
   const envSelect = document.getElementById('envia-env');
   if (envSelect) envSelect.value = 'live';
-  testEnviaConnection();
+  handleTestEnviaConnection();
 }
+function switchToLiveAndTest() { return handleSwitchToLiveAndTest(); }
 
-async function registerEnviaWebhook() {
+async function handleRegisterEnviaWebhook() {
   const btn = document.getElementById('btn-register-webhook');
   if (btn) {
     btn.disabled = true;
@@ -2129,8 +2289,9 @@ async function registerEnviaWebhook() {
     }
   }
 }
+function registerEnviaWebhook() { return handleRegisterEnviaWebhook(); }
 
-async function shipWithEnvia(orderId, btn) {
+async function handleShipWithEnvia(orderId, btn) {
   if (!confirm(`Generate official Envia courier shipping label & AWB for order ${orderId}?`)) return;
 
   if (btn) {
@@ -2145,7 +2306,11 @@ async function shipWithEnvia(orderId, btn) {
     });
 
     if (res.success) {
-      showAdminToast(`Shipped via ${res.courierName}! AWB: ${res.trackingNumber}`);
+      const courier = res.carrier || res.courierName || 'courier';
+      showAdminToast(res.message || `Shipped via ${courier}! AWB: ${res.trackingNumber}`);
+      if (res.labelUrl) {
+        window.open(res.labelUrl, '_blank');
+      }
       await loadOrders();
     } else {
       throw new Error(res.error || 'Failed to generate shipment label');
@@ -2160,6 +2325,7 @@ async function shipWithEnvia(orderId, btn) {
     }
   }
 }
+function shipWithEnvia(orderId, btn) { return handleShipWithEnvia(orderId, btn); }
 
 /* ==========================================================================
    Tab 8: Customer Coupon Usages Log
@@ -2234,7 +2400,7 @@ async function saveRazorpaySettings(event) {
     enabled: document.getElementById('rzp-enabled-check')?.checked ?? true,
     env: document.getElementById('rzp-env-select')?.value || 'live',
     keyId: document.getElementById('rzp-key-id')?.value?.trim() || 'rzp_live_Ti8AffHarb3tai',
-    keySecret: document.getElementById('rzp-key-secret')?.value?.trim() || 'X4Ws6I0iovvSrTYh18i1nNjl',
+    keySecret: document.getElementById('rzp-key-secret')?.value?.trim() || '',
     brandName: document.getElementById('rzp-brand-name')?.value?.trim() || 'ODD Perfume',
     themeColor: document.getElementById('rzp-theme-color')?.value?.trim() || '#E86B32',
     simulate: document.getElementById('rzp-simulate-check')?.checked ?? false
@@ -2272,6 +2438,27 @@ window.toggleSecretVisibility = function() {
   }
 };
 
+// Immediate global exposure of utility & settings functions for HTML inline event handlers
+window.toggleEnviaKeyVisibility = toggleEnviaKeyVisibility;
+window.saveEnviaSettings = saveEnviaSettings;
+window.testEnviaConnection = testEnviaConnection;
+window.switchToLiveAndTest = switchToLiveAndTest;
+window.registerEnviaWebhook = registerEnviaWebhook;
+window.shipWithEnvia = shipWithEnvia;
+window.saveShippingSettings = saveShippingSettings;
+window.saveRazorpaySettings = saveRazorpaySettings;
+window.saveBannerSettings = saveBannerSettings;
+window.clearCouponUsages = clearCouponUsages;
+window.applyLabelPreset = applyLabelPreset;
+window.onCustomDimensionInput = onCustomDimensionInput;
+window.backToBarcodeSelection = backToBarcodeSelection;
+window.printBarcodeSheet = printBarcodeSheet;
+window.setAllCopies = setAllCopies;
+window.setStartSerial = setStartSerial;
+window.quickScanSimulate = quickScanSimulate;
+window.quickScanLatestOrder = quickScanLatestOrder;
+window.clearScanLog = clearScanLog;
+
 
 
 /* ==========================================================================
@@ -2294,11 +2481,34 @@ async function signOut() {
   window.location.replace('admin-login.html');
 }
 
+function initOrdersViewToggle() {
+  const container = document.getElementById('orders-view-toggle');
+  if (!container) return;
+  const cardsEl = document.getElementById('orders-mobile-cards');
+  const tableEl = document.getElementById('orders-table-wrapper');
+
+  container.querySelectorAll('.view-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const view = btn.dataset.view;
+      if (view === 'table') {
+        if (cardsEl) cardsEl.style.setProperty('display', 'none', 'important');
+        if (tableEl) tableEl.style.setProperty('display', 'block', 'important');
+      } else {
+        if (cardsEl) cardsEl.style.setProperty('display', 'flex', 'important');
+        if (tableEl) tableEl.style.setProperty('display', 'none', 'important');
+      }
+    });
+  });
+}
+
 /* ==========================================================================
    App Initialization
    ========================================================================== */
 document.addEventListener('DOMContentLoaded', async () => {
   try {
+    initOrdersViewToggle();
     // 1. Verify authentic server-side session
     let session = null;
     try {
@@ -2367,6 +2577,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const enviaForm = document.getElementById('envia-settings-form');
     enviaForm?.addEventListener('submit', saveEnviaSettings);
+    document.getElementById('btn-toggle-envia-key')?.addEventListener('click', toggleEnviaKeyVisibility);
+    document.getElementById('btn-save-envia')?.addEventListener('click', saveEnviaSettings);
+    document.getElementById('btn-test-envia')?.addEventListener('click', testEnviaConnection);
+    document.getElementById('btn-register-webhook')?.addEventListener('click', registerEnviaWebhook);
 
     const razorpayForm = document.getElementById('razorpay-settings-form');
     razorpayForm?.addEventListener('submit', saveRazorpaySettings);
@@ -2405,23 +2619,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         hardwareScanBuffer += e.key;
       }
     });
-
-    // Expose utility functions on window for inline handlers
-    window.applyLabelPreset = applyLabelPreset;
-    window.onCustomDimensionInput = onCustomDimensionInput;
-    window.backToBarcodeSelection = backToBarcodeSelection;
-    window.printBarcodeSheet = printBarcodeSheet;
-    window.setAllCopies = setAllCopies;
-    window.setStartSerial = setStartSerial;
-    window.quickScanSimulate = quickScanSimulate;
-    window.quickScanLatestOrder = quickScanLatestOrder;
-    window.clearScanLog = clearScanLog;
-    window.toggleEnviaKeyVisibility = toggleEnviaKeyVisibility;
-    window.testEnviaConnection = testEnviaConnection;
-    window.switchToLiveAndTest = switchToLiveAndTest;
-    window.saveEnviaSettings = saveEnviaSettings;
-    window.registerEnviaWebhook = registerEnviaWebhook;
-    window.shipWithEnvia = shipWithEnvia;
 
   } catch (error) {
     console.error('Admin initialization error:', error);

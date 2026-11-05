@@ -463,14 +463,14 @@ async function processPageOrder(e) {
       const raw = localStorage.getItem('odd_razorpay_config');
       if (raw) {
         const parsed = JSON.parse(raw);
+        delete parsed.keySecret;
         // Automatically migrate legacy test key to user live key
         if (parsed.keyId === 'rzp_test_51NgQODDPERFUME') {
           parsed.keyId = 'rzp_live_Ti8AffHarb3tai';
-          parsed.keySecret = 'X4Ws6I0iovvSrTYh18i1nNjl';
           parsed.env = 'live';
           parsed.simulate = false;
-          localStorage.setItem('odd_razorpay_config', JSON.stringify(parsed));
         }
+        localStorage.setItem('odd_razorpay_config', JSON.stringify(parsed));
         return parsed;
       }
     } catch (e) {}
@@ -478,7 +478,6 @@ async function processPageOrder(e) {
       enabled: true,
       env: 'live',
       keyId: 'rzp_live_Ti8AffHarb3tai',
-      keySecret: 'X4Ws6I0iovvSrTYh18i1nNjl',
       brandName: 'ODD Perfume',
       themeColor: '#E86B32',
       simulate: false
@@ -494,6 +493,26 @@ async function processPageOrder(e) {
     const keyId = rzpConfig.keyId || 'rzp_live_Ti8AffHarb3tai';
 
     if (typeof Razorpay !== 'undefined') {
+      let rzpServerOrderId = null;
+      try {
+        const orderCreateRes = await fetch('/api/payments/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: finalTotal,
+            receipt: 'rcpt_' + (orderId || Date.now())
+          })
+        });
+        if (orderCreateRes.ok) {
+          const createData = await orderCreateRes.json();
+          if (createData.orderId) {
+            rzpServerOrderId = createData.orderId;
+          }
+        }
+      } catch (e) {
+        console.warn('Server Razorpay order creation check:', e);
+      }
+
       const options = {
         key: keyId,
         amount: amountPaisa,
@@ -501,12 +520,38 @@ async function processPageOrder(e) {
         name: rzpConfig.brandName || 'ODD Perfume',
         description: 'Fragrance Order ' + orderId,
         image: 'assets/images/Phantom Single bottle.png',
+        ...(rzpServerOrderId ? { order_id: rzpServerOrderId } : {}),
         handler: async function (response) {
           const paymentId = response.razorpay_payment_id || ('pay_' + Math.random().toString(36).substring(2, 12));
+          if (response.razorpay_signature && response.razorpay_order_id) {
+            try {
+              const verifyRes = await fetch('/api/payments/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature
+                })
+              });
+              const vData = await verifyRes.json();
+              if (verifyRes.ok && vData.verified === false) {
+                alert('Payment verification failed. Please contact store support.');
+                if (submitBtn) {
+                  submitBtn.disabled = false;
+                  submitBtn.textContent = 'Confirm & Place Order';
+                }
+                return;
+              }
+            } catch (vErr) {
+              console.warn('Signature verification check note:', vErr);
+            }
+          }
+
           await completeOrderPlacement(
             orderId, firstName, lastName, phone, email, address, city, pincode,
             'Razorpay Online (' + paymentId + ')',
-            cart, shippingFee, paymentId
+            cart, shippingFee, paymentId, response.razorpay_order_id || rzpServerOrderId
           );
         },
         prefill: {
@@ -555,7 +600,7 @@ async function processPageOrder(e) {
       await completeOrderPlacement(
         orderId, firstName, lastName, phone, email, address, city, pincode,
         'Razorpay Online (' + simPaymentId + ')',
-        cart, shippingFee, simPaymentId
+        cart, shippingFee, simPaymentId, null
       );
       return;
     } else {
@@ -569,10 +614,10 @@ async function processPageOrder(e) {
   }
 
   // Complete COD placement
-  await completeOrderPlacement(orderId, firstName, lastName, phone, email, address, city, pincode, 'Cash on Delivery (COD)', cart, shippingFee, null);
+  await completeOrderPlacement(orderId, firstName, lastName, phone, email, address, city, pincode, 'Cash on Delivery (COD)', cart, shippingFee, null, null);
 }
 
-async function completeOrderPlacement(orderId, firstName, lastName, phone, email, address, city, pincode, paymentMethod, cart, shippingFee, razorpayPaymentId = null) {
+async function completeOrderPlacement(orderId, firstName, lastName, phone, email, address, city, pincode, paymentMethod, cart, shippingFee, razorpayPaymentId = null, razorpayOrderId = null) {
   const submitBtn = document.getElementById('checkout-submit') || document.getElementById('place-order-btn') || document.querySelector('button[type="submit"]');
   if (submitBtn) {
     submitBtn.disabled = true;
@@ -613,6 +658,7 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
       })),
       paymentMethod: paymentMethod,
       couponCode: coupon ? coupon.code : null,
+      razorpayOrderId: razorpayOrderId || null,
       razorpayPaymentId: razorpayPaymentId || null
     };
 
@@ -641,7 +687,13 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
       serverTotal = resData.totalAmount;
     }
   } catch (netErr) {
-    console.warn('Backend /api/orders sync encountered network issue, proceeding with local fallback:', netErr);
+    console.error('Backend /api/orders sync encountered network issue:', netErr);
+    alert('We could not establish a connection to the store server to finalize your order. Please check your internet connection and try again.');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Confirm & Place Order';
+    }
+    return;
   }
 
   // 3. Deduct Inventory from odd_admin_inventory (storefront local sync)

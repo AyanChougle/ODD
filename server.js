@@ -750,12 +750,12 @@ const server = http.createServer(async (req, res) => {
 
       // Coupon redemptions log
       if (pathname === '/api/coupons/usages' && method === 'GET') {
-        const session = requireStaffAuth(req, res, 'coupons:read');
+        const session = requireStaffAuth(req, res, 'coupons');
         if (!session) return;
         const usages = db.prepare(`
           SELECT coupon_code as coupon, customer_email as email, customer_phone as phone,
-                 order_id as orderId, discount_amount as discount, used_at as date
-          FROM coupon_usages ORDER BY used_at DESC LIMIT 100
+                 order_id as orderId, discount_amount as discount, created_at as date
+          FROM coupon_usages ORDER BY id DESC LIMIT 100
         `).all();
         return sendJson(res, 200, { usages });
       }
@@ -1026,9 +1026,12 @@ const server = http.createServer(async (req, res) => {
           SELECT id, customer_name as customer, customer_email as email, customer_phone as phone,
                  shipping_address as address, subtotal, discount_amount as discount, coupon_code as coupon,
                  shipping_fee as shipping, total_amount as total, total_amount as amount,
-                 payment_method as paymentMethod, payment_status as paymentStatus, status, gateway,
-                 courier_name as courier, tracking_number as trackingNumber, tracking_url as trackingUrl, label_url as labelUrl,
-                 razorpay_payment_id as razorpayPaymentId, created_at as date
+                 payment_method as paymentMethod, payment_method as method, payment_method, payment_status as paymentStatus, payment_status, status, gateway,
+                 courier_name as courier, courier_name, tracking_number as trackingNumber, tracking_number, tracking_url as trackingUrl, tracking_url, label_url as labelUrl, label_url,
+                 razorpay_payment_id as razorpayPaymentId, created_at as date, created_at as createdAt,
+                 dispatched_at as dispatchedAt, dispatched_at,
+                 delivered_at as deliveredAt, delivered_at,
+                 cancelled_at as cancelledAt, cancelled_at
           FROM orders
           ORDER BY datetime(created_at) DESC
         `).all();
@@ -1036,6 +1039,13 @@ const server = http.createServer(async (req, res) => {
         const getItems = db.prepare('SELECT product_id as id, sku, name, price, quantity as qty, line_total FROM order_items WHERE order_id = ?');
         for (const order of orders) {
           order.items = getItems.all(order.id);
+          if (order.delivered_at) {
+            order.estimatedDelivery = order.delivered_at;
+          } else if (order.dispatched_at) {
+            order.estimatedDelivery = new Date(new Date(order.dispatched_at).getTime() + 4 * 86400000).toISOString();
+          } else {
+            order.estimatedDelivery = new Date(new Date(order.date || Date.now()).getTime() + 5 * 86400000).toISOString();
+          }
         }
 
         return sendJson(res, 200, { orders });
@@ -1104,8 +1114,7 @@ const server = http.createServer(async (req, res) => {
         } else if (orderId && phone) {
           const cleanPhone = phone.replace(/[^0-9]/g, '');
           order = db.prepare("SELECT * FROM orders WHERE id = ? AND replace(replace(customer_phone, '+91', ''), ' ', '') LIKE ?").get(orderId, `%${cleanPhone.slice(-10)}%`);
-        } else if (orderId) {
-          // Public preview by order ID without leaking customer private phone/address
+        } else if (orderId && getStaffSession(req)) {
           order = db.prepare('SELECT id, status, subtotal, discount_amount, coupon_code, shipping_fee, total_amount, created_at FROM orders WHERE id = ?').get(orderId);
         }
 
@@ -1125,10 +1134,24 @@ const server = http.createServer(async (req, res) => {
           total: order.total_amount,
           amount: order.total_amount,
           courier: order.courier_name || null,
+          courier_name: order.courier_name || null,
           trackingNumber: order.tracking_number || null,
+          tracking_number: order.tracking_number || null,
           trackingUrl: order.tracking_url || null,
+          tracking_url: order.tracking_url || null,
           labelUrl: order.label_url || null,
+          label_url: order.label_url || null,
           date: order.created_at,
+          createdAt: order.created_at,
+          created_at: order.created_at,
+          dispatchedAt: order.dispatched_at || null,
+          dispatched_at: order.dispatched_at || null,
+          deliveredAt: order.delivered_at || null,
+          delivered_at: order.delivered_at || null,
+          cancelledAt: order.cancelled_at || null,
+          cancelled_at: order.cancelled_at || null,
+          estimatedDelivery: order.delivered_at || (order.dispatched_at ? new Date(new Date(order.dispatched_at).getTime() + 4 * 86400000).toISOString() : new Date(new Date(order.created_at || Date.now()).getTime() + 5 * 86400000).toISOString()),
+          estimated_delivery: order.delivered_at || (order.dispatched_at ? new Date(new Date(order.dispatched_at).getTime() + 4 * 86400000).toISOString() : new Date(new Date(order.created_at || Date.now()).getTime() + 5 * 86400000).toISOString()),
           items: items
         });
       }
@@ -1316,9 +1339,13 @@ const server = http.createServer(async (req, res) => {
             success: true,
             alreadyGenerated: true,
             trackingNumber: order.tracking_number,
+            tracking_number: order.tracking_number,
             labelUrl: order.label_url,
+            label_url: order.label_url,
             trackUrl: order.tracking_url,
+            tracking_url: order.tracking_url,
             carrier: order.courier_name,
+            courier_name: order.courier_name,
             message: `Label already generated: ${order.courier_name} AWB ${order.tracking_number}`
           };
         }
@@ -1341,6 +1368,30 @@ const server = http.createServer(async (req, res) => {
         const destAddress = String(order.shipping_address || '');
         const pincodeMatch = destAddress.match(/\b\d{6}\b/);
         const pincode = pincodeMatch ? pincodeMatch[0] : '400001';
+
+        let destCity = origin.city || 'Mumbai';
+        const cityMatch = destAddress.match(/,\s*([^,-]+?)\s*-\s*\d{6}/);
+        if (cityMatch) destCity = cityMatch[1].trim();
+
+        const pfx2 = parseInt(pincode.slice(0, 2), 10);
+        let destState = 'MH';
+        if (pfx2 === 11) destState = 'DL';
+        else if (pfx2 >= 12 && pfx2 <= 13) destState = 'HR';
+        else if (pfx2 >= 14 && pfx2 <= 16) destState = 'PB';
+        else if (pfx2 === 17) destState = 'HP';
+        else if (pfx2 >= 18 && pfx2 <= 19) destState = 'JK';
+        else if (pfx2 >= 20 && pfx2 <= 28) destState = 'UP';
+        else if (pfx2 >= 30 && pfx2 <= 34) destState = 'RJ';
+        else if (pfx2 >= 36 && pfx2 <= 39) destState = 'GJ';
+        else if (pfx2 >= 40 && pfx2 <= 44) destState = 'MH';
+        else if (pfx2 >= 45 && pfx2 <= 48) destState = 'MP';
+        else if (pfx2 >= 50 && pfx2 <= 53) destState = 'TG';
+        else if (pfx2 >= 56 && pfx2 <= 59) destState = 'KA';
+        else if (pfx2 >= 60 && pfx2 <= 64) destState = 'TN';
+        else if (pfx2 >= 67 && pfx2 <= 69) destState = 'KL';
+        else if (pfx2 >= 70 && pfx2 <= 74) destState = 'WB';
+        else if (pfx2 >= 80 && pfx2 <= 85) destState = 'BR';
+
         const chosenCarrier = enviaSetting.carrier && enviaSetting.carrier !== 'all' ? enviaSetting.carrier.toLowerCase() : 'delhivery';
 
         const payload = {
@@ -1360,8 +1411,8 @@ const server = http.createServer(async (req, res) => {
             phone: (order.customer_phone || '9876543210').replace(/[^0-9]/g, ''),
             street: destAddress.slice(0, 100),
             number: '1',
-            city: origin.city || 'Mumbai',
-            state: 'MH',
+            city: destCity,
+            state: destState,
             country: 'IN',
             postalCode: pincode
           },
@@ -1378,7 +1429,15 @@ const server = http.createServer(async (req, res) => {
           shipment: {
             type: 1,
             carrier: chosenCarrier,
-            service: 'express'
+            service: 'express',
+            orderReference: orderId,
+            totalValue: Number(order.total_amount) || 899
+          },
+          orderData: {
+            orderNumber: orderId,
+            orderIdentifier: orderId,
+            total: Number(order.total_amount) || 899,
+            store: 'ODD Perfumes'
           },
           settings: {
             currency: 'INR',
@@ -1429,9 +1488,13 @@ const server = http.createServer(async (req, res) => {
             return {
               success: true,
               trackingNumber,
+              tracking_number: trackingNumber,
               labelUrl,
+              label_url: labelUrl,
               trackUrl,
+              tracking_url: trackUrl,
               carrier: carrierName,
+              courier_name: carrierName,
               message: `Envia shipping label generated with ${carrierName}! AWB: ${trackingNumber}`
             };
           } else {
@@ -1463,13 +1526,8 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (pathname === '/api/shipping/envia/create-label' && method === 'POST') {
-        const session = getStaffSession(req);
-        if (session) {
-          const perms = ROLE_PERMISSIONS[session.role] || [];
-          if (!perms.includes('*') && !perms.includes('orders') && !perms.includes('shipping')) {
-            return sendJson(res, 403, { error: `Forbidden: Role ${session.role} cannot create labels` });
-          }
-        }
+        const session = requireStaffAuth(req, res, 'shipping');
+        if (!session) return;
 
         const body = await parseJsonBody(req);
         const orderId = String(body.orderId || '').trim();
@@ -1900,17 +1958,19 @@ const server = http.createServer(async (req, res) => {
       // --- 10. Store Settings (/api/settings) ---
       if (pathname.startsWith('/api/settings/') && method === 'GET') {
         const key = pathname.replace('/api/settings/', '');
+        if (key === 'envia' || key === 'razorpay') {
+          const session = requireStaffAuth(req, res, 'admin');
+          if (!session) return;
+        }
         const setting = db.prepare('SELECT value_json FROM settings WHERE key_name = ?').get(key);
         return sendJson(res, 200, setting ? JSON.parse(setting.value_json) : {});
       }
 
       if (pathname.startsWith('/api/settings/') && (method === 'POST' || method === 'PUT')) {
         const key = pathname.replace('/api/settings/', '');
-        if (!['shipping', 'envia'].includes(key)) {
-          const requiredPermission = key === 'banner' ? 'marketing' : 'admin';
-          const session = requireStaffAuth(req, res, requiredPermission);
-          if (!session) return;
-        }
+        const requiredPermission = key === 'banner' ? 'marketing' : 'admin';
+        const session = requireStaffAuth(req, res, requiredPermission);
+        if (!session) return;
 
         const body = await parseJsonBody(req);
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ODD Admin & Inventory Management Portal</title>
   <link rel="stylesheet" href="assets/css/global.css?v=3.2">
-  <link rel="stylesheet" href="assets/css/admin.css?v=3.2">
+  <link rel="stylesheet" href="assets/css/admin.css?v=3.8">
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="assets/js/qrcode.min.js"></script>
   <script>
@@ -215,10 +215,25 @@
               <h3 class="admin-card-title">Customer Orders</h3>
               <div class="admin-card-subtitle">Real-time database queries of all completed and pending orders</div>
             </div>
-            <span class="admin-card-subtitle" id="orders-last-updated">Live orders from the shared database</span>
+            <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+              <span class="admin-card-subtitle" id="orders-last-updated">Live orders from the shared database</span>
+              <div class="admin-view-toggle" id="orders-view-toggle">
+                <button type="button" class="view-toggle-btn active" data-view="cards" title="Touch-friendly cards view">Cards</button>
+                <button type="button" class="view-toggle-btn" data-view="table" title="Data table view">Table</button>
+              </div>
+            </div>
           </div>
 
-          <div class="admin-table-wrapper">
+          <!-- Touch-optimized Mobile Order Cards (Shown on mobile devices by default) -->
+          <div class="admin-mobile-orders-cards" id="orders-mobile-cards">
+            <!-- Javascript Populated -->
+          </div>
+
+          <!-- Data Table (Sticky first column, shown on desktop/tablets or table toggle) -->
+          <div class="admin-table-wrapper" id="orders-table-wrapper">
+            <div class="admin-table-scroll-hint">
+              <span>&larr; Swipe horizontally to view full order columns &rarr;</span>
+            </div>
             <table class="admin-table">
               <thead>
                 <tr>
@@ -727,8 +742,8 @@
             </div>
 
             <div style="display:flex; gap:0.8rem; align-items:center; flex-wrap:wrap;">
-              <button type="button" class="admin-btn admin-btn-primary" onclick="saveEnviaSettings(event)">Save Envia Settings</button>
-              <button type="button" class="admin-btn" onclick="testEnviaConnection()">Test Connection</button>
+              <button type="button" id="btn-save-envia" class="admin-btn admin-btn-primary" onclick="saveEnviaSettings(event)">Save Envia Settings</button>
+              <button type="button" id="btn-test-envia" class="admin-btn" onclick="testEnviaConnection()">Test Connection</button>
               <span id="envia-saved-msg" style="font-size:0.8rem; color:#10B981; display:none;">Settings saved successfully!</span>
             </div>
             <div id="envia-test-result" style="margin-top:1rem; display:none; padding:12px 14px; border-radius:6px; font-size:0.85rem;"></div>
@@ -928,7 +943,7 @@
     </div>
   </main>
 
-  <script src="assets/js/admin.js?v=3.2"></script>
+  <script src="assets/js/admin.js?v=3.8"></script>
 </body>
 </html>
 

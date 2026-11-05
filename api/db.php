@@ -5,6 +5,11 @@
 
 declare(strict_types=1);
 
+if (basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'db.php') {
+    http_response_code(403);
+    exit('Direct access not permitted.');
+}
+
 require_once __DIR__ . '/config.php';
 
 function getDb(): PDO {
@@ -19,11 +24,11 @@ function getDb(): PDO {
         try {
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
+            error_log('Database connection error: ' . $e->getMessage());
             http_response_code(503);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
-                'error' => 'Database connection failed. Please ensure MySQL database is configured.',
-                'details' => $e->getMessage()
+                'error' => 'Database connection failed. Please ensure MySQL database is configured.'
             ]);
             exit;
         }

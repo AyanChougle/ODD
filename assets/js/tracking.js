@@ -24,6 +24,32 @@ function statusClass(status) {
     : 'pending';
 }
 
+function formatMilestoneDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
+function formatDayDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+}
+
 async function submitOrderTracking(event) {
   event?.preventDefault();
   const id = document.getElementById('tracking-order-id')?.value.trim().toUpperCase();
@@ -105,16 +131,62 @@ async function submitOrderTracking(event) {
       `;
     }).join('');
 
-    const progress = ['Confirmed', 'Processing', 'Packed', 'Dispatched', 'Delivered'];
-    const currentIndex = progress.indexOf(order.status || 'Confirmed');
+    const confirmedDate = order.date || order.createdAt || order.created_at;
+    const dispatchedDate = order.dispatchedAt || order.dispatched_at;
+    const deliveredDate = order.deliveredAt || order.delivered_at;
+    const cancelledDate = order.cancelledAt || order.cancelled_at;
+
+    let eddText = '';
+    if (order.estimatedDelivery || order.estimated_delivery) {
+      eddText = formatDayDate(order.estimatedDelivery || order.estimated_delivery);
+    } else if (dispatchedDate) {
+      const edd = new Date(new Date(dispatchedDate).getTime() + 4 * 86400000);
+      eddText = formatDayDate(edd);
+    } else if (confirmedDate) {
+      const edd = new Date(new Date(confirmedDate).getTime() + 5 * 86400000);
+      eddText = formatDayDate(edd);
+    }
+
+    const currentIndex = ['Confirmed', 'Processing', 'Packed', 'Dispatched', 'Delivered'].indexOf(order.status || 'Confirmed');
+
+    const progressSteps = [
+      {
+        name: 'Confirmed',
+        date: confirmedDate ? formatMilestoneDate(confirmedDate) : ''
+      },
+      {
+        name: 'Processing',
+        date: (currentIndex >= 1 && confirmedDate) ? 'Order verified' : ''
+      },
+      {
+        name: 'Packed',
+        date: (currentIndex >= 2 && confirmedDate) ? 'Quality inspected' : ''
+      },
+      {
+        name: 'Dispatched',
+        date: dispatchedDate ? formatMilestoneDate(dispatchedDate) : (currentIndex >= 3 ? 'Handed to courier' : '')
+      },
+      {
+        name: 'Delivered',
+        date: deliveredDate ? formatMilestoneDate(deliveredDate) : (eddText && order.status !== 'Cancelled' ? 'Expected by ' + eddText : '')
+      }
+    ];
+
     const timeline = order.status === 'Cancelled'
-      ? '<li class="is-current is-cancelled"><strong>Order cancelled</strong><span>This order has been cancelled.</span></li>'
-      : progress.map((step, index) => `
-          <li class="${index <= currentIndex ? 'is-complete' : ''} ${index === currentIndex ? 'is-current' : ''}">
-            <strong>${step}</strong>
-            <span>${index < currentIndex ? 'Completed' : index === currentIndex ? 'Current status' : 'Pending'}</span>
-          </li>
-        `).join('');
+      ? `<li class="is-current is-cancelled"><strong>Order cancelled</strong><span>This order has been cancelled${cancelledDate ? ' on ' + formatMilestoneDate(cancelledDate) : ''}.</span></li>`
+      : progressSteps.map((step, index) => {
+          const isComplete = index <= currentIndex;
+          const isCurrent = index === currentIndex;
+          const label = isCurrent ? 'Current status' : (isComplete ? 'Completed' : 'Pending');
+          const extraDate = step.date ? `<div style="font-size:0.75rem; color:#6b7280; margin-top:2px; font-weight:500;">${trackingEscape(step.date)}</div>` : '';
+          return `
+            <li class="${isComplete ? 'is-complete' : ''} ${isCurrent ? 'is-current' : ''}">
+              <strong>${step.name}</strong>
+              <span>${label}</span>
+              ${extraDate}
+            </li>
+          `;
+        }).join('');
 
     if (resultBox) {
       resultBox.innerHTML = `
@@ -128,17 +200,20 @@ async function submitOrderTracking(event) {
             <span>Order total</span>
             <strong>${trackingMoney(amountNum)}</strong>
             ${order.discount ? `<small style="display:block; color:var(--brand-orange, #E86B32); font-size:0.75rem; font-weight:600;">Includes discount -${trackingMoney(order.discount)} (${trackingEscape(order.coupon || 'PROMO')})</small>` : ''}
-            <small>${order.date ? new Date(order.date).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : ''}</small>
+            <small>${confirmedDate ? formatMilestoneDate(confirmedDate) : ''}</small>
           </div>
         </header>
-        ${order.tracking_number ? `
-          <div class="tracking-courier-banner" style="background:#f8f9fa; border:1px solid #e5e7eb; border-radius:8px; padding:12px 16px; margin:16px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        ${(order.tracking_number || order.trackingNumber) ? `
+          <div class="tracking-courier-banner" style="background:#f8f9fa; border:1px solid #e5e7eb; border-radius:8px; padding:14px 18px; margin:16px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
             <div>
-              <span style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; display:block; margin-bottom:2px;">Dispatched via Official Courier</span>
-              <strong style="font-size:1rem; color:#111827;">${trackingEscape(order.courier_name || 'Envia Logistics')}</strong>
-              <div style="font-size:0.82rem; color:#4b5563; margin-top:2px;">AWB Tracking: <span style="font-family:monospace; font-weight:700;">${trackingEscape(order.tracking_number)}</span></div>
+              <span style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; display:block; margin-bottom:3px;">Dispatched via Official Courier</span>
+              <strong style="font-size:1.05rem; color:#111827;">${trackingEscape(order.courier_name || order.courier || 'Envia Logistics')}</strong>
+              <div style="font-size:0.85rem; color:#374151; margin-top:3px;">AWB Tracking: <span style="font-family:monospace; font-weight:700; color:#111827;">${trackingEscape(order.tracking_number || order.trackingNumber)}</span></div>
+              ${dispatchedDate ? `<div style="font-size:0.78rem; color:#059669; margin-top:4px; font-weight:600;">Dispatched on: ${formatMilestoneDate(dispatchedDate)}</div>` : ''}
+              ${eddText && order.status !== 'Delivered' && order.status !== 'Cancelled' ? `<div style="font-size:0.78rem; color:#4B5563; margin-top:2px;">Estimated Delivery: <strong style="color:#111827;">${eddText}</strong></div>` : ''}
+              ${deliveredDate ? `<div style="font-size:0.78rem; color:#2563EB; margin-top:4px; font-weight:600;">Delivered on: ${formatMilestoneDate(deliveredDate)}</div>` : ''}
             </div>
-            ${order.tracking_url ? `<a href="${trackingEscape(order.tracking_url)}" target="_blank" rel="noopener" class="btn btn-outline" style="font-size:0.8rem; padding:6px 14px; text-decoration:none; display:inline-block;">Track Shipment Live &rarr;</a>` : ''}
+            ${(order.tracking_url || order.trackingUrl) ? `<a href="${trackingEscape(order.tracking_url || order.trackingUrl)}" target="_blank" rel="noopener" class="btn btn-outline" style="font-size:0.8rem; padding:8px 16px; text-decoration:none; display:inline-block; font-weight:600;">Track Shipment Live &rarr;</a>` : ''}
           </div>
         ` : ''}
         <section class="tracking-order-items">

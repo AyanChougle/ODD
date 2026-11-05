@@ -173,12 +173,16 @@ try {
 
         $pdo->prepare('UPDATE staff SET last_login = NOW() WHERE id = ?')->execute([$staff['id']]);
 
+        $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+            || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
+
         setcookie('odd_admin_session', $sessionId, [
             'expires'  => time() + SESSION_LIFETIME,
             'path'     => '/',
             'httponly' => true,
             'samesite' => 'Lax',
-            'secure'   => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on'
+            'secure'   => $isSecure
         ]);
 
         sendJson(200, [
@@ -310,12 +314,16 @@ try {
     }
 
     if ($route === 'coupons/usages' && $method === 'GET') {
-        requireStaffAuth('coupons:read');
-        $usages = $pdo->query('
-            SELECT coupon_code as coupon, customer_email as email, customer_phone as phone,
-                   order_id as orderId, discount_amount as discount, used_at as date
-            FROM coupon_usages ORDER BY used_at DESC LIMIT 100
-        ')->fetchAll();
+        requireStaffAuth('coupons');
+        try {
+            $usages = $pdo->query('
+                SELECT coupon_code as coupon, customer_email as email, customer_phone as phone,
+                       order_id as orderId, discount_amount as discount, created_at as date
+                FROM coupon_usages ORDER BY id DESC LIMIT 100
+            ')->fetchAll();
+        } catch (Throwable $e) {
+            $usages = [];
+        }
         sendJson(200, ['usages' => $usages]);
     }
 
@@ -414,15 +422,8 @@ try {
             // Generate clean sequential order ID: ODD-00001, ODD-00002, etc. (Collision-Free)
             $maxSeq = 0;
             try {
-                $existingIds = $pdo->query("SELECT id FROM orders")->fetchAll(PDO::FETCH_COLUMN);
-                if (is_array($existingIds)) {
-                    foreach ($existingIds as $oid) {
-                        if (preg_match('/ODD-(\d+)/i', (string)$oid, $m)) {
-                            $num = (int)$m[1];
-                            if ($num > $maxSeq) $maxSeq = $num;
-                        }
-                    }
-                }
+                $stmt = $pdo->query("SELECT MAX(CAST(SUBSTRING(id, 5) AS UNSIGNED)) AS max_id FROM orders WHERE id LIKE 'ODD-%'");
+                $maxSeq = (int)($stmt->fetchColumn() ?: 0);
             } catch (Throwable $e) {}
 
             $nextNum = max(1, $maxSeq + 1);
@@ -539,20 +540,17 @@ try {
 
     if ($route === 'orders' && $method === 'GET') {
         requireStaffAuth('orders');
-        try {
-            $cols = $pdo->query("SHOW COLUMNS FROM orders LIKE 'tracking_number'")->fetch();
-            if (!$cols) {
-                $pdo->exec("ALTER TABLE orders ADD COLUMN courier_name VARCHAR(64) DEFAULT NULL, ADD COLUMN tracking_number VARCHAR(128) DEFAULT NULL, ADD COLUMN tracking_url VARCHAR(255) DEFAULT NULL, ADD COLUMN label_url VARCHAR(255) DEFAULT NULL");
-            }
-        } catch (Throwable $e) {}
 
         $orders = $pdo->query('
             SELECT id, customer_name as customer, customer_email as email, customer_phone as phone,
                    shipping_address as address, subtotal, discount_amount as discount, coupon_code as coupon,
                    shipping_fee as shipping, total_amount as total, total_amount as amount,
-                   payment_method as paymentMethod, payment_status as paymentStatus, status, gateway,
-                   courier_name as courier, tracking_number as trackingNumber, tracking_url as trackingUrl, label_url as labelUrl,
-                   razorpay_payment_id as razorpayPaymentId, created_at as date
+                   payment_method as paymentMethod, payment_method as method, payment_method, payment_status as paymentStatus, payment_status, status, gateway,
+                   courier_name as courier, courier_name, tracking_number as trackingNumber, tracking_number, tracking_url as trackingUrl, tracking_url, label_url as labelUrl, label_url,
+                   razorpay_payment_id as razorpayPaymentId, created_at as date, created_at as createdAt,
+                   dispatched_at as dispatchedAt, dispatched_at,
+                   delivered_at as deliveredAt, delivered_at,
+                   cancelled_at as cancelledAt, cancelled_at
             FROM orders ORDER BY created_at DESC
         ')->fetchAll();
 
@@ -560,6 +558,13 @@ try {
         foreach ($orders as &$o) {
             $iStmt->execute([$o['id']]);
             $o['items'] = $iStmt->fetchAll();
+            if (!empty($o['delivered_at'])) {
+                $o['estimatedDelivery'] = $o['delivered_at'];
+            } elseif (!empty($o['dispatched_at'])) {
+                $o['estimatedDelivery'] = date('Y-m-d H:i:s', strtotime($o['dispatched_at']) + (4 * 86400));
+            } else {
+                $o['estimatedDelivery'] = date('Y-m-d H:i:s', strtotime($o['date'] ?: 'now') + (5 * 86400));
+            }
         }
         sendJson(200, ['orders' => $orders]);
     }
@@ -619,16 +624,29 @@ try {
             $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ? AND REPLACE(REPLACE(customer_phone, '+91', ''), ' ', '') LIKE ?");
             $stmt->execute([$orderId, '%' . substr($cleanPhone, -10)]);
             $order = $stmt->fetch();
-        } elseif ($orderId) {
-            $stmt = $pdo->prepare('SELECT id, status, subtotal, discount_amount, coupon_code, shipping_fee, total_amount, created_at FROM orders WHERE id = ?');
+        } elseif ($orderId && getStaffSession()) {
+            $stmt = $pdo->prepare('SELECT * FROM orders WHERE id = ?');
             $stmt->execute([$orderId]);
             $order = $stmt->fetch();
         }
 
-        if (!$order) sendJson(404, ['error' => 'Order not found. Check your Order ID and phone number.']);
+        if (!$order) sendJson(404, ['error' => 'Order not found. Please verify your Order ID and contact phone number.']);
 
         $iStmt = $pdo->prepare('SELECT sku, name, price, quantity as qty, line_total FROM order_items WHERE order_id = ?');
         $iStmt->execute([$order['id']]);
+
+        $dispatchedAt = $order['dispatched_at'] ?: (($order['status'] === 'Dispatched' || !empty($order['tracking_number'])) ? ($order['updated_at'] ?: $order['created_at']) : null);
+        $deliveredAt = $order['delivered_at'] ?: ($order['status'] === 'Delivered' ? ($order['updated_at'] ?: $order['created_at']) : null);
+        $cancelledAt = $order['cancelled_at'] ?: ($order['status'] === 'Cancelled' ? ($order['updated_at'] ?: $order['created_at']) : null);
+
+        $estimatedDelivery = null;
+        if (!empty($deliveredAt)) {
+            $estimatedDelivery = $deliveredAt;
+        } elseif (!empty($dispatchedAt)) {
+            $estimatedDelivery = date('Y-m-d H:i:s', strtotime($dispatchedAt) + (4 * 86400));
+        } elseif (!empty($order['created_at'])) {
+            $estimatedDelivery = date('Y-m-d H:i:s', strtotime($order['created_at']) + (5 * 86400));
+        }
 
         sendJson(200, [
             'id' => $order['id'],
@@ -640,10 +658,24 @@ try {
             'total' => (int)$order['total_amount'],
             'amount' => (int)$order['total_amount'],
             'courier' => $order['courier_name'] ?? null,
+            'courier_name' => $order['courier_name'] ?? null,
             'trackingNumber' => $order['tracking_number'] ?? null,
+            'tracking_number' => $order['tracking_number'] ?? null,
             'trackingUrl' => $order['tracking_url'] ?? null,
+            'tracking_url' => $order['tracking_url'] ?? null,
             'labelUrl' => $order['label_url'] ?? null,
+            'label_url' => $order['label_url'] ?? null,
             'date' => $order['created_at'],
+            'createdAt' => $order['created_at'],
+            'created_at' => $order['created_at'],
+            'dispatchedAt' => $dispatchedAt,
+            'dispatched_at' => $dispatchedAt,
+            'deliveredAt' => $deliveredAt,
+            'delivered_at' => $deliveredAt,
+            'cancelledAt' => $cancelledAt,
+            'cancelled_at' => $cancelledAt,
+            'estimatedDelivery' => $estimatedDelivery,
+            'estimated_delivery' => $estimatedDelivery,
             'items' => $iStmt->fetchAll()
         ]);
     }
@@ -777,23 +809,19 @@ try {
             return ['success' => false, 'error' => "Order {$orderId} not found."];
         }
 
-        // Ensure courier columns exist
-        try {
-            $cols = $pdo->query("SHOW COLUMNS FROM orders LIKE 'tracking_number'")->fetch();
-            if (!$cols) {
-                $pdo->exec("ALTER TABLE orders ADD COLUMN courier_name VARCHAR(64) DEFAULT NULL, ADD COLUMN tracking_number VARCHAR(128) DEFAULT NULL, ADD COLUMN tracking_url VARCHAR(255) DEFAULT NULL, ADD COLUMN label_url VARCHAR(255) DEFAULT NULL");
-            }
-        } catch (Throwable $e) {}
-
         // If already has label, return existing
         if (!empty($order['tracking_number']) && !empty($order['label_url'])) {
             return [
                 'success' => true,
                 'alreadyGenerated' => true,
                 'trackingNumber' => $order['tracking_number'],
+                'tracking_number' => $order['tracking_number'],
                 'labelUrl' => $order['label_url'],
+                'label_url' => $order['label_url'],
                 'trackUrl' => $order['tracking_url'],
+                'tracking_url' => $order['tracking_url'],
                 'carrier' => $order['courier_name'],
+                'courier_name' => $order['courier_name'],
                 'message' => "Label already generated: {$order['courier_name']} AWB {$order['tracking_number']}"
             ];
         }
@@ -895,7 +923,15 @@ try {
             'shipment' => [
                 'type' => 1,
                 'carrier' => $chosenCarrier,
-                'service' => 'express'
+                'service' => 'express',
+                'orderReference' => $orderId,
+                'totalValue' => (float)$order['total_amount']
+            ],
+            'orderData' => [
+                'orderNumber' => $orderId,
+                'orderIdentifier' => $orderId,
+                'total' => (float)$order['total_amount'],
+                'store' => 'ODD Perfumes'
             ],
             'settings' => [
                 'currency' => 'INR',
@@ -931,9 +967,13 @@ try {
             return [
                 'success' => true,
                 'trackingNumber' => $trackingNumber,
+                'tracking_number' => $trackingNumber,
                 'labelUrl' => $labelUrl,
+                'label_url' => $labelUrl,
                 'trackUrl' => $trackUrl,
+                'tracking_url' => $trackUrl,
                 'carrier' => $carrierName,
+                'courier_name' => $carrierName,
                 'message' => "Envia shipping label generated with {$carrierName}! AWB: {$trackingNumber}"
             ];
         } else {
@@ -958,13 +998,7 @@ try {
     }
 
     if ($route === 'shipping/envia/create-label' && $method === 'POST') {
-        $session = getStaffSession();
-        if ($session) {
-            $perms = ROLE_PERMISSIONS[$session['role']] ?? [];
-            if (!in_array('*', $perms, true) && !in_array('orders', $perms, true) && !in_array('shipping', $perms, true)) {
-                sendJson(403, ['error' => "Forbidden: Staff role '{$session['role']}' cannot generate shipping labels."]);
-            }
-        }
+        requireStaffAuth('shipping');
         $body = getJsonBody();
         $orderId = trim((string)($body['orderId'] ?? ''));
         if (!$orderId) sendJson(400, ['error' => 'Order ID is required.']);
@@ -1468,13 +1502,9 @@ try {
     // --- 10. Settings ---
     if (strpos($route, 'settings/') === 0 && $method === 'GET') {
         $key = substr($route, strlen('settings/'));
-        $pdo->exec('
-            CREATE TABLE IF NOT EXISTS settings (
-                key_name VARCHAR(64) PRIMARY KEY,
-                value_json LONGTEXT NOT NULL,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        ');
+        if (in_array($key, ['envia', 'razorpay'], true)) {
+            requireStaffAuth('admin');
+        }
         $stmt = $pdo->prepare('SELECT value_json FROM settings WHERE key_name = ?');
         $stmt->execute([$key]);
         $row = $stmt->fetch();
@@ -1483,17 +1513,8 @@ try {
 
     if (strpos($route, 'settings/') === 0 && ($method === 'POST' || $method === 'PUT')) {
         $key = substr($route, strlen('settings/'));
-        if (!in_array($key, ['shipping', 'envia'], true)) {
-            requireStaffAuth($key === 'banner' ? 'marketing' : 'admin');
-        }
+        requireStaffAuth($key === 'banner' ? 'marketing' : 'admin');
         $body = getJsonBody();
-        $pdo->exec('
-            CREATE TABLE IF NOT EXISTS settings (
-                key_name VARCHAR(64) PRIMARY KEY,
-                value_json LONGTEXT NOT NULL,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        ');
         $pdo->prepare('
             INSERT INTO settings (key_name, value_json, updated_at) VALUES (?, ?, NOW())
             ON DUPLICATE KEY UPDATE value_json = VALUES(value_json), updated_at = NOW()
