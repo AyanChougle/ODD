@@ -48,9 +48,11 @@ define('RAZORPAY_KEY_ID', getenv('RAZORPAY_KEY_ID') ?: 'rzp_live_Ti8AffHarb3tai'
 define('RAZORPAY_KEY_SECRET', getenv('RAZORPAY_KEY_SECRET') ?: 'X4Ws6I0iovvSrTYh18i1nNjl');
 define('RAZORPAY_WEBHOOK_SECRET', getenv('RAZORPAY_WEBHOOK_SECRET') ?: '');
 
-// Envia.com Multi-Carrier Shipping API
-define('ENVIA_API_KEY', getenv('ENVIA_API_KEY') ?: '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236');
-define('ENVIA_ENV', getenv('ENVIA_ENV') ?: 'live');
+// Shiprocket Multi-Carrier Shipping API v2
+define('SHIPROCKET_EMAIL', getenv('SHIPROCKET_EMAIL') ?: 'oddperfumesocial@gmail.com');
+define('SHIPROCKET_PASSWORD', getenv('SHIPROCKET_PASSWORD') ?: 'Aoeo6$g4!7RYRLSLM0@V90MYX!fI*Gg!');
+define('SHIPROCKET_TOKEN', getenv('SHIPROCKET_TOKEN') ?: '');
+define('SHIPROCKET_PICKUP_LOCATION', getenv('SHIPROCKET_PICKUP_LOCATION') ?: 'Primary');
 
 // Session Lifetime & Secrets
 define('SESSION_SECRET', getenv('SESSION_SECRET') ?: '38c6dfef5c36c359974c53677a1598ccc604729db7670a28825b827fd247aeb3');

@@ -85,8 +85,8 @@ function readStorageJSON(key, fallback) {
 let cartState = readStorageJSON('odd_cart', []).filter(item => item && PRODUCTS[item.id] && Number.isInteger(Number(item.qty)) && Number(item.qty) > 0).map(item => ({ id: item.id, qty: Number(item.qty) }));
 let appliedCoupon = localStorage.getItem('odd_coupon') || localStorage.getItem('odd_coupon_code') || null;
 let STORE_INVENTORY = {
-  phantom: { sku: 'ODD-PH-001', stock: 240, price: 899 },
-  lucid: { sku: 'ODD-LC-003', stock: 180, price: 899 },
+  phantom: { sku: 'ODD-PH-001', stock: 0, price: 899 },
+  lucid: { sku: 'ODD-LC-003', stock: 0, price: 899 },
   'first-move': { sku: 'ODD-FM-002', stock: 0, price: 899 }
 };
 
@@ -110,12 +110,7 @@ async function syncInventoryFromApi() {
 }
 syncInventoryFromApi();
 
-let ACTIVE_COUPONS = [
-  { code: 'LAUNCH20', discount: 20 },
-  { code: 'ODD10', discount: 10 },
-  { code: 'WELCOME15', discount: 15 },
-  { code: 'ODDSPOT10', discount: 10 }
-];
+let ACTIVE_COUPONS = [];
 let STORE_STATE_FROM_SERVER = false;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -453,37 +448,60 @@ function renderCartPage() {
   }
 }
 
-function applyCartCoupon() {
+async function applyCartCoupon() {
   const input = document.getElementById('cart-coupon-input') || document.getElementById('coupon-input-drawer');
   if (!input) return;
   const code = input.value.trim().toUpperCase();
   if (!code) return;
 
-  // Refresh active coupons from Admin/localStorage
+  const subtotal = getCartSubtotal();
+
   try {
-    const localCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || localStorage.getItem('odd_coupons'));
-    if (localCoupons && Array.isArray(localCoupons)) {
-      ACTIVE_COUPONS = localCoupons.filter(c => c.active !== false);
+    const res = await fetch('/api/coupons/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, subtotal })
+    });
+    const data = await res.json();
+    if (res.ok && data.valid) {
+      appliedCoupon = data.code;
+      localStorage.setItem('odd_coupon', data.code);
+      localStorage.setItem('odd_coupon_code', data.code);
+      localStorage.setItem('odd_coupon_discount', String(data.discountPercent));
+      saveCart();
+      const tag = document.getElementById('coupon-tag-applied');
+      if (tag) tag.style.display = 'flex';
+      const codeName = document.getElementById('applied-code-name');
+      if (codeName) codeName.innerText = `${data.code} (${data.discountPercent}% OFF)`;
+      input.value = '';
+      updateCartUI();
+      showToast(`Code ${data.code} applied: ${data.discountPercent}% discount!`);
+      return;
+    } else {
+      showToast(data.error || 'Invalid or expired promo code.');
+      return;
     }
-  } catch (e) {}
-
-  const coupons = ACTIVE_COUPONS;
-  const found = coupons.find(c => c.code === code && c.active !== false);
-
-  if (found) {
-    appliedCoupon = found.code;
-    localStorage.setItem('odd_coupon', found.code);
-    localStorage.setItem('odd_coupon_code', found.code);
-    localStorage.setItem('odd_coupon_discount', String(found.discount));
-    saveCart();
-    const tag = document.getElementById('coupon-tag-applied');
-    if (tag) tag.style.display = 'flex';
-    const codeName = document.getElementById('applied-code-name');
-    if (codeName) codeName.innerText = `${found.code} (${found.discount}% OFF)`;
-    input.value = '';
-    updateCartUI();
-    showToast(`Code ${found.code} applied: ${found.discount}% discount!`);
-  } else {
+  } catch (e) {
+    // Fallback to local admin coupons if server is offline
+    try {
+      const localCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || localStorage.getItem('odd_coupons') || '[]');
+      const found = localCoupons.find(c => String(c.code).toUpperCase() === code && c.active !== false);
+      if (found) {
+        appliedCoupon = found.code;
+        localStorage.setItem('odd_coupon', found.code);
+        localStorage.setItem('odd_coupon_code', found.code);
+        localStorage.setItem('odd_coupon_discount', String(found.discount || found.discount_percent || 0));
+        saveCart();
+        const tag = document.getElementById('coupon-tag-applied');
+        if (tag) tag.style.display = 'flex';
+        const codeName = document.getElementById('applied-code-name');
+        if (codeName) codeName.innerText = `${found.code} (${found.discount || found.discount_percent || 0}% OFF)`;
+        input.value = '';
+        updateCartUI();
+        showToast(`Code ${found.code} applied!`);
+        return;
+      }
+    } catch (err) {}
     showToast('Invalid or expired promo code.');
   }
 }

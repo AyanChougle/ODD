@@ -4,12 +4,6 @@
    ODD Perfume — Hostinger Static Checkout & Order Integration Engine
    ========================================================================== */
 
-const DEFAULT_INVENTORY_MAP = {
-  'ODD-PH-001': { sku: 'ODD-PH-001', name: 'ODD PHANTOM', stock: 240, price: 899 },
-  'ODD-LC-003': { sku: 'ODD-LC-003', name: 'ODD LUCID', stock: 180, price: 899 },
-  'ODD-FM-002': { sku: 'ODD-FM-002', name: 'ODD FIRST MOVE', stock: 0, price: 899 }
-};
-
 const SKU_TO_ID = {
   'ODD-PH-001': 'phantom',
   'ODD-LC-003': 'lucid',
@@ -22,13 +16,6 @@ const ID_TO_SKU = {
   'first-move': 'ODD-FM-002'
 };
 
-const DEFAULT_COUPONS_LIST = [
-  { code: 'LAUNCH20', discount: 20 },
-  { code: 'ODD10', discount: 10 },
-  { code: 'WELCOME15', discount: 15 },
-  { code: 'ODDSPOT10', discount: 10 }
-];
-
 function checkoutMoney(value) {
   return '₹' + Number(value || 0).toLocaleString('en-IN');
 }
@@ -38,18 +25,42 @@ function checkoutEscape(value) {
 }
 
 function getLiveInventory() {
-  let inv = null;
   try {
-    inv = JSON.parse(localStorage.getItem('odd_admin_inventory'));
+    const inv = JSON.parse(localStorage.getItem('odd_admin_inventory'));
+    return (inv && typeof inv === 'object') ? inv : {};
   } catch (e) {
-    inv = null;
+    return {};
   }
-  if (!inv || typeof inv !== 'object' || !Object.keys(inv).length) {
-    inv = { ...DEFAULT_INVENTORY_MAP };
-    localStorage.setItem('odd_admin_inventory', JSON.stringify(inv));
-  }
-  return inv;
 }
+
+// Synchronize live product stock and prices directly from backend
+async function syncLiveProductsAndInventory() {
+  try {
+    const res = await fetch('/api/products');
+    if (res.ok) {
+      const data = await res.json();
+      const list = Array.isArray(data.products) ? data.products : (Array.isArray(data) ? data : []);
+      const inv = getLiveInventory();
+      list.forEach(p => {
+        const sku = p.sku || ID_TO_SKU[p.id] || p.id;
+        inv[sku] = {
+          sku: sku,
+          name: p.name,
+          stock: Math.max(0, Number(p.stock ?? 0)),
+          price: Number(p.price || 899)
+        };
+        if (typeof PRODUCTS !== 'undefined' && PRODUCTS[p.id]) {
+          PRODUCTS[p.id].price = Number(p.price || 899);
+        }
+      });
+      localStorage.setItem('odd_admin_inventory', JSON.stringify(inv));
+      if (typeof renderCheckoutSummary === 'function') {
+        renderCheckoutSummary();
+      }
+    }
+  } catch (e) {}
+}
+syncLiveProductsAndInventory();
 
 function getProductAvailability(productId) {
   const inv = getLiveInventory();
@@ -116,15 +127,9 @@ function getActiveCouponDetails() {
   // 2. Check odd_admin_coupons from localStorage
   try {
     const adminCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || '[]');
-    const match = adminCoupons.find(c => c.code === code && c.active !== false);
-    if (match) return { code: match.code, discount: Number(match.discount) };
+    const match = adminCoupons.find(c => String(c.code).toUpperCase() === code && c.active !== false);
+    if (match) return { code: match.code, discount: Number(match.discount || match.discount_percent || 0) };
   } catch (e) {}
-
-  // 3. Fallback to default coupons
-  const defaultMatch = DEFAULT_COUPONS_LIST.find(c => c.code === code);
-  if (defaultMatch) {
-    return defaultMatch;
-  }
 
   return null;
 }
@@ -249,7 +254,7 @@ function renderCheckoutSummary() {
   }
 }
 
-function applyCheckoutCoupon() {
+async function applyCheckoutCoupon() {
   const input = document.getElementById('chk-coupon-input');
   if (!input) return;
   const code = input.value.trim().toUpperCase();
@@ -258,50 +263,72 @@ function applyCheckoutCoupon() {
     return;
   }
 
-  // Check email-linked coupon usage
   const customerEmail = (
     document.getElementById('chk-email')?.value ||
     JSON.parse(localStorage.getItem('odd_customer_session') || '{}')?.email ||
     ''
   ).trim().toLowerCase();
 
-  if (customerEmail) {
-    try {
-      const usages = JSON.parse(localStorage.getItem('odd_coupon_usages') || '[]');
-      const alreadyUsed = usages.some(u => (u.coupon || '').toUpperCase() === code && String(u.email || '').toLowerCase() === customerEmail);
-      if (alreadyUsed) {
-        const msg = `Coupon ${code} has already been redeemed with this email (${customerEmail}). Limited to 1 use per customer.`;
-        if (typeof showToast === 'function') showToast(msg);
-        else alert(msg);
-        return;
-      }
-    } catch (e) {}
-  }
-
-  // Check admin coupons or default coupons
-  let discount = 0;
+  // Compute current cart subtotal
+  let cart = [];
   try {
-    const adminCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || '[]');
-    const match = adminCoupons.find(c => c.code === code && c.active !== false);
-    if (match) discount = Number(match.discount);
-  } catch (e) {}
-
-  if (!discount) {
-    const defaultMatch = DEFAULT_COUPONS_LIST.find(c => c.code === code);
-    if (defaultMatch) discount = defaultMatch.discount;
+    cart = (typeof cartState !== 'undefined' && Array.isArray(cartState))
+      ? cartState
+      : JSON.parse(localStorage.getItem('odd_cart') || '[]');
+  } catch (e) {
+    cart = [];
   }
+  let subtotal = 0;
+  cart.forEach(item => {
+    const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[item.id]) ? PRODUCTS[item.id] : null;
+    const price = prod ? prod.price : (item.price || 899);
+    subtotal += price * item.qty;
+  });
 
-  if (discount > 0) {
-    localStorage.setItem('odd_coupon', code);
-    localStorage.setItem('odd_coupon_code', code);
-    localStorage.setItem('odd_coupon_discount', String(discount));
-    input.value = '';
-    renderCheckoutSummary();
-    if (typeof updateCartUI === 'function') updateCartUI();
-    if (typeof showToast === 'function') showToast(`Coupon ${code} applied: ${discount}% discount!`);
-  } else {
-    if (typeof showToast === 'function') showToast('Invalid or expired promo code.');
-    else alert('Invalid or expired promo code.');
+  // Dynamic server verification
+  try {
+    const res = await fetch('/api/coupons/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, subtotal, email: customerEmail })
+    });
+    const data = await res.json();
+    if (res.ok && data.valid) {
+      localStorage.setItem('odd_coupon', data.code);
+      localStorage.setItem('odd_coupon_code', data.code);
+      localStorage.setItem('odd_coupon_discount', String(data.discountPercent));
+      input.value = '';
+      renderCheckoutSummary();
+      if (typeof updateCartUI === 'function') updateCartUI();
+      if (typeof showToast === 'function') showToast(`Coupon ${data.code} applied: ${data.discountPercent}% discount!`);
+      return;
+    } else {
+      const err = data.error || 'Invalid or expired promo code.';
+      if (typeof showToast === 'function') showToast(err);
+      else alert(err);
+      return;
+    }
+  } catch (err) {
+    // Local storage fallback for offline mode
+    let discount = 0;
+    try {
+      const adminCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || '[]');
+      const match = adminCoupons.find(c => String(c.code).toUpperCase() === code && c.active !== false);
+      if (match) discount = Number(match.discount || match.discount_percent || 0);
+    } catch (e) {}
+
+    if (discount > 0) {
+      localStorage.setItem('odd_coupon', code);
+      localStorage.setItem('odd_coupon_code', code);
+      localStorage.setItem('odd_coupon_discount', String(discount));
+      input.value = '';
+      renderCheckoutSummary();
+      if (typeof updateCartUI === 'function') updateCartUI();
+      if (typeof showToast === 'function') showToast(`Coupon ${code} applied: ${discount}% discount!`);
+    } else {
+      if (typeof showToast === 'function') showToast('Invalid or expired promo code.');
+      else alert('Invalid or expired promo code.');
+    }
   }
 }
 
@@ -457,40 +484,18 @@ async function processPageOrder(e) {
   const shippingFee = getShippingFee(subtotal);
   const finalTotal = Math.max(0, subtotal - discountAmount + shippingFee);
 
-  // Live Razorpay Gateway Configuration
-  const rzpConfig = (() => {
-    try {
-      const raw = localStorage.getItem('odd_razorpay_config');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        delete parsed.keySecret;
-        // Automatically migrate legacy test key to user live key
-        if (parsed.keyId === 'rzp_test_51NgQODDPERFUME') {
-          parsed.keyId = 'rzp_live_Ti8AffHarb3tai';
-          parsed.env = 'live';
-          parsed.simulate = false;
-        }
-        localStorage.setItem('odd_razorpay_config', JSON.stringify(parsed));
-        return parsed;
-      }
-    } catch (e) {}
-    const def = {
-      enabled: true,
-      env: 'live',
-      keyId: 'rzp_live_Ti8AffHarb3tai',
-      brandName: 'ODD Perfume',
-      themeColor: '#E86B32',
-      simulate: false
-    };
-    try {
-      localStorage.setItem('odd_razorpay_config', JSON.stringify(def));
-    } catch (e) {}
-    return def;
-  })();
+  // Razorpay Gateway Configuration (loaded dynamically from server)
+  let activeRzpKeyId = '';
+  try {
+    const pubRes = await fetch('/api/settings/razorpay-public');
+    if (pubRes.ok) {
+      const pubData = await pubRes.json();
+      if (pubData.keyId) activeRzpKeyId = pubData.keyId;
+    }
+  } catch (e) {}
 
   if (method === 'razorpay') {
     const amountPaisa = Math.round(finalTotal * 100);
-    const keyId = rzpConfig.keyId || 'rzp_live_Ti8AffHarb3tai';
 
     if (typeof Razorpay !== 'undefined') {
       let rzpServerOrderId = null;
@@ -508,16 +513,31 @@ async function processPageOrder(e) {
           if (createData.orderId) {
             rzpServerOrderId = createData.orderId;
           }
+          if (createData.keyId) {
+            activeRzpKeyId = createData.keyId;
+          }
         }
       } catch (e) {
         console.warn('Server Razorpay order creation check:', e);
       }
 
+      if (!activeRzpKeyId) {
+        alert('Online payment gateway is temporarily initializing. Please select Cash on Delivery (COD) or try again in a moment.');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirm & Place Order';
+        }
+        return;
+      }
+
       const options = {
-        key: keyId,
+        key: activeRzpKeyId,
         amount: amountPaisa,
         currency: 'INR',
-        name: rzpConfig.brandName || 'ODD Perfume',
+        name: 'ODD Perfume',
+        description: 'Fragrance Order ' + orderId,
+        image: 'assets/images/Phantom Single bottle.png',
+        ...(rzpServerOrderId ? { order_id: rzpServerOrderId } : {}),
         description: 'Fragrance Order ' + orderId,
         image: 'assets/images/Phantom Single bottle.png',
         ...(rzpServerOrderId ? { order_id: rzpServerOrderId } : {}),

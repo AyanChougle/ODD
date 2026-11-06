@@ -29,9 +29,9 @@ const SKU_LABELS = {
 };
 
 // Immediate global exposure with distinct delegate names to guarantee zero ReferenceErrors and zero RangeError recursions
-window.toggleEnviaKeyVisibility = function() {
-  const input = document.getElementById('envia-api-key');
-  const btn = document.getElementById('btn-toggle-envia-key');
+window.toggleShiprocketKeyVisibility = function() {
+  const input = document.getElementById('shiprocket-password');
+  const btn = document.getElementById('btn-toggle-shiprocket-key');
   if (!input) return;
   if (input.type === 'password') {
     input.type = 'text';
@@ -41,122 +41,21 @@ window.toggleEnviaKeyVisibility = function() {
     if (btn) btn.textContent = 'Show';
   }
 };
-window.saveEnviaSettings = function(event) {
+window.toggleshiprocketKeyVisibility = window.toggleShiprocketKeyVisibility;
+
+window.printOrderInvoice = function(orderId) {
+  if (typeof handlePrintOrderInvoice === 'function') return handlePrintOrderInvoice(orderId);
+};
+window.saveShiprocketSettings = function(event) {
   if (event) { event.preventDefault(); event.stopPropagation(); }
-  if (typeof handleSaveEnviaSettings === 'function') return handleSaveEnviaSettings(event);
+  if (typeof handleSaveShiprocketSettings === 'function') return handleSaveShiprocketSettings(event);
 };
-window.testEnviaConnection = function() {
-  if (typeof handleTestEnviaConnection === 'function') return handleTestEnviaConnection();
+window.testShiprocketConnection = function() {
+  if (typeof handleTestShiprocketConnection === 'function') return handleTestShiprocketConnection();
 };
-window.switchToLiveAndTest = function() {
-  if (typeof handleSwitchToLiveAndTest === 'function') return handleSwitchToLiveAndTest();
+window.shipWithShiprocket = function(orderId, btn) {
+  if (typeof handleShipWithShiprocket === 'function') return handleShipWithShiprocket(orderId, btn);
 };
-window.registerEnviaWebhook = function() {
-  if (typeof handleRegisterEnviaWebhook === 'function') return handleRegisterEnviaWebhook();
-};
-window.shipWithEnvia = function(orderId, btn) {
-  if (typeof handleShipWithEnvia === 'function') return handleShipWithEnvia(orderId, btn);
-};
-
-const DEFAULT_INVENTORY = {
-  'ODD-PH-001': { sku: 'ODD-PH-001', name: 'ODD PHANTOM', stock: 240, price: 899, updated: '2026-10-12 10:00' },
-  'ODD-LC-003': { sku: 'ODD-LC-003', name: 'ODD LUCID', stock: 180, price: 899, updated: '2026-10-12 10:00' },
-  'ODD-FM-002': { sku: 'ODD-FM-002', name: 'ODD FIRST MOVE', stock: 0, price: 899, updated: '2026-10-12 10:00' }
-};
-
-const DEFAULT_COUPONS = [
-  { code: 'LAUNCH20', discount: 20, active: true },
-  { code: 'ODD10', discount: 10, active: true },
-  { code: 'WELCOME15', discount: 15, active: true }
-];
-
-const DEFAULT_STAFF = [
-  { id: 'usr-001', name: 'Admin', email: 'admin@oddperfume.com', role: 'admin', active: true, lastLogin: '2026-10-12 10:00' },
-  { id: 'usr-002', name: 'Warehouse Lead', email: 'warehouse@oddperfume.com', role: 'warehouse', active: true, lastLogin: '2026-10-11 16:30' }
-];
-
-const DEFAULT_BANNER = {
-  active: true,
-  text: "WE'RE LIVE. Take 20% OFF your first order with code LAUNCH20",
-  code: 'LAUNCH20'
-};
-
-const DEFAULT_ORDERS = [
-  {
-    id: 'ODD-739182',
-    date: '2026-10-18 14:32',
-    customer: 'Rohit Sharma',
-    phone: '+91 98201 12345',
-    email: 'rohit.s@gmail.com',
-    address: 'B-402, Sea Green Apts, Worli, Mumbai - 400018',
-    items: [
-      { id: 'first-move', sku: 'ODD-FM-002', name: 'ODD FIRST MOVE', qty: 1, price: 899 },
-      { id: 'phantom', sku: 'ODD-PH-001', name: 'ODD PHANTOM', qty: 1, price: 899 }
-    ],
-    subtotal: 1798,
-    coupon: 'LAUNCH20',
-    discount: 360,
-    shipping: 50,
-    total: 1488,
-    amount: 1488,
-    status: 'Processing',
-    method: 'Razorpay',
-    paymentMethod: 'Razorpay Online (pay_PwK8201948)',
-    paymentStatus: 'Paid',
-    gateway: 'Razorpay Live',
-    razorpayPaymentId: 'pay_PwK8201948',
-    stockDeducted: true
-  },
-  {
-    id: 'ODD-518294',
-    date: '2026-10-17 11:15',
-    customer: 'Priya Mehta',
-    phone: '+91 98199 87654',
-    email: 'priya.m@outlook.com',
-    address: '12, Coral Heights, Bandra West, Mumbai - 400050',
-    items: [
-      { id: 'lucid', sku: 'ODD-LC-003', name: 'ODD LUCID', qty: 1, price: 899 }
-    ],
-    subtotal: 899,
-    coupon: null,
-    discount: 0,
-    shipping: 50,
-    total: 949,
-    amount: 949,
-    status: 'Confirmed',
-    method: 'COD',
-    paymentMethod: 'Cash on Delivery (COD)',
-    paymentStatus: 'Payment pending',
-    gateway: 'Cash on Delivery (COD)',
-    razorpayPaymentId: null,
-    stockDeducted: true
-  },
-  {
-    id: 'ODD-429011',
-    date: '2026-10-16 16:40',
-    customer: 'Ananya Verma',
-    phone: '+91 99200 45678',
-    email: 'ananya.v@gmail.com',
-    address: 'Flat 8A, Lodha Bellissimo, Mahalaxmi, Mumbai - 400011',
-    items: [
-      { id: 'phantom', sku: 'ODD-PH-001', name: 'ODD PHANTOM', qty: 2, price: 899 }
-    ],
-    subtotal: 1798,
-    coupon: 'WELCOME15',
-    discount: 270,
-    shipping: 0,
-    total: 1528,
-    amount: 1528,
-    status: 'Delivered',
-    method: 'Razorpay',
-    paymentMethod: 'Razorpay Online (pay_NxQ7102934)',
-    paymentStatus: 'Paid',
-    gateway: 'Razorpay Live',
-    razorpayPaymentId: 'pay_NxQ7102934',
-    stockDeducted: true,
-    deliveredAt: '2026-10-18T10:00:00Z'
-  }
-];
 
 /* --- Permission & Utility Helpers --- */
 function hasPermission(permission) {
@@ -244,22 +143,23 @@ function playScanBeep(type = 'success') {
 
 /* --- Offline Data Storage Getters & Setters --- */
 function getOfflineInventory() {
-  let inv = JSON.parse(localStorage.getItem('odd_admin_inventory') || 'null');
-  if (!inv || !Object.keys(inv).length) {
-    inv = { ...DEFAULT_INVENTORY };
-    localStorage.setItem('odd_admin_inventory', JSON.stringify(inv));
+  try {
+    const inv = JSON.parse(localStorage.getItem('odd_admin_inventory') || '{}');
+    return (inv && typeof inv === 'object') ? inv : {};
+  } catch (e) {
+    return {};
   }
-  return inv;
 }
 
 function saveOfflineInventory(inv) {
-  localStorage.setItem('odd_admin_inventory', JSON.stringify(inv));
   try {
+    localStorage.setItem('odd_admin_inventory', JSON.stringify(inv || {}));
     window.dispatchEvent(new CustomEvent('odd:inventory-updated', { detail: inv }));
   } catch (e) {}
 }
 
 function normalizeOrder(o) {
+  if (!o) return null;
   const rawTotal = o.total != null ? o.total : (o.amount || 0);
   const amountNum = typeof rawTotal === 'number'
     ? rawTotal
@@ -294,9 +194,9 @@ function normalizeOrder(o) {
     : (o.status !== 'Cancelled');
 
   return {
-    id: o.id || ('ODD-' + Math.floor(100000 + Math.random() * 900000)),
-    date: o.date || new Date().toISOString().split('T')[0],
-    customer: o.customer || 'Guest Customer',
+    id: o.id || 'ODD-ORDER',
+    date: o.date || (o.created_at ? o.created_at.replace('T', ' ').substring(0, 16) : new Date().toISOString().replace('T', ' ').substring(0, 16)),
+    customer: o.customer || 'Customer',
     phone: o.phone || '—',
     email: o.email || '—',
     address: o.address || '—',
@@ -321,70 +221,79 @@ function normalizeOrder(o) {
 }
 
 function getOfflineOrders() {
-  let raw = JSON.parse(localStorage.getItem('odd_orders') || 'null');
-  if (!raw || !Array.isArray(raw) || !raw.length) {
-    raw = [...DEFAULT_ORDERS];
-    localStorage.setItem('odd_orders', JSON.stringify(raw));
+  try {
+    const raw = JSON.parse(localStorage.getItem('odd_orders') || '[]');
+    return Array.isArray(raw) ? raw.map(normalizeOrder).filter(Boolean) : [];
+  } catch (e) {
+    return [];
   }
-  return raw.map(normalizeOrder);
 }
 
 function saveOfflineOrders(orders) {
-  localStorage.setItem('odd_orders', JSON.stringify(orders));
   try {
+    localStorage.setItem('odd_orders', JSON.stringify(orders || []));
     window.dispatchEvent(new CustomEvent('odd:orders-updated', { detail: orders }));
   } catch (e) {}
 }
 
 function getOfflineCoupons() {
-  let coupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || 'null');
-  if (!coupons) {
-    coupons = JSON.parse(localStorage.getItem('odd_coupons') || 'null');
+  try {
+    const coupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || localStorage.getItem('odd_coupons') || '[]');
+    return Array.isArray(coupons) ? coupons : [];
+  } catch (e) {
+    return [];
   }
-  if (!coupons || !coupons.length) {
-    coupons = [...DEFAULT_COUPONS];
-    saveOfflineCoupons(coupons);
-  }
-  return coupons;
 }
 
 function saveOfflineCoupons(coupons) {
-  localStorage.setItem('odd_admin_coupons', JSON.stringify(coupons));
-  localStorage.setItem('odd_coupons', JSON.stringify(coupons));
+  try {
+    localStorage.setItem('odd_admin_coupons', JSON.stringify(coupons || []));
+    localStorage.setItem('odd_coupons', JSON.stringify(coupons || []));
+  } catch (e) {}
 }
 
 function getOfflineStaff() {
-  let staff = JSON.parse(localStorage.getItem('odd_admin_staff') || 'null');
-  if (!staff || !staff.length) {
-    staff = [...DEFAULT_STAFF];
-    localStorage.setItem('odd_admin_staff', JSON.stringify(staff));
+  try {
+    const staff = JSON.parse(localStorage.getItem('odd_admin_staff') || '[]');
+    return Array.isArray(staff) ? staff : [];
+  } catch (e) {
+    return [];
   }
-  return staff;
 }
 
 function saveOfflineStaff(staff) {
-  localStorage.setItem('odd_admin_staff', JSON.stringify(staff));
+  try {
+    localStorage.setItem('odd_admin_staff', JSON.stringify(staff || []));
+  } catch (e) {}
 }
 
 function getOfflineBanner() {
-  let banner = JSON.parse(localStorage.getItem('odd_admin_banner') || 'null');
-  if (!banner) {
-    banner = { ...DEFAULT_BANNER };
-    localStorage.setItem('odd_admin_banner', JSON.stringify(banner));
+  try {
+    const banner = JSON.parse(localStorage.getItem('odd_admin_banner') || 'null');
+    return banner || { active: false, text: '', code: '' };
+  } catch (e) {
+    return { active: false, text: '', code: '' };
   }
-  return banner;
 }
 
 function saveOfflineBanner(banner) {
-  localStorage.setItem('odd_admin_banner', JSON.stringify(banner));
+  try {
+    localStorage.setItem('odd_admin_banner', JSON.stringify(banner || {}));
+  } catch (e) {}
 }
 
 function getOfflineScans() {
-  return JSON.parse(localStorage.getItem('odd_scans') || '[]');
+  try {
+    return JSON.parse(localStorage.getItem('odd_scans') || '[]');
+  } catch (e) {
+    return [];
+  }
 }
 
 function saveOfflineScans(scans) {
-  localStorage.setItem('odd_scans', JSON.stringify(scans));
+  try {
+    localStorage.setItem('odd_scans', JSON.stringify(scans || []));
+  } catch (e) {}
 }
 
 /* ==========================================================================
@@ -623,14 +532,10 @@ async function loadTab(tab) {
   }
   if (tab === 'barcodes') {
     await loadInventory();
-    const preview = document.getElementById('barcode-sheet-preview');
-    if (preview && !preview.querySelector('.barcode-sticker')) {
-      await generateBarcodeSheet();
-    }
   }
   if (tab === 'shipping') {
     loadShippingSettings();
-    loadEnviaSettings();
+    loadShiprocketSettings();
   }
   if (tab === 'access-links') await loadStaff();
   if (tab === 'launch-offer') {
@@ -725,8 +630,10 @@ function renderPaymentDashboardFromOrders() {
 async function loadOrders() {
   const data = await adminApi('/api/orders');
   ordersData = data.orders || [];
+  saveOfflineOrders(ordersData);
   renderOrdersTable();
   renderPaymentDashboardFromOrders();
+  updateInventoryKpis();
 }
 
 function renderOrdersTable() {
@@ -768,7 +675,7 @@ function renderOrdersTable() {
 
       let shippingCell = '<span style="color:var(--admin-text-muted); font-size:0.75rem;">—</span>';
       const trackingNum = order.tracking_number || order.trackingNumber;
-      const courier = order.courier_name || order.courier || 'Envia';
+      const courier = order.courier_name || order.courier || 'Shiprocket';
       const trackUrl = order.tracking_url || order.trackingUrl || '#';
       const labelUrl = order.label_url || order.labelUrl;
 
@@ -777,16 +684,30 @@ function renderOrdersTable() {
           <div style="font-size:0.8rem; line-height:1.4;">
             <span class="badge-status info" style="display:inline-block; margin-bottom:4px; font-size:0.7rem; padding:2px 7px;">${escapeHtml(courier)}</span>
             <div style="font-family:monospace; font-size:0.75rem;"><a href="${escapeHtml(trackUrl)}" target="_blank" rel="noopener" style="color:var(--admin-accent); text-decoration:underline; font-weight:600;" title="Track package online">${escapeHtml(trackingNum)}</a></div>
-            ${labelUrl ? `<a href="${escapeHtml(labelUrl)}" target="_blank" rel="noopener" class="admin-btn admin-btn-xs admin-btn-print" style="margin-top:6px; display:inline-flex;" title="Open official shipping label PDF">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-              Print Label
-            </a>` : ''}
+            <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:6px;">
+              ${labelUrl ? `<a href="${escapeHtml(labelUrl)}" target="_blank" rel="noopener" class="admin-btn admin-btn-xs admin-btn-print" title="Open official shipping label PDF">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                Print Label
+              </a>` : ''}
+              <button type="button" class="admin-btn admin-btn-xs" onclick="printOrderInvoice('${escapeHtml(order.id)}')" style="display:inline-flex; align-items:center; gap:4px; padding:3px 7px; font-size:0.72rem;" title="Print customer tax invoice / bill">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                Print Bill
+              </button>
+            </div>
           </div>
         `;
       } else if (order.status !== 'Cancelled' && order.status !== 'Delivered') {
-        shippingCell = (hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
-          ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithEnvia('${escapeHtml(order.id)}', this)" style="font-size:0.72rem; padding:5px 10px; white-space:nowrap;">Ship with Envia</button>`
-          : '<span style="color:var(--admin-text-muted); font-size:0.75rem;">Ready to Ship</span>';
+        shippingCell = `
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            ${(hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
+              ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithShiprocket('${escapeHtml(order.id)}', this)" style="font-size:0.72rem; padding:5px 10px; white-space:nowrap;">Ship with Shiprocket</button>`
+              : '<span style="color:var(--admin-text-muted); font-size:0.75rem;">Ready to Ship</span>'}
+            <button type="button" class="admin-btn admin-btn-xs" onclick="printOrderInvoice('${escapeHtml(order.id)}')" style="display:inline-flex; align-items:center; gap:4px; padding:3px 7px; font-size:0.72rem;" title="Print customer tax invoice / bill">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              Print Bill
+            </button>
+          </div>
+        `;
       }
 
       const rawMethod = order.paymentMethod || order.method || order.gateway || (order.paymentStatus === 'Paid' ? 'Razorpay' : 'COD');
@@ -840,7 +761,7 @@ function renderOrdersTable() {
         : `<span class="badge-status ${order.status === 'Cancelled' ? 'danger' : 'info'}">${escapeHtml(order.status)}</span>`;
 
       const trackingNum = order.tracking_number || order.trackingNumber;
-      const courier = order.courier_name || order.courier || 'Envia';
+      const courier = order.courier_name || order.courier || 'Shiprocket';
       const trackUrl = order.tracking_url || order.trackingUrl || '#';
       const labelUrl = order.label_url || order.labelUrl;
 
@@ -850,17 +771,31 @@ function renderOrdersTable() {
           <div class="order-card-tracking-block">
             <span class="badge-status info" style="font-size:0.68rem; padding:2px 6px;">${escapeHtml(courier)}</span>
             <a href="${escapeHtml(trackUrl)}" target="_blank" rel="noopener" class="order-card-awb-link">${escapeHtml(trackingNum)}</a>
-            ${labelUrl ? `
-              <a href="${escapeHtml(labelUrl)}" target="_blank" rel="noopener" class="admin-btn admin-btn-xs admin-btn-print" title="Open official shipping label PDF">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                Print Label
-              </a>` : ''}
+            <div style="display:flex; gap:4px; margin-top:4px; flex-wrap:wrap;">
+              ${labelUrl ? `
+                <a href="${escapeHtml(labelUrl)}" target="_blank" rel="noopener" class="admin-btn admin-btn-xs admin-btn-print" title="Open official shipping label PDF">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                  Print Label
+                </a>` : ''}
+              <button type="button" class="admin-btn admin-btn-xs" onclick="printOrderInvoice('${escapeHtml(order.id)}')" style="display:inline-flex; align-items:center; gap:4px; padding:3px 7px; font-size:0.72rem;" title="Print customer tax invoice / bill">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                Print Bill
+              </button>
+            </div>
           </div>
         `;
       } else if (order.status !== 'Cancelled' && order.status !== 'Delivered') {
-        shippingAction = (hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
-          ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithEnvia('${escapeHtml(order.id)}', this)" style="white-space:nowrap;">Ship with Envia</button>`
-          : '<span style="color:var(--admin-text-muted); font-size:0.75rem;">Ready to Ship</span>';
+        shippingAction = `
+          <div style="display:flex; gap:4px; flex-wrap:wrap;">
+            ${(hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
+              ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithShiprocket('${escapeHtml(order.id)}', this)" style="white-space:nowrap;">Ship with Shiprocket</button>`
+              : '<span style="color:var(--admin-text-muted); font-size:0.75rem;">Ready to Ship</span>'}
+            <button type="button" class="admin-btn admin-btn-xs" onclick="printOrderInvoice('${escapeHtml(order.id)}')" style="display:inline-flex; align-items:center; gap:4px; padding:3px 7px; font-size:0.72rem;" title="Print customer tax invoice / bill">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              Print Bill
+            </button>
+          </div>
+        `;
       }
 
       const rawMethod = order.paymentMethod || order.method || order.gateway || (order.paymentStatus === 'Paid' ? 'Razorpay' : 'COD');
@@ -941,8 +876,15 @@ function renderOrdersTable() {
    Tab 3: Fragrance Inventory Management
    ========================================================================== */
 async function loadInventory() {
-  const data = await adminApi('/api/inventory');
+  const [data, ordData] = await Promise.all([
+    adminApi('/api/inventory'),
+    adminApi('/api/orders').catch(() => ({ orders: [] }))
+  ]);
   inventoryData = data.inventory || [];
+  if (Array.isArray(ordData?.orders)) {
+    ordersData = ordData.orders;
+    saveOfflineOrders(ordersData);
+  }
 
   // Sync offline storage cache with live inventory
   const cacheObj = {};
@@ -987,7 +929,7 @@ function updateInventoryKpis() {
   const totalUnits = inventoryData.reduce((sum, it) => sum + (Number(it.stock) || 0), 0);
   const totalValuation = inventoryData.reduce((sum, it) => sum + ((Number(it.stock) || 0) * (Number(it.price) || 899)), 0);
 
-  const orders = getOfflineOrders();
+  const orders = Array.isArray(ordersData) ? ordersData : [];
   const activeOrders = orders.filter(o => ['Confirmed', 'Processing', 'Packed'].includes(o.status));
   const fulfilledOrders = orders.filter(o => ['Dispatched', 'Delivered'].includes(o.status));
 
@@ -1447,7 +1389,7 @@ function quickScanSimulate(code) {
 }
 
 function quickScanLatestOrder() {
-  const orders = getOfflineOrders();
+  const orders = Array.isArray(ordersData) && ordersData.length ? ordersData : getOfflineOrders();
   if (!orders.length) return showAdminToast('No orders found to test dispatch scan.', true);
   const targetOrder = orders.find(o => o.status !== 'Dispatched' && o.status !== 'Delivered') || orders[0];
   quickScanSimulate(targetOrder.id);
@@ -2055,17 +1997,19 @@ async function saveShippingSettings(event) {
 }
 
 /* ==========================================================================
-   Tab 7B: Envia.com Multi-Carrier Shipping & AWB Automation
+   Tab 7B: Shiprocket Multi-Carrier Shipping & AWB Automation
    ========================================================================== */
-function getOfflineEnvia() {
+function getOfflineShiprocket() {
   try {
-    const raw = localStorage.getItem('odd_admin_envia');
+    const raw = localStorage.getItem('odd_admin_shiprocket');
     if (raw) return JSON.parse(raw);
   } catch (e) {}
   return {
-    apiKey: '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236',
-    env: 'live',
-    carrier: 'all',
+    email: 'oddperfumesocial@gmail.com',
+    password: '',
+    pickupLocation: 'Primary',
+    carrier: 'automatic',
+    autoDispatch: false,
     origin: {
       name: 'ODD Perfume Fulfillment',
       phone: '+919876543210',
@@ -2078,16 +2022,16 @@ function getOfflineEnvia() {
   };
 }
 
-function saveOfflineEnvia(cfg) {
+function saveOfflineShiprocket(cfg) {
   try {
-    localStorage.setItem('odd_admin_envia', JSON.stringify(cfg));
-    localStorage.setItem('odd_envia_settings', JSON.stringify(cfg));
+    localStorage.setItem('odd_admin_shiprocket', JSON.stringify(cfg));
+    localStorage.setItem('odd_shiprocket_settings', JSON.stringify(cfg));
   } catch (e) {}
 }
 
-function toggleEnviaKeyVisibility() {
-  const input = document.getElementById('envia-api-key');
-  const btn = document.getElementById('btn-toggle-envia-key');
+function toggleShiprocketKeyVisibility() {
+  const input = document.getElementById('shiprocket-password');
+  const btn = document.getElementById('btn-toggle-shiprocket-key');
   if (!input || !btn) return;
   if (input.type === 'password') {
     input.type = 'text';
@@ -2098,24 +2042,26 @@ function toggleEnviaKeyVisibility() {
   }
 }
 
-async function loadEnviaSettings() {
-  const keyInput = document.getElementById('envia-api-key');
-  const envSelect = document.getElementById('envia-env');
-  const carrierSelect = document.getElementById('envia-carrier');
-  const origName = document.getElementById('envia-origin-name');
-  const origPhone = document.getElementById('envia-origin-phone');
-  const origStreet = document.getElementById('envia-origin-street');
-  const origCity = document.getElementById('envia-origin-city');
-  const origState = document.getElementById('envia-origin-state');
-  const origPostal = document.getElementById('envia-origin-postal');
-  const badge = document.getElementById('envia-status-badge');
+async function loadShiprocketSettings() {
+  const emailInput = document.getElementById('shiprocket-email');
+  const passInput = document.getElementById('shiprocket-password');
+  const pickupInput = document.getElementById('shiprocket-pickup-location');
+  const carrierSelect = document.getElementById('shiprocket-carrier');
+  const origName = document.getElementById('shiprocket-origin-name');
+  const origPhone = document.getElementById('shiprocket-origin-phone');
+  const origStreet = document.getElementById('shiprocket-origin-street');
+  const origCity = document.getElementById('shiprocket-origin-city');
+  const origState = document.getElementById('shiprocket-origin-state');
+  const origPostal = document.getElementById('shiprocket-origin-postal');
+  const badge = document.getElementById('shiprocket-status-badge');
 
-  const applyEnviaFields = (data) => {
+  const applyShiprocketFields = (data) => {
     if (!data || typeof data !== 'object') return;
-    if (keyInput) keyInput.value = data.apiKey || '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236';
-    if (envSelect) envSelect.value = data.env || 'live';
-    if (carrierSelect) carrierSelect.value = data.carrier || 'all';
-    const autoDispatchEl = document.getElementById('envia-auto-dispatch');
+    if (emailInput && data.email) emailInput.value = data.email;
+    if (passInput && data.password) passInput.value = data.password;
+    if (pickupInput && data.pickupLocation) pickupInput.value = data.pickupLocation;
+    if (carrierSelect && data.carrier) carrierSelect.value = data.carrier;
+    const autoDispatchEl = document.getElementById('shiprocket-auto-dispatch');
     if (autoDispatchEl) autoDispatchEl.checked = data.autoDispatch === true;
     if (data.origin) {
       if (origName && data.origin.name) origName.value = data.origin.name;
@@ -2132,15 +2078,15 @@ async function loadEnviaSettings() {
   };
 
   // 1. Immediately apply cached/offline settings so fields never remain blank
-  const local = getOfflineEnvia();
-  applyEnviaFields(local);
+  const local = getOfflineShiprocket();
+  applyShiprocketFields(local);
 
   // 2. Fetch authoritative configuration from server if connected
   try {
-    const data = await adminApi('/api/settings/envia');
+    const data = await adminApi('/api/settings/shiprocket');
     if (data && typeof data === 'object' && Object.keys(data).length > 0) {
-      applyEnviaFields(data);
-      saveOfflineEnvia(data);
+      applyShiprocketFields(data);
+      saveOfflineShiprocket(data);
     }
   } catch (e) {
     if (badge) {
@@ -2150,43 +2096,44 @@ async function loadEnviaSettings() {
   }
 }
 
-function handleSaveEnviaSettings(event) {
+function handleSaveShiprocketSettings(event) {
   if (event) {
     event.preventDefault();
     event.stopPropagation();
   }
-  const apiKey = document.getElementById('envia-api-key')?.value.trim() || '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236';
-  const env = document.getElementById('envia-env')?.value || 'live';
-  const carrier = document.getElementById('envia-carrier')?.value || 'all';
-  const autoDispatch = document.getElementById('envia-auto-dispatch')?.checked ?? false;
+  const email = document.getElementById('shiprocket-email')?.value.trim() || 'oddperfumesocial@gmail.com';
+  const password = document.getElementById('shiprocket-password')?.value.trim() || '';
+  const pickupLocation = document.getElementById('shiprocket-pickup-location')?.value.trim() || 'Primary';
+  const carrier = document.getElementById('shiprocket-carrier')?.value || 'automatic';
+  const autoDispatch = document.getElementById('shiprocket-auto-dispatch')?.checked ?? false;
   const origin = {
-    name: document.getElementById('envia-origin-name')?.value.trim() || 'ODD Perfume Fulfillment',
-    phone: document.getElementById('envia-origin-phone')?.value.trim() || '+919876543210',
-    street: document.getElementById('envia-origin-street')?.value.trim() || 'Plot 42, Perfume Studio, Industrial Area',
-    city: document.getElementById('envia-origin-city')?.value.trim() || 'Mumbai',
-    state: document.getElementById('envia-origin-state')?.value.trim().toUpperCase() || 'MH',
-    postalCode: document.getElementById('envia-origin-postal')?.value.trim() || '400001',
+    name: document.getElementById('shiprocket-origin-name')?.value.trim() || 'ODD Perfume Fulfillment',
+    phone: document.getElementById('shiprocket-origin-phone')?.value.trim() || '+919876543210',
+    street: document.getElementById('shiprocket-origin-street')?.value.trim() || 'Plot 42, Perfume Studio, Industrial Area',
+    city: document.getElementById('shiprocket-origin-city')?.value.trim() || 'Mumbai',
+    state: document.getElementById('shiprocket-origin-state')?.value.trim().toUpperCase() || 'MH',
+    postalCode: document.getElementById('shiprocket-origin-postal')?.value.trim() || '400001',
     country: 'IN'
   };
 
-  const cfg = { apiKey, env, carrier, origin, autoDispatch };
-  saveOfflineEnvia(cfg);
+  const cfg = { email, password, pickupLocation, carrier, origin, autoDispatch };
+  saveOfflineShiprocket(cfg);
 
-  const badge = document.getElementById('envia-status-badge');
+  const badge = document.getElementById('shiprocket-status-badge');
   if (badge) {
     badge.textContent = 'Active (Saved)';
     badge.className = 'badge-status info';
   }
 
-  const msg = document.getElementById('envia-saved-msg');
+  const msg = document.getElementById('shiprocket-saved-msg');
   if (msg) {
     msg.style.display = 'inline';
     setTimeout(() => { msg.style.display = 'none'; }, 3000);
   }
 
-  showAdminToast('Envia shipping configuration saved successfully.');
+  showAdminToast('Shiprocket shipping configuration saved successfully.');
 
-  adminApi('/api/settings/envia', {
+  adminApi('/api/settings/shiprocket', {
     method: 'PUT',
     body: cfg
   }).catch(err => {
@@ -2195,46 +2142,45 @@ function handleSaveEnviaSettings(event) {
 
   return false;
 }
-function saveEnviaSettings(event) { return handleSaveEnviaSettings(event); }
+function saveShiprocketSettings(event) { return handleSaveShiprocketSettings(event); }
 
-async function handleTestEnviaConnection() {
-  const resultDiv = document.getElementById('envia-test-result');
-  const badge = document.getElementById('envia-status-badge');
-  const apiKey = document.getElementById('envia-api-key')?.value.trim() || '';
-  const env = document.getElementById('envia-env')?.value || 'live';
+async function handleTestShiprocketConnection() {
+  const resultDiv = document.getElementById('shiprocket-test-result');
+  const badge = document.getElementById('shiprocket-status-badge');
+  const email = document.getElementById('shiprocket-email')?.value.trim() || '';
+  const password = document.getElementById('shiprocket-password')?.value.trim() || '';
 
   if (resultDiv) {
     resultDiv.style.display = 'block';
     resultDiv.style.background = '#1E232D';
     resultDiv.style.color = '#F3F4F6';
     resultDiv.style.border = '1px solid var(--admin-border)';
-    resultDiv.innerHTML = 'Connecting to Envia.com API…';
+    resultDiv.innerHTML = 'Connecting to Shiprocket API v2…';
   }
 
   try {
-    const res = await adminApi('/api/shipping/envia/test', {
+    const res = await adminApi('/api/shipping/shiprocket/test', {
       method: 'POST',
-      body: { apiKey, env }
+      body: { email, password }
     });
 
     if (res.success) {
       if (badge) {
-        badge.textContent = `Connected (${res.count} Couriers)`;
+        badge.textContent = 'Connected (API Verified)';
         badge.className = 'badge-status info';
       }
       if (resultDiv) {
-        const names = (res.carriers || []).map(c => `<span style="display:inline-block; background:#0E1015; border:1px solid #374151; padding:3px 8px; border-radius:4px; margin:2px 4px 2px 0; font-size:0.75rem;">${escapeHtml(c.name)}</span>`).join('');
         resultDiv.style.background = 'rgba(16, 185, 129, 0.1)';
         resultDiv.style.color = '#10B981';
         resultDiv.style.border = '1px solid rgba(16, 185, 129, 0.3)';
         resultDiv.innerHTML = `
           <strong>Connection Active!</strong> ${escapeHtml(res.message)}
-          <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">
-            ${names}
+          <div style="margin-top:6px; font-size:0.8rem; color:#9CA3AF;">
+            Account: <strong>${escapeHtml(res.account?.email || email)}</strong> ${res.account?.name ? '(' + escapeHtml(res.account.name) + ')' : ''}
           </div>
         `;
       }
-      showAdminToast(`Envia connected! ${res.count} couriers verified.`);
+      showAdminToast('Shiprocket API connected and verified successfully!');
     } else {
       throw new Error(res.error || 'Authentication failed');
     }
@@ -2243,56 +2189,19 @@ async function handleTestEnviaConnection() {
       badge.textContent = 'Disconnected';
       badge.className = 'badge-status danger';
     }
-    const isSandboxError = env === 'test' && (err.message || '').toLowerCase().includes('token is invalid');
     if (resultDiv) {
       resultDiv.style.background = 'rgba(239, 68, 68, 0.1)';
       resultDiv.style.color = '#EF4444';
       resultDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-      if (isSandboxError) {
-        resultDiv.innerHTML = `
-          <strong>Notice:</strong> Your API token is a <strong>Live Production</strong> key. Envia Sandbox rejects live keys.<br>
-          <div style="margin-top:8px;">
-            <button type="button" class="admin-btn admin-btn-sm admin-btn-primary" onclick="switchToLiveAndTest()">Switch to Live Production &amp; Test Now</button>
-          </div>
-        `;
-      } else {
-        resultDiv.innerHTML = `<strong>Connection Failed:</strong> ${escapeHtml(err.message)}`;
-      }
+      resultDiv.innerHTML = `<strong>Connection Failed:</strong> ${escapeHtml(err.message)}`;
     }
-    showAdminToast(isSandboxError ? 'Your token is for Live Production. Switch API Environment to Live.' : err.message, true);
+    showAdminToast(err.message, true);
   }
 }
-function testEnviaConnection() { return handleTestEnviaConnection(); }
+function testShiprocketConnection() { return handleTestShiprocketConnection(); }
 
-function handleSwitchToLiveAndTest() {
-  const envSelect = document.getElementById('envia-env');
-  if (envSelect) envSelect.value = 'live';
-  handleTestEnviaConnection();
-}
-function switchToLiveAndTest() { return handleSwitchToLiveAndTest(); }
-
-async function handleRegisterEnviaWebhook() {
-  const btn = document.getElementById('btn-register-webhook');
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = 'Registering…';
-  }
-  try {
-    const res = await adminApi('/api/shipping/envia/register-webhook', { method: 'POST' });
-    showAdminToast(res.message || 'Webhook registered with Envia!');
-  } catch (err) {
-    if (!err.toastShown) showAdminToast(`Webhook registration error: ${err.message}`, true);
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = 'Sync Webhook with Envia';
-    }
-  }
-}
-function registerEnviaWebhook() { return handleRegisterEnviaWebhook(); }
-
-async function handleShipWithEnvia(orderId, btn) {
-  if (!confirm(`Generate official Envia courier shipping label & AWB for order ${orderId}?`)) return;
+async function handleShipWithShiprocket(orderId, btn) {
+  if (!confirm(`Generate official Shiprocket courier shipping label & AWB for order ${orderId}?`)) return;
 
   if (btn) {
     btn.disabled = true;
@@ -2300,16 +2209,16 @@ async function handleShipWithEnvia(orderId, btn) {
   }
 
   try {
-    const res = await adminApi('/api/shipping/envia/create-label', {
+    const res = await adminApi('/api/shipping/shiprocket/create-label', {
       method: 'POST',
       body: { orderId }
     });
 
     if (res.success) {
-      const courier = res.carrier || res.courierName || 'courier';
+      const courier = res.carrier || res.courier_name || 'Shiprocket Partner';
       showAdminToast(res.message || `Shipped via ${courier}! AWB: ${res.trackingNumber}`);
-      if (res.labelUrl) {
-        window.open(res.labelUrl, '_blank');
+      if (res.labelUrl || res.label_url) {
+        window.open(res.labelUrl || res.label_url, '_blank');
       }
       await loadOrders();
     } else {
@@ -2321,11 +2230,11 @@ async function handleShipWithEnvia(orderId, btn) {
     }
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Ship with Envia';
+      btn.textContent = 'Ship with Shiprocket';
     }
   }
 }
-function shipWithEnvia(orderId, btn) { return handleShipWithEnvia(orderId, btn); }
+function shipWithShiprocket(orderId, btn) { return handleShipWithShiprocket(orderId, btn); }
 
 /* ==========================================================================
    Tab 8: Customer Coupon Usages Log
@@ -2379,8 +2288,14 @@ async function loadRazorpaySettings() {
 
     if (enCheck) enCheck.checked = cfg.enabled !== false;
     if (envSelect) envSelect.value = cfg.env || 'live';
-    if (keyInput) keyInput.value = cfg.keyId || 'rzp_live_Ti8AffHarb3tai';
-    if (secretInput && cfg.keySecret) secretInput.value = cfg.keySecret;
+    if (keyInput && cfg.keyId) keyInput.value = cfg.keyId;
+    if (secretInput) {
+      if (cfg.keySecret && cfg.keySecret !== '••••••••••••') {
+        secretInput.value = cfg.keySecret;
+      } else if (cfg.keySecret) {
+        secretInput.placeholder = '••••••••••••••••';
+      }
+    }
     if (brandInput) brandInput.value = cfg.brandName || 'ODD Perfume';
     if (colorInput) colorInput.value = cfg.themeColor || '#E86B32';
     if (simCheck) simCheck.checked = cfg.simulate === true;
@@ -2396,15 +2311,18 @@ async function loadRazorpaySettings() {
 
 async function saveRazorpaySettings(event) {
   if (event) event.preventDefault();
+  const rawSecret = document.getElementById('rzp-key-secret')?.value?.trim() || '';
   const cfg = {
     enabled: document.getElementById('rzp-enabled-check')?.checked ?? true,
     env: document.getElementById('rzp-env-select')?.value || 'live',
-    keyId: document.getElementById('rzp-key-id')?.value?.trim() || 'rzp_live_Ti8AffHarb3tai',
-    keySecret: document.getElementById('rzp-key-secret')?.value?.trim() || '',
+    keyId: document.getElementById('rzp-key-id')?.value?.trim() || '',
     brandName: document.getElementById('rzp-brand-name')?.value?.trim() || 'ODD Perfume',
     themeColor: document.getElementById('rzp-theme-color')?.value?.trim() || '#E86B32',
     simulate: document.getElementById('rzp-simulate-check')?.checked ?? false
   };
+  if (rawSecret && !rawSecret.includes('••••')) {
+    cfg.keySecret = rawSecret;
+  }
 
   try {
     await adminApi('/api/settings/razorpay', { method: 'PUT', body: cfg });
@@ -2438,13 +2356,220 @@ window.toggleSecretVisibility = function() {
   }
 };
 
+function handlePrintOrderInvoice(orderId) {
+  const order = ordersData.find(o => o.id === orderId) || { id: orderId };
+  const items = Array.isArray(order.items) && order.items.length ? order.items : [
+    { name: 'ODD Fragrance', sku: 'ODD-PARFUM', qty: 1, price: order.amount || 899 }
+  ];
+  const customerName = order.customer || 'Valued Customer';
+  const customerPhone = order.phone || '';
+  const customerEmail = order.email || '';
+  const customerAddress = order.address || 'Standard Delivery Address';
+  const orderDate = order.date ? formatDate(order.date) : new Date().toLocaleDateString('en-IN');
+  const subtotal = order.subtotal || order.amount || 899;
+  const discount = order.discount || 0;
+  const coupon = order.coupon || '';
+  const shipping = order.shipping || 0;
+  const total = order.amount || 899;
+
+  const rawMethod = String(order.paymentMethod || order.method || order.gateway || '').toLowerCase();
+  const isCod = rawMethod.includes('cod') || rawMethod.includes('cash');
+  const isPaid = String(order.paymentStatus).toLowerCase() === 'paid' || (!isCod && rawMethod.includes('razorpay'));
+  const courier = order.courier_name || order.courier || 'Shiprocket Multi-Carrier';
+  const trackingNumber = order.tracking_number || order.trackingNumber || 'Pending AWB';
+
+  const rowsHtml = items.map((it, idx) => {
+    const qty = it.qty || it.quantity || 1;
+    const price = it.price || 899;
+    const lineTotal = price * qty;
+    return `
+      <tr>
+        <td style="padding:10px 12px; border-bottom:1px solid #e5e7eb; font-size:13px; text-align:center;">${idx + 1}</td>
+        <td style="padding:10px 12px; border-bottom:1px solid #e5e7eb; font-size:13px;">
+          <strong>${escapeHtml(it.name)}</strong>
+          <div style="font-size:11px; color:#6b7280; font-family:monospace;">SKU: ${escapeHtml(it.sku || 'ODD-BOTTLE')}</div>
+        </td>
+        <td style="padding:10px 12px; border-bottom:1px solid #e5e7eb; font-size:13px; text-align:center;">${qty}</td>
+        <td style="padding:10px 12px; border-bottom:1px solid #e5e7eb; font-size:13px; text-align:right;">₹${price.toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px; border-bottom:1px solid #e5e7eb; font-size:13px; text-align:center; color:#6b7280;">18% (Incl.)</td>
+        <td style="padding:10px 12px; border-bottom:1px solid #e5e7eb; font-size:13px; text-align:right; font-weight:600;">₹${lineTotal.toLocaleString('en-IN')}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const printWindow = window.open('', '_blank', 'width=840,height=960');
+  if (!printWindow) {
+    alert('Please allow popups to view and print the tax invoice.');
+    return;
+  }
+
+  const invoiceHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tax Invoice — ${escapeHtml(order.id)}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #111827; background: #fff; padding: 40px; font-size: 13px; line-height: 1.5; }
+    .invoice-card { max-width: 760px; margin: 0 auto; border: 1px solid #e5e7eb; padding: 32px; border-radius: 8px; }
+    .header-row { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 24px; border-bottom: 2px solid #111827; margin-bottom: 24px; }
+    .brand-title { font-size: 28px; font-weight: 900; letter-spacing: -0.03em; color: #111827; }
+    .brand-dot { color: #E86B32; }
+    .brand-subtitle { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-top: 4px; }
+    .invoice-badge-box { text-align: right; }
+    .invoice-title { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #111827; }
+    .invoice-ref { font-family: monospace; font-size: 14px; font-weight: 700; color: #E86B32; margin-top: 4px; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px; }
+    .meta-col h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 8px; }
+    .meta-box { background: #f9fafb; border: 1px solid #f3f4f6; border-radius: 6px; padding: 12px 14px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    th { background: #f9fafb; border-bottom: 2px solid #e5e7eb; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #4b5563; padding: 10px 12px; font-weight: 700; }
+    .totals-wrapper { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 24px; }
+    .payment-notice-box { flex: 1; border: 1px solid ${isCod ? '#f59e0b' : '#10b981'}; background: ${isCod ? '#fffbeb' : '#ecfdf5'}; border-radius: 6px; padding: 14px; }
+    .payment-notice-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: ${isCod ? '#b45309' : '#047857'}; margin-bottom: 6px; }
+    .payment-notice-desc { font-size: 12px; color: #374151; }
+    .totals-table { width: 280px; }
+    .totals-table td { padding: 6px 0; font-size: 13px; }
+    .totals-table tr.grand-total td { font-size: 16px; font-weight: 800; border-top: 2px solid #111827; padding-top: 8px; color: #111827; }
+    .shipping-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
+    .footer-note { font-size: 11px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 16px; }
+    @media print {
+      body { padding: 0; }
+      .invoice-card { border: none; padding: 0; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="max-width:760px; margin:0 auto 16px; display:flex; justify-content:space-between; align-items:center;">
+    <button onclick="window.print()" style="background:#111827; color:#fff; border:none; padding:10px 20px; font-weight:700; border-radius:6px; cursor:pointer; font-size:13px;">Print Invoice / Save as PDF</button>
+    <span style="font-size:12px; color:#6b7280;">Press Print to generate physical copy or PDF</span>
+  </div>
+  <div class="invoice-card">
+    <div class="header-row">
+      <div>
+        <div class="brand-title">ODD<span class="brand-dot">.</span></div>
+        <div class="brand-subtitle">Haute Parfumerie &middot; Mumbai, India</div>
+        <div style="font-size:11px; color:#6b7280; margin-top:4px;">GSTIN: 27AABCO0000A1Z5 &middot; Support: hello@oddperfume.com</div>
+      </div>
+      <div class="invoice-badge-box">
+        <div class="invoice-title">Tax Invoice</div>
+        <div class="invoice-ref">#INV-${escapeHtml(order.id)}</div>
+        <div style="font-size:12px; color:#6b7280; margin-top:4px;">Order Date: ${escapeHtml(orderDate)}</div>
+      </div>
+    </div>
+
+    <div class="meta-grid">
+      <div class="meta-col">
+        <h4>Billed &amp; Shipped To</h4>
+        <div class="meta-box">
+          <strong style="font-size:14px; color:#111827; display:block;">${escapeHtml(customerName)}</strong>
+          <div style="margin-top:4px; color:#374151;">${escapeHtml(customerAddress)}</div>
+          <div style="margin-top:6px; font-size:12px; color:#6b7280;">Phone: ${escapeHtml(customerPhone || '—')}</div>
+          <div style="font-size:12px; color:#6b7280;">Email: ${escapeHtml(customerEmail || '—')}</div>
+        </div>
+      </div>
+      <div class="meta-col">
+        <h4>Order &amp; Dispatch Overview</h4>
+        <div class="meta-box">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span style="color:#6b7280;">Order ID:</span>
+            <strong>${escapeHtml(order.id)}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span style="color:#6b7280;">Payment Method:</span>
+            <strong>${isCod ? 'Cash on Delivery (COD)' : 'Razorpay Online'}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span style="color:#6b7280;">Payment Status:</span>
+            <strong style="color:${isPaid ? '#059669' : '#d97706'};">${isPaid ? 'Paid in Full' : (isCod ? 'Collect on Delivery' : 'Pending')}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:#6b7280;">Fulfillment:</span>
+            <span>Dispatched from Mumbai Hub</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px; text-align:center;">#</th>
+          <th style="text-align:left;">Item / Fragrance</th>
+          <th style="width:60px; text-align:center;">Qty</th>
+          <th style="width:100px; text-align:right;">Unit Price</th>
+          <th style="width:90px; text-align:center;">GST</th>
+          <th style="width:100px; text-align:right;">Net Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+
+    <div class="totals-wrapper">
+      <div class="payment-notice-box">
+        <div class="payment-notice-title">${isCod ? 'Cash on Delivery Collection (COD)' : 'Online Payment Verified (Razorpay)'}</div>
+        <div class="payment-notice-desc">
+          ${isCod
+            ? `<strong>Collect ₹${total.toLocaleString('en-IN')}</strong> in cash upon delivery. Please hand over package only after receiving full cash payment.`
+            : `Payment received in full via <strong>Razorpay Live Secured Gateway</strong>. Reference: <code>${escapeHtml(order.razorpay_payment_id || order.paymentId || 'pay_verified')}</code>. No cash to be collected.`
+          }
+        </div>
+      </div>
+      <table class="totals-table">
+        <tr>
+          <td style="color:#6b7280;">Items Subtotal</td>
+          <td style="text-align:right; font-weight:600;">₹${subtotal.toLocaleString('en-IN')}</td>
+        </tr>
+        ${discount > 0 ? `
+        <tr>
+          <td style="color:#E86B32;">Coupon Discount ${coupon ? '(' + escapeHtml(coupon) + ')' : ''}</td>
+          <td style="text-align:right; font-weight:600; color:#E86B32;">-₹${discount.toLocaleString('en-IN')}</td>
+        </tr>` : ''}
+        <tr>
+          <td style="color:#6b7280;">Shipping &amp; Handling</td>
+          <td style="text-align:right; font-weight:600;">${shipping > 0 ? '₹' + shipping.toLocaleString('en-IN') : 'FREE'}</td>
+        </tr>
+        <tr class="grand-total">
+          <td>Total Amount</td>
+          <td style="text-align:right;">₹${total.toLocaleString('en-IN')}</td>
+        </tr>
+      </table>
+    </div>
+
+    ${trackingNumber && trackingNumber !== 'Pending AWB' ? `
+    <div class="shipping-box">
+      <div>
+        <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#6b7280; display:block;">Logistics Partner</span>
+        <strong style="font-size:14px; color:#111827;">${escapeHtml(courier)}</strong>
+      </div>
+      <div style="text-align:right;">
+        <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#6b7280; display:block;">AWB Tracking Reference</span>
+        <span style="font-family:monospace; font-weight:700; font-size:14px; color:#111827;">${escapeHtml(trackingNumber)}</span>
+      </div>
+    </div>` : ''}
+
+    <div class="footer-note">
+      Thank you for your order with ODD Perfume. For returns or customer care, visit <a href="https://test.oddperfume.com" style="color:#111827; text-decoration:none;">oddperfume.com</a> or write to hello@oddperfume.com.
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  printWindow.document.open();
+  printWindow.document.write(invoiceHtml);
+  printWindow.document.close();
+}
+
 // Immediate global exposure of utility & settings functions for HTML inline event handlers
-window.toggleEnviaKeyVisibility = toggleEnviaKeyVisibility;
-window.saveEnviaSettings = saveEnviaSettings;
-window.testEnviaConnection = testEnviaConnection;
-window.switchToLiveAndTest = switchToLiveAndTest;
-window.registerEnviaWebhook = registerEnviaWebhook;
-window.shipWithEnvia = shipWithEnvia;
+window.toggleShiprocketKeyVisibility = toggleShiprocketKeyVisibility;
+window.saveShiprocketSettings = saveShiprocketSettings;
+window.testShiprocketConnection = testShiprocketConnection;
+window.shipWithShiprocket = shipWithShiprocket;
 window.saveShippingSettings = saveShippingSettings;
 window.saveRazorpaySettings = saveRazorpaySettings;
 window.saveBannerSettings = saveBannerSettings;
@@ -2548,6 +2673,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (staffForm) staffForm.addEventListener('submit', createStaff);
 
     // 3. Tab Routing
+    try {
+      const stored = JSON.parse(localStorage.getItem('odd_orders') || '[]');
+      const cleaned = stored.filter(o => o.customer !== 'Rohit Sharma' && o.customer !== 'Priya Mehta' && o.customer !== 'Ananya Verma' && o.id !== 'ODD-739182' && o.id !== 'ODD-518294' && o.id !== 'ODD-429011');
+      if (cleaned.length !== stored.length) {
+        localStorage.setItem('odd_orders', JSON.stringify(cleaned));
+      }
+    } catch (e) {}
     initTabNavigation();
     const activeTab = document.querySelector('.admin-nav-item[data-tab].active')?.dataset.tab || 'payments';
     await loadTab(activeTab);
@@ -2575,12 +2707,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const shippingForm = document.getElementById('shipping-settings-form');
     shippingForm?.addEventListener('submit', saveShippingSettings);
 
-    const enviaForm = document.getElementById('envia-settings-form');
-    enviaForm?.addEventListener('submit', saveEnviaSettings);
-    document.getElementById('btn-toggle-envia-key')?.addEventListener('click', toggleEnviaKeyVisibility);
-    document.getElementById('btn-save-envia')?.addEventListener('click', saveEnviaSettings);
-    document.getElementById('btn-test-envia')?.addEventListener('click', testEnviaConnection);
-    document.getElementById('btn-register-webhook')?.addEventListener('click', registerEnviaWebhook);
+    const shiprocketForm = document.getElementById('shiprocket-settings-form');
+    shiprocketForm?.addEventListener('submit', saveShiprocketSettings);
+    document.getElementById('btn-toggle-shiprocket-key')?.addEventListener('click', toggleShiprocketKeyVisibility);
+    document.getElementById('btn-save-shiprocket')?.addEventListener('click', saveShiprocketSettings);
+    document.getElementById('btn-test-shiprocket')?.addEventListener('click', testShiprocketConnection);
 
     const razorpayForm = document.getElementById('razorpay-settings-form');
     razorpayForm?.addEventListener('submit', saveRazorpaySettings);

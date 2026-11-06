@@ -216,7 +216,8 @@ async function runTests() {
       body: {
         products: [{ sku: 'ODD-LC-003', qty: 3 }],
         lot: testLot,
-        mfg: '2026-10-14'
+        mfg: '2026-10-14',
+        startSerial: 1
       }
     });
     assert(barcodeBatch.status === 200, 'Barcode batch generation succeeds');
@@ -277,20 +278,20 @@ async function runTests() {
 
     // 11. Testing Hardened Security Controls
     console.log('\n[11] Testing Hardened Security Controls:');
-    const unauthLabel = await request('/api/shipping/envia/create-label', {
+    const unauthLabel = await request('/api/shipping/shiprocket/create-label', {
       method: 'POST',
       body: { orderId: 'ODD-00001' }
     });
-    assert(unauthLabel.status === 401, 'Unauthenticated Envia create-label rejected with HTTP 401');
+    assert(unauthLabel.status === 401, 'Unauthenticated Shiprocket create-label rejected with HTTP 401');
 
-    const unauthGetEnvia = await request('/api/settings/envia');
-    assert(unauthGetEnvia.status === 401, 'Unauthenticated GET /api/settings/envia rejected with HTTP 401');
+    const unauthGetShiprocket = await request('/api/settings/shiprocket');
+    assert(unauthGetShiprocket.status === 401, 'Unauthenticated GET /api/settings/shiprocket rejected with HTTP 401');
 
-    const unauthPostEnvia = await request('/api/settings/envia', {
+    const unauthPostShiprocket = await request('/api/settings/shiprocket', {
       method: 'POST',
-      body: { apiKey: 'hacked' }
+      body: { password: 'hacked' }
     });
-    assert(unauthPostEnvia.status === 401, 'Unauthenticated POST /api/settings/envia rejected with HTTP 401');
+    assert(unauthPostShiprocket.status === 401, 'Unauthenticated POST /api/settings/shiprocket rejected with HTTP 401');
 
     const unauthPostShipping = await request('/api/settings/shipping', {
       method: 'POST',

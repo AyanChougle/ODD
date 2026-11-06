@@ -289,10 +289,13 @@ function initDatabase() {
     INSERT OR IGNORE INTO settings (key_name, value_json) VALUES (?, ?)
   `);
   setSetting.run('shipping', JSON.stringify({ standardRate: 50, freeThreshold: 0, enabled: true }));
-  setSetting.run('envia', JSON.stringify({
+  setSetting.run('shiprocket', JSON.stringify({
     enabled: true,
-    env: 'live',
-    apiKey: process.env.ENVIA_API_KEY || '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236',
+    email: process.env.SHIPROCKET_EMAIL || 'oddperfumesocial@gmail.com',
+    password: process.env.SHIPROCKET_PASSWORD || 'Aoeo6$g4!7RYRLSLM0@V90MYX!fI*Gg!',
+    pickupLocation: process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary',
+    carrier: 'automatic',
+    autoDispatch: false,
     origin: {
       name: 'ODD Perfumes Warehouse',
       phone: '9876543210',
@@ -301,8 +304,7 @@ function initDatabase() {
       state: 'MH',
       country: 'IN',
       postalCode: '400001'
-    },
-    carrier: 'all'
+    }
   }));
   setSetting.run('banner', JSON.stringify({
     active: true,
@@ -996,11 +998,31 @@ const server = http.createServer(async (req, res) => {
 
           db.exec('COMMIT;');
 
-          // Optional Envia Auto-Dispatch
+          // Save confirmation email record to storage/emails
           try {
-            const enviaSetting = JSON.parse(db.prepare("SELECT value_json FROM settings WHERE key_name = 'envia'").get()?.value_json || '{}');
-            if (enviaSetting.autoDispatch) {
-              dispatchOrderWithEnvia(orderId).catch(() => {});
+            const emailsDir = path.join(__dirname, 'storage', 'emails');
+            if (!fs.existsSync(emailsDir)) fs.mkdirSync(emailsDir, { recursive: true });
+            const emailSummary = `
+              <!DOCTYPE html>
+              <html><body>
+              <h1>ODD Perfumes — Order Confirmation #${orderId}</h1>
+              <p>Customer: ${customer} (${email}, ${phone})</p>
+              <p>Delivery Address: ${address}</p>
+              <p>Subtotal: ₹${subtotal}</p>
+              <p>Discount: -₹${discountAmount} (${validCoupon || 'None'})</p>
+              <p>Shipping: ₹${shippingFee}</p>
+              <p>Total: ₹${totalAmount}</p>
+              <p>Payment: ${isOnline ? 'Online (Razorpay Live)' : 'Cash on Delivery (COD)'}</p>
+              </body></html>
+            `;
+            fs.writeFileSync(path.join(emailsDir, `${orderId}_confirmation.html`), emailSummary);
+          } catch (_) {}
+
+          // Optional Shiprocket Auto-Dispatch
+          try {
+            const srSetting = JSON.parse(db.prepare("SELECT value_json FROM settings WHERE key_name = 'shiprocket'").get()?.value_json || '{}');
+            if (srSetting.autoDispatch) {
+              dispatchOrderWithShiprocket(orderId).catch(() => {});
             }
           } catch (_) {}
 
@@ -1281,56 +1303,140 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
-      // --- 7B. Envia Multi-Carrier Shipping Integration ---
-      if (pathname === '/api/shipping/envia/test' && method === 'POST') {
+      // --- 7B. Shiprocket Multi-Carrier Shipping Integration ---
+      async function getShiprocketToken() {
+        try {
+          const row = db.prepare("SELECT value_json FROM settings WHERE key_name = 'shiprocket_token'").get();
+          if (row) {
+            const cached = JSON.parse(row.value_json || '{}');
+            if (cached.token && cached.expires_at && cached.expires_at > (Date.now() / 1000 + 3600)) {
+              return cached.token;
+            }
+          }
+        } catch (_) {}
+
+        const sRow = db.prepare("SELECT value_json FROM settings WHERE key_name = 'shiprocket'").get();
+        const cfg = sRow ? JSON.parse(sRow.value_json || '{}') : {};
+        const email = String(cfg.email || process.env.SHIPROCKET_EMAIL || '').trim();
+        const password = String(cfg.password || process.env.SHIPROCKET_PASSWORD || '').trim();
+
+        if (cfg.token) return cfg.token;
+        if (process.env.SHIPROCKET_TOKEN) return process.env.SHIPROCKET_TOKEN;
+        if (!email || !password) return null;
+
+        const https = require('node:https');
+        const payload = JSON.stringify({ email, password });
+
+        return new Promise((resolve) => {
+          const r = https.request({
+            hostname: 'apiv2.shiprocket.in',
+            path: '/v1/external/auth/login',
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(payload)
+            },
+            timeout: 12000
+          }, (resp) => {
+            let data = '';
+            resp.on('data', chunk => data += chunk);
+            resp.on('end', () => {
+              try {
+                const json = JSON.parse(data || '{}');
+                if (resp.statusCode === 200 && json.token) {
+                  const expiresAt = Math.floor(Date.now() / 1000) + (9 * 86400);
+                  db.prepare(`
+                    INSERT INTO settings (key_name, value_json, updated_at)
+                    VALUES ('shiprocket_token', ?, datetime('now'))
+                    ON CONFLICT(key_name) DO UPDATE SET value_json = excluded.value_json, updated_at = datetime('now')
+                  `).run(JSON.stringify({ token: json.token, expires_at: expiresAt }));
+                  resolve(json.token);
+                } else {
+                  resolve(null);
+                }
+              } catch (_) {
+                resolve(null);
+              }
+            });
+          });
+          r.on('error', () => resolve(null));
+          r.on('timeout', () => { r.destroy(); resolve(null); });
+          r.write(payload);
+          r.end();
+        });
+      }
+
+      if (pathname === '/api/shipping/shiprocket/test' && method === 'POST') {
         const body = await parseJsonBody(req);
-        const token = String(body.apiKey || process.env.ENVIA_API_KEY || '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236').trim();
-        const env = body.env === 'test' ? 'test' : 'live';
-        const host = env === 'test' ? 'queries.test.envia.com' : 'queries.envia.com';
+        let email = String(body.email || '').trim();
+        let password = String(body.password || '').trim();
+
+        if (!email || password.includes('••••')) {
+          const sRow = db.prepare("SELECT value_json FROM settings WHERE key_name = 'shiprocket'").get();
+          const cfg = sRow ? JSON.parse(sRow.value_json || '{}') : {};
+          if (!email) email = String(cfg.email || process.env.SHIPROCKET_EMAIL || '').trim();
+          if (!password || password.includes('••••')) password = String(cfg.password || process.env.SHIPROCKET_PASSWORD || '').trim();
+        }
+
+        if (!email || !password) {
+          return sendJson(res, 400, { success: false, error: 'Shiprocket email and password are required.' });
+        }
 
         try {
           const https = require('node:https');
-          const enviaRes = await new Promise((resolve, reject) => {
+          const payload = JSON.stringify({ email, password });
+          const authRes = await new Promise((resolve, reject) => {
             const r = https.request({
-              hostname: host,
-              path: '/carrier?country_code=IN',
-              method: 'GET',
+              hostname: 'apiv2.shiprocket.in',
+              path: '/v1/external/auth/login',
+              method: 'POST',
               headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload)
               },
-              timeout: 10000
+              timeout: 12000
             }, (resp) => {
               let data = '';
               resp.on('data', chunk => data += chunk);
               resp.on('end', () => resolve({ statusCode: resp.statusCode, body: data }));
             });
             r.on('error', reject);
-            r.on('timeout', () => { r.destroy(); reject(new Error('Envia API request timed out')); });
+            r.on('timeout', () => { r.destroy(); reject(new Error('Shiprocket API timed out')); });
+            r.write(payload);
             r.end();
           });
 
-          const json = JSON.parse(enviaRes.body || '{}');
-          if (enviaRes.statusCode === 200 && Array.isArray(json.data)) {
-            const carriers = json.data.map(c => ({ id: c.id, name: c.name, trackUrl: c.track_url || '' }));
+          const json = JSON.parse(authRes.body || '{}');
+          if (authRes.statusCode === 200 && json.token) {
+            const expiresAt = Math.floor(Date.now() / 1000) + (9 * 86400);
+            db.prepare(`
+              INSERT INTO settings (key_name, value_json, updated_at)
+              VALUES ('shiprocket_token', ?, datetime('now'))
+              ON CONFLICT(key_name) DO UPDATE SET value_json = excluded.value_json, updated_at = datetime('now')
+            `).run(JSON.stringify({ token: json.token, expires_at: expiresAt }));
+
             return sendJson(res, 200, {
               success: true,
-              count: carriers.length,
-              carriers,
-              message: `Envia.com connection active! ${carriers.length} couriers connected.`
+              message: 'Shiprocket connection verified! API authentication successful.',
+              account: {
+                id: json.id || null,
+                email: json.email || email,
+                name: `${json.first_name || ''} ${json.last_name || ''}`.trim()
+              }
             });
           } else {
-            return sendJson(res, 400, {
-              success: false,
-              error: json.message || 'Failed to authenticate with Envia. Please check your API token.'
-            });
+            let errMsg = json.message || 'Failed to authenticate with Shiprocket API.';
+            if (authRes.statusCode === 403 || errMsg.toLowerCase().includes('invalid')) {
+              errMsg = 'Shiprocket authentication failed (Invalid email or password). Please configure an API user in Shiprocket Dashboard -> Settings -> API -> Configure API and save the credentials.';
+            }
+            return sendJson(res, 400, { success: false, error: errMsg, httpCode: authRes.statusCode });
           }
         } catch (err) {
-          return sendJson(res, 502, { error: err.message || 'Error communicating with Envia API' });
+          return sendJson(res, 502, { error: err.message || 'Error communicating with Shiprocket API' });
         }
       }
 
-      async function dispatchOrderWithEnvia(orderId) {
+      async function dispatchOrderWithShiprocket(orderId) {
         const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
         if (!order) return { success: false, error: `Order ${orderId} not found.` };
 
@@ -1350,114 +1456,134 @@ const server = http.createServer(async (req, res) => {
           };
         }
 
-        const enviaSetting = JSON.parse(db.prepare("SELECT value_json FROM settings WHERE key_name = 'envia'").get()?.value_json || '{}');
-        const token = enviaSetting.apiKey || process.env.ENVIA_API_KEY || '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236';
-        const env = enviaSetting.env === 'test' ? 'test' : 'live';
-        const apiHost = env === 'test' ? 'api-test.envia.com' : 'api.envia.com';
-        const origin = enviaSetting.origin || {
-          name: 'ODD Perfumes Warehouse',
-          phone: '9876543210',
-          street: 'Industrial Area',
-          number: '10',
-          city: 'Mumbai',
-          state: 'MH',
-          country: 'IN',
-          postalCode: '400001'
-        };
+        const sRow = db.prepare("SELECT value_json FROM settings WHERE key_name = 'shiprocket'").get();
+        const srCfg = sRow ? JSON.parse(sRow.value_json || '{}') : {};
+        const pickupLocation = String(srCfg.pickupLocation || process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary').trim() || 'Primary';
 
-        const destAddress = String(order.shipping_address || '');
-        const pincodeMatch = destAddress.match(/\b\d{6}\b/);
-        const pincode = pincodeMatch ? pincodeMatch[0] : '400001';
+        const token = await getShiprocketToken();
+        if (!token) {
+          return {
+            success: false,
+            error: 'Shiprocket API token could not be obtained. Please verify Shiprocket email and password in Shipping Settings.'
+          };
+        }
 
-        let destCity = origin.city || 'Mumbai';
+        const destAddress = String(order.shipping_address || '').trim();
+        let pincode = '400001';
+        const pinMatch = destAddress.match(/\b\d{6}\b/);
+        if (pinMatch) pincode = pinMatch[0];
+
+        let destCity = 'Mumbai';
         const cityMatch = destAddress.match(/,\s*([^,-]+?)\s*-\s*\d{6}/);
         if (cityMatch) destCity = cityMatch[1].trim();
 
-        const pfx2 = parseInt(pincode.slice(0, 2), 10);
-        let destState = 'MH';
-        if (pfx2 === 11) destState = 'DL';
-        else if (pfx2 >= 12 && pfx2 <= 13) destState = 'HR';
-        else if (pfx2 >= 14 && pfx2 <= 16) destState = 'PB';
-        else if (pfx2 === 17) destState = 'HP';
-        else if (pfx2 >= 18 && pfx2 <= 19) destState = 'JK';
-        else if (pfx2 >= 20 && pfx2 <= 28) destState = 'UP';
-        else if (pfx2 >= 30 && pfx2 <= 34) destState = 'RJ';
-        else if (pfx2 >= 36 && pfx2 <= 39) destState = 'GJ';
-        else if (pfx2 >= 40 && pfx2 <= 44) destState = 'MH';
-        else if (pfx2 >= 45 && pfx2 <= 48) destState = 'MP';
-        else if (pfx2 >= 50 && pfx2 <= 53) destState = 'TG';
-        else if (pfx2 >= 56 && pfx2 <= 59) destState = 'KA';
-        else if (pfx2 >= 60 && pfx2 <= 64) destState = 'TN';
-        else if (pfx2 >= 67 && pfx2 <= 69) destState = 'KL';
-        else if (pfx2 >= 70 && pfx2 <= 74) destState = 'WB';
-        else if (pfx2 >= 80 && pfx2 <= 85) destState = 'BR';
+        const pfx2 = parseInt(pincode.substring(0, 2), 10);
+        let destState = 'Maharashtra';
+        if (pfx2 === 11) destState = 'Delhi';
+        else if (pfx2 >= 12 && pfx2 <= 13) destState = 'Haryana';
+        else if (pfx2 >= 14 && pfx2 <= 16) destState = 'Punjab';
+        else if (pfx2 === 17) destState = 'Himachal Pradesh';
+        else if (pfx2 >= 18 && pfx2 <= 19) destState = 'Jammu and Kashmir';
+        else if (pfx2 >= 20 && pfx2 <= 28) destState = 'Uttar Pradesh';
+        else if (pfx2 >= 30 && pfx2 <= 34) destState = 'Rajasthan';
+        else if (pfx2 >= 36 && pfx2 <= 39) destState = 'Gujarat';
+        else if (pfx2 >= 40 && pfx2 <= 44) destState = 'Maharashtra';
+        else if (pfx2 >= 45 && pfx2 <= 48) destState = 'Madhya Pradesh';
+        else if (pfx2 >= 50 && pfx2 <= 53) destState = 'Telangana';
+        else if (pfx2 >= 56 && pfx2 <= 59) destState = 'Karnataka';
+        else if (pfx2 >= 60 && pfx2 <= 64) destState = 'Tamil Nadu';
+        else if (pfx2 >= 67 && pfx2 <= 69) destState = 'Kerala';
+        else if (pfx2 >= 70 && pfx2 <= 74) destState = 'West Bengal';
+        else if (pfx2 >= 80 && pfx2 <= 85) destState = 'Bihar';
 
-        const chosenCarrier = enviaSetting.carrier && enviaSetting.carrier !== 'all' ? enviaSetting.carrier.toLowerCase() : 'delhivery';
+        const totalAmount = Number(order.total_amount) || 0;
+        const isCod = (order.payment_method || '').toLowerCase() === 'cod'
+          || (order.gateway || '').toLowerCase().includes('cash')
+          || (order.gateway || '').toLowerCase().includes('cod');
 
-        const payload = {
-          origin: {
-            name: origin.name || 'ODD Perfumes',
-            company: 'ODD Perfumes',
-            phone: (origin.phone || '9876543210').replace(/[^0-9]/g, ''),
-            street: origin.street || 'Main Street',
-            number: '1',
-            city: origin.city || 'Mumbai',
-            state: origin.state || 'MH',
-            country: 'IN',
-            postalCode: origin.postalCode || '400001'
-          },
-          destination: {
-            name: order.customer_name || 'Valued Customer',
-            phone: (order.customer_phone || '9876543210').replace(/[^0-9]/g, ''),
-            street: destAddress.slice(0, 100),
-            number: '1',
-            city: destCity,
-            state: destState,
-            country: 'IN',
-            postalCode: pincode
-          },
-          packages: [{
-            content: 'ODD Luxury Perfume Fragrance',
-            amount: 1,
-            type: 'box',
-            weight: 0.4,
-            weightUnit: 'KG',
-            lengthUnit: 'CM',
-            dimensions: { length: 15, width: 10, height: 8 },
-            declaredValue: Number(order.total_amount) || 899
-          }],
-          shipment: {
-            type: 1,
-            carrier: chosenCarrier,
-            service: 'express',
-            orderReference: orderId,
-            totalValue: Number(order.total_amount) || 899
-          },
-          orderData: {
-            orderNumber: orderId,
-            orderIdentifier: orderId,
-            total: Number(order.total_amount) || 899,
-            store: 'ODD Perfumes'
-          },
-          settings: {
-            currency: 'INR',
-            printFormat: 'PDF',
-            printSize: 'STOCK_4X6'
+        const customerName = String(order.customer_name || 'Valued Customer').trim();
+        const nameParts = customerName.split(' ');
+        const firstName = nameParts[0] || 'Customer';
+        const lastName = nameParts.slice(1).join(' ') || 'Customer';
+
+        const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(orderId);
+        const orderItems = [];
+
+        if (items && items.length > 0) {
+          for (const it of items) {
+            const name = it.product_name || 'ODD Perfume';
+            const sku = 'ODD-' + String(name).replace(/[^a-zA-Z0-9]/g, '').substring(0, 10).toUpperCase();
+            const units = Math.max(1, Number(it.quantity) || 1);
+            const sellingPrice = Number(it.price) || (totalAmount / units);
+            orderItems.push({
+              name,
+              sku,
+              units,
+              selling_price: sellingPrice,
+              discount: 0,
+              tax: 0,
+              hsn: 330300
+            });
           }
-        };
+        } else {
+          orderItems.push({
+            name: 'ODD Eau de Parfum (100ml)',
+            sku: 'ODD-PARFUM-100',
+            units: 1,
+            selling_price: totalAmount,
+            discount: 0,
+            tax: 0,
+            hsn: 330300
+          });
+        }
+
+        const dateObj = order.created_at ? new Date(order.created_at) : new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const orderDate = `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())} ${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
+
+        const srOrderPayload = JSON.stringify({
+          order_id: orderId,
+          order_date: orderDate,
+          pickup_location: pickupLocation,
+          channel_id: '',
+          comment: 'ODD Luxury Perfume Order',
+          billing_customer_name: firstName,
+          billing_last_name: lastName,
+          billing_address: destAddress.substring(0, 100),
+          billing_address_2: '',
+          billing_city: destCity,
+          billing_pincode: pincode,
+          billing_state: destState,
+          billing_country: 'India',
+          billing_email: order.customer_email || 'orders@oddperfume.com',
+          billing_phone: String(order.customer_phone || '9876543210').replace(/[^0-9]/g, ''),
+          shipping_is_billing: true,
+          order_items: orderItems,
+          payment_method: isCod ? 'COD' : 'Prepaid',
+          shipping_charges: Number(order.shipping_fee) || 0,
+          giftwrap_charges: 0,
+          transaction_charges: 0,
+          total_discount: Number(order.discount_amount) || 0,
+          sub_total: totalAmount,
+          length: 15,
+          breadth: 10,
+          height: 8,
+          weight: 0.4
+        });
 
         try {
           const https = require('node:https');
-          const reqData = JSON.stringify(payload);
-          const enviaRes = await new Promise((resolve, reject) => {
+
+          // Step 1: Create Adhoc Order
+          const createRes = await new Promise((resolve, reject) => {
             const r = https.request({
-              hostname: apiHost,
-              path: '/ship/generate/',
+              hostname: 'apiv2.shiprocket.in',
+              path: '/v1/external/orders/create/adhoc',
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(reqData)
+                'Content-Length': Buffer.byteLength(srOrderPayload)
               },
               timeout: 15000
             }, (resp) => {
@@ -1466,66 +1592,106 @@ const server = http.createServer(async (req, res) => {
               resp.on('end', () => resolve({ statusCode: resp.statusCode, body: data }));
             });
             r.on('error', reject);
-            r.on('timeout', () => { r.destroy(); reject(new Error('Envia label generation timed out')); });
-            r.write(reqData);
+            r.on('timeout', () => { r.destroy(); reject(new Error('Shiprocket order creation timed out')); });
+            r.write(srOrderPayload);
             r.end();
           });
 
-          const resJson = JSON.parse(enviaRes.body || '{}');
-          const shipData = (Array.isArray(resJson.data) ? resJson.data[0] : resJson.data) || {};
-          const trackingNumber = shipData.trackingNumber || shipData.tracking_number || null;
-          const labelUrl = shipData.label || shipData.labelUrl || shipData.label_url || null;
-          const carrierName = (shipData.carrier || chosenCarrier).toUpperCase();
-          const trackUrl = shipData.trackUrl || shipData.track_url || `https://www.delhivery.com/track/package/${trackingNumber}`;
-
-          if (trackingNumber) {
-            db.prepare(`
-              UPDATE orders
-              SET courier_name = ?, tracking_number = ?, tracking_url = ?, label_url = ?, status = 'Dispatched', dispatched_at = datetime('now'), updated_at = datetime('now')
-              WHERE id = ?
-            `).run(carrierName, trackingNumber, trackUrl, labelUrl, orderId);
-
-            return {
-              success: true,
-              trackingNumber,
-              tracking_number: trackingNumber,
-              labelUrl,
-              label_url: labelUrl,
-              trackUrl,
-              tracking_url: trackUrl,
-              carrier: carrierName,
-              courier_name: carrierName,
-              message: `Envia shipping label generated with ${carrierName}! AWB: ${trackingNumber}`
-            };
-          } else {
-            let errMsg = 'Envia could not generate label for this address.';
-            if (resJson.error?.message) {
-              const raw = String(resJson.error.message);
-              if (resJson.error.code === 1170 || raw.toLowerCase().includes('not enough money')) {
-                errMsg = 'Insufficient Envia wallet balance (Not Enough money). Please recharge your Envia account balance at shipping.envia.com to generate courier labels.';
-              } else {
-                errMsg = raw;
-              }
-            } else if (resJson.meta?.message) {
-              errMsg = String(resJson.meta.message);
-            } else if (typeof resJson.message === 'string') {
-              errMsg = resJson.message;
-            } else if (typeof resJson.error === 'string') {
-              errMsg = resJson.error;
-            }
-
-            return {
-              success: false,
-              error: errMsg,
-              raw: resJson
-            };
+          const orderJson = JSON.parse(createRes.body || '{}');
+          const shipmentId = orderJson.shipment_id || null;
+          if (!shipmentId) {
+            let err = orderJson.message || 'Failed to create order in Shiprocket.';
+            if (orderJson.errors) err += ' Details: ' + JSON.stringify(orderJson.errors);
+            return { success: false, error: err, raw: orderJson };
           }
+
+          // Step 2: Assign AWB
+          const awbPayload = JSON.stringify({ shipment_id: shipmentId });
+          const awbRes = await new Promise((resolve, reject) => {
+            const r = https.request({
+              hostname: 'apiv2.shiprocket.in',
+              path: '/v1/external/courier/assign/awb',
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(awbPayload)
+              },
+              timeout: 15000
+            }, (resp) => {
+              let data = '';
+              resp.on('data', chunk => data += chunk);
+              resp.on('end', () => resolve({ statusCode: resp.statusCode, body: data }));
+            });
+            r.on('error', reject);
+            r.on('timeout', () => { r.destroy(); reject(new Error('Shiprocket AWB assignment timed out')); });
+            r.write(awbPayload);
+            r.end();
+          });
+
+          const awbJson = JSON.parse(awbRes.body || '{}');
+          const awbData = awbJson.response?.data || awbJson.data || {};
+          const trackingNumber = awbData.awb_code || null;
+          const courierName = awbData.courier_name || 'Shiprocket Logistics Partner';
+
+          if (!trackingNumber) {
+            const err = awbJson.message || awbJson.response?.data?.error || 'Shiprocket could not assign AWB for this shipment.';
+            return { success: false, error: err, shipment_id: shipmentId, raw: awbJson };
+          }
+
+          // Step 3: Generate Label
+          const labelPayload = JSON.stringify({ shipment_id: [shipmentId] });
+          const labelRes = await new Promise((resolve, reject) => {
+            const r = https.request({
+              hostname: 'apiv2.shiprocket.in',
+              path: '/v1/external/courier/generate/label',
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(labelPayload)
+              },
+              timeout: 15000
+            }, (resp) => {
+              let data = '';
+              resp.on('data', chunk => data += chunk);
+              resp.on('end', () => resolve({ statusCode: resp.statusCode, body: data }));
+            });
+            r.on('error', reject);
+            r.on('timeout', () => { r.destroy(); reject(new Error('Shiprocket label generation timed out')); });
+            r.write(labelPayload);
+            r.end();
+          });
+
+          const labelJson = JSON.parse(labelRes.body || '{}');
+          const labelUrl = labelJson.label_url || labelJson.response?.label_url || null;
+          const trackUrl = 'https://shiprocket.co/tracking/' + trackingNumber;
+
+          // Step 4: Update SQLite Database
+          db.prepare(`
+            UPDATE orders
+            SET courier_name = ?, tracking_number = ?, tracking_url = ?, label_url = ?, status = 'Dispatched', dispatched_at = datetime('now'), updated_at = datetime('now')
+            WHERE id = ?
+          `).run(courierName, trackingNumber, trackUrl, labelUrl, orderId);
+
+          return {
+            success: true,
+            trackingNumber,
+            tracking_number: trackingNumber,
+            labelUrl,
+            label_url: labelUrl,
+            trackUrl,
+            tracking_url: trackUrl,
+            carrier: courierName,
+            courier_name: courierName,
+            message: `Shiprocket label generated with ${courierName}! AWB: ${trackingNumber}`
+          };
         } catch (err) {
-          return { success: false, error: err.message || 'Error communicating with Envia API' };
+          return { success: false, error: err.message || 'Error communicating with Shiprocket API' };
         }
       }
 
-      if (pathname === '/api/shipping/envia/create-label' && method === 'POST') {
+      if (pathname === '/api/shipping/shiprocket/create-label' && method === 'POST') {
         const session = requireStaffAuth(req, res, 'shipping');
         if (!session) return;
 
@@ -1533,113 +1699,107 @@ const server = http.createServer(async (req, res) => {
         const orderId = String(body.orderId || '').trim();
         if (!orderId) return sendJson(res, 400, { error: 'Order ID is required.' });
 
-        const result = await dispatchOrderWithEnvia(orderId);
+        const result = await dispatchOrderWithShiprocket(orderId);
         return sendJson(res, result.success ? 200 : 400, result);
       }
 
-      if (pathname === '/api/shipping/envia/rates' && method === 'POST') {
+      if (pathname === '/api/shipping/shiprocket/rates' && method === 'POST') {
         const body = await parseJsonBody(req);
-        const pincode = String(body.postalCode || body.pincode || '400001').trim();
-        if (!/^\d{6}$/.test(pincode)) {
+        const destPincode = String(body.postalCode || body.pincode || '400001').trim();
+        if (!/^\d{6}$/.test(destPincode)) {
           return sendJson(res, 400, { error: 'Please provide a valid 6-digit Indian PIN code.' });
         }
 
-        const enviaSetting = JSON.parse(db.prepare("SELECT value_json FROM settings WHERE key_name = 'envia'").get()?.value_json || '{}');
-        const token = enviaSetting.apiKey || process.env.ENVIA_API_KEY || '87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236';
-        const origin = enviaSetting.origin || {
-          name: 'ODD Perfumes Warehouse',
-          phone: '9876543210',
-          street: 'Industrial Area',
-          number: '10',
-          city: 'Mumbai',
-          state: 'MH',
-          country: 'IN',
-          postalCode: '400001'
-        };
+        const sRow = db.prepare("SELECT value_json FROM settings WHERE key_name = 'shiprocket'").get();
+        const srCfg = sRow ? JSON.parse(sRow.value_json || '{}') : {};
+        const pickupPincode = String(srCfg.origin?.postalCode || '400001').trim();
+        const isCod = Boolean(body.isCod || body.cod);
 
-        const carriers = ['delhivery', 'ekart'];
-        const https = require('node:https');
-        const ratePromises = carriers.map(carrier => new Promise(resolve => {
-          const payload = JSON.stringify({
-            origin: {
-              name: origin.name || 'ODD Perfumes',
-              company: 'ODD Perfumes',
-              phone: (origin.phone || '9876543210').replace(/[^0-9]/g, ''),
-              street: origin.street || 'Main Street',
-              number: '1',
-              city: origin.city || 'Mumbai',
-              state: 'MH',
-              country: 'IN',
-              postalCode: origin.postalCode || '400001'
-            },
-            destination: {
-              name: 'Customer',
-              phone: '9876543210',
-              street: 'Destination Street',
-              number: '1',
-              city: body.city || 'Mumbai',
-              state: 'MH',
-              country: 'IN',
-              postalCode: pincode
-            },
-            packages: [{
-              content: 'ODD Luxury Perfume Fragrance',
-              amount: 1,
-              type: 'box',
-              weight: 0.4,
-              weightUnit: 'KG',
-              lengthUnit: 'CM',
-              dimensions: { length: 15, width: 10, height: 8 },
-              declaredValue: Number(body.totalAmount) || 899
-            }],
-            shipment: { type: 1, carrier }
+        const token = await getShiprocketToken();
+        if (!token) {
+          return sendJson(res, 200, {
+            success: true,
+            rates: [{
+              carrier: 'Shiprocket Express',
+              carrierName: 'Shiprocket Express Partner',
+              service: 'Surface Express',
+              serviceName: 'Standard Express (2-4 Days)',
+              totalPrice: 0.00,
+              currency: 'INR',
+              estimate: '2-4 business days'
+            }]
           });
+        }
 
-          const r = https.request({
-            hostname: 'api.envia.com',
-            path: '/ship/rate/',
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-              'Content-Length': Buffer.byteLength(payload)
-            },
-            timeout: 6000
-          }, resp => {
-            let data = '';
-            resp.on('data', c => data += c);
-            resp.on('end', () => {
-              try {
-                const j = JSON.parse(data);
-                resolve(Array.isArray(j.data) ? j.data : []);
-              } catch (_) { resolve([]); }
+        try {
+          const https = require('node:https');
+          const pathUrl = `/v1/external/courier/serviceability/?pickup_postcode=${encodeURIComponent(pickupPincode)}&delivery_postcode=${encodeURIComponent(destPincode)}&weight=0.4&cod=${isCod ? '1' : '0'}`;
+          const ratesRes = await new Promise((resolve, reject) => {
+            const r = https.request({
+              hostname: 'apiv2.shiprocket.in',
+              path: pathUrl,
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              timeout: 8000
+            }, (resp) => {
+              let data = '';
+              resp.on('data', chunk => data += chunk);
+              resp.on('end', () => resolve({ statusCode: resp.statusCode, body: data }));
             });
+            r.on('error', reject);
+            r.on('timeout', () => { r.destroy(); reject(new Error('Rate request timed out')); });
+            r.end();
           });
-          r.on('error', () => resolve([]));
-          r.write(payload);
-          r.end();
-        }));
 
-        const results = await Promise.all(ratePromises);
-        const quotes = results.flat().map(q => ({
-          carrier: q.carrier,
-          carrierName: q.carrier ? q.carrier.charAt(0).toUpperCase() + q.carrier.slice(1) : '',
-          service: q.service,
-          serviceName: q.serviceDescription || q.service,
-          totalPrice: Number(q.totalPrice) || 0,
-          currency: q.currency || 'INR',
-          estimate: q.deliveryEstimate || '2-4 days',
-          deliveryDate: q.deliveryDate?.date || null
-        })).sort((a, b) => a.totalPrice - b.totalPrice);
+          const json = JSON.parse(ratesRes.body || '{}');
+          const courierList = json.data?.available_courier_companies || [];
+          const rates = courierList.map(c => ({
+            carrier: c.courier_name || 'Express',
+            carrierName: c.courier_name || 'Courier',
+            service: String(c.courier_company_id || 'standard'),
+            serviceName: (c.courier_name || 'Courier') + ' (' + (c.etd || '2-4 days') + ')',
+            totalPrice: Number(c.rate) || 0,
+            currency: 'INR',
+            estimate: c.etd || '2-4 days'
+          }));
 
-        return sendJson(res, 200, { success: true, count: quotes.length, rates: quotes });
+          if (rates.length === 0) {
+            rates.push({
+              carrier: 'Shiprocket Express',
+              carrierName: 'Shiprocket Multi-Carrier',
+              service: 'express',
+              serviceName: 'Standard Fast Delivery',
+              totalPrice: 0.00,
+              currency: 'INR',
+              estimate: '2-4 business days'
+            });
+          }
+
+          return sendJson(res, 200, { success: true, count: rates.length, rates });
+        } catch (_) {
+          return sendJson(res, 200, {
+            success: true,
+            rates: [{
+              carrier: 'Shiprocket Express',
+              carrierName: 'Shiprocket Multi-Carrier',
+              service: 'express',
+              serviceName: 'Standard Fast Delivery',
+              totalPrice: 0.00,
+              currency: 'INR',
+              estimate: '2-4 business days'
+            }]
+          });
+        }
       }
 
-      if (pathname === '/api/shipping/envia/webhook' && method === 'POST') {
+      if (pathname === '/api/shipping/shiprocket/webhook' && method === 'POST') {
         const body = await parseJsonBody(req);
-        const trackingNumber = String(body.trackingNumber || body.tracking_number || body.data?.tracking_number || '').trim();
-        const rawStatus = String(body.status || body.data?.status || '').trim();
-        const orderId = String(body.orderData?.orderNumber || body.orderData?.orderIdentifier || body.orderNumber || '').trim();
+        const trackingNumber = String(body.awb || body.awb_code || body.tracking_number || '').trim();
+        const rawStatus = String(body.current_status || body.status || '').trim();
+        const orderId = String(body.order_id || body.channel_order_id || '').trim();
 
         if (!trackingNumber && !orderId) {
           return sendJson(res, 200, { success: false, message: 'No tracking or order ID' });
@@ -1665,7 +1825,7 @@ const server = http.createServer(async (req, res) => {
           } else if (sLower.includes('transit') || sLower.includes('picked up') || sLower.includes('shipped')) {
             targetStatus = 'Dispatched';
             db.prepare("UPDATE orders SET status = 'Dispatched', updated_at = datetime('now') WHERE id = ?").run(order.id);
-          } else if (sLower.includes('return') || sLower.includes('exception') || sLower.includes('fail')) {
+          } else if (sLower.includes('rto') || sLower.includes('return') || sLower.includes('fail')) {
             targetStatus = 'Exception';
             db.prepare("UPDATE orders SET status = 'Exception', updated_at = datetime('now') WHERE id = ?").run(order.id);
           }
@@ -1956,14 +2116,37 @@ const server = http.createServer(async (req, res) => {
       }
 
       // --- 10. Store Settings (/api/settings) ---
+      if (pathname === '/api/settings/razorpay-public' && method === 'GET') {
+        const setting = db.prepare("SELECT value_json FROM settings WHERE key_name = 'razorpay'").get();
+        const rzp = setting ? JSON.parse(setting.value_json) : {};
+        return sendJson(res, 200, {
+          enabled: rzp.enabled !== undefined ? rzp.enabled : (RAZORPAY_CONFIG.enabled !== false),
+          env: rzp.env || RAZORPAY_CONFIG.env || 'live',
+          keyId: rzp.keyId || RAZORPAY_CONFIG.keyId,
+          brandName: rzp.brandName || RAZORPAY_CONFIG.brandName || 'ODD Perfume',
+          themeColor: rzp.themeColor || RAZORPAY_CONFIG.themeColor || '#E86B32'
+        });
+      }
+
       if (pathname.startsWith('/api/settings/') && method === 'GET') {
         const key = pathname.replace('/api/settings/', '');
-        if (key === 'envia' || key === 'razorpay') {
+        if (key === 'shiprocket' || key === 'razorpay') {
           const session = requireStaffAuth(req, res, 'admin');
           if (!session) return;
         }
         const setting = db.prepare('SELECT value_json FROM settings WHERE key_name = ?').get(key);
-        return sendJson(res, 200, setting ? JSON.parse(setting.value_json) : {});
+        const data = setting ? JSON.parse(setting.value_json) : {};
+
+        if (key === 'razorpay') {
+          if (data.keySecret) data.keySecret = '••••••••••••';
+          if (!data.keyId) data.keyId = RAZORPAY_CONFIG.keyId;
+        } else if (key === 'shiprocket') {
+          if (data.password) data.password = '••••••••••••';
+          if (!data.email) data.email = process.env.SHIPROCKET_EMAIL || 'oddperfumesocial@gmail.com';
+          if (!data.pickupLocation) data.pickupLocation = process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary';
+        }
+
+        return sendJson(res, 200, data);
       }
 
       if (pathname.startsWith('/api/settings/') && (method === 'POST' || method === 'PUT')) {
@@ -1974,6 +2157,16 @@ const server = http.createServer(async (req, res) => {
 
         const body = await parseJsonBody(req);
 
+        if (key === 'razorpay' && (!body.keySecret || body.keySecret.includes('••••'))) {
+          const prev = db.prepare("SELECT value_json FROM settings WHERE key_name = 'razorpay'").get();
+          const prevJson = prev ? JSON.parse(prev.value_json) : {};
+          body.keySecret = prevJson.keySecret || RAZORPAY_CONFIG.keySecret;
+        } else if (key === 'shiprocket' && (!body.password || body.password.includes('••••'))) {
+          const prev = db.prepare("SELECT value_json FROM settings WHERE key_name = 'shiprocket'").get();
+          const prevJson = prev ? JSON.parse(prev.value_json) : {};
+          body.password = prevJson.password || process.env.SHIPROCKET_PASSWORD || 'Aoeo6$g4!7RYRLSLM0@V90MYX!fI*Gg!';
+        }
+
         db.prepare(`
           INSERT INTO settings (key_name, value_json, updated_at)
           VALUES (?, ?, datetime('now'))
@@ -1983,7 +2176,7 @@ const server = http.createServer(async (req, res) => {
         // Update active in-memory Razorpay config if key is razorpay
         if (key === 'razorpay') {
           if (body.keyId) RAZORPAY_CONFIG.keyId = body.keyId;
-          if (body.keySecret) RAZORPAY_CONFIG.keySecret = body.keySecret;
+          if (body.keySecret && !body.keySecret.includes('••••')) RAZORPAY_CONFIG.keySecret = body.keySecret;
           if (body.enabled !== undefined) RAZORPAY_CONFIG.enabled = body.enabled;
         }
 

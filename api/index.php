@@ -522,12 +522,32 @@ try {
 
             $pdo->commit();
 
-            // Optional Envia Auto-Dispatch on checkout
+            // Send rich HTML order confirmation email with breakdown
             try {
-                $eRow = $pdo->query('SELECT value_json FROM settings WHERE key_name = "envia"')->fetch();
-                $eCfg = $eRow ? json_decode($eRow['value_json'], true) : [];
-                if (!empty($eCfg['autoDispatch'])) {
-                    dispatchOrderWithEnvia($pdo, $orderId);
+                $fullOrderData = [
+                    'id' => $orderId,
+                    'customer_name' => $customer,
+                    'customer_email' => $email,
+                    'customer_phone' => $phone,
+                    'shipping_address' => $address,
+                    'subtotal' => $subtotal,
+                    'discount_amount' => $discountAmount,
+                    'coupon_code' => $appliedCode,
+                    'shipping_fee' => $shippingFee,
+                    'total_amount' => $totalAmount,
+                    'payment_method' => $paymentMethod,
+                    'gateway' => $isOnline ? 'Razorpay Live' : 'Cash on Delivery (COD)',
+                    'items' => $itemsData
+                ];
+                sendOrderConfirmationEmail($fullOrderData);
+            } catch (Throwable $e) {}
+
+            // Optional Shiprocket Auto-Dispatch on checkout
+            try {
+                $srRow = $pdo->query('SELECT value_json FROM settings WHERE key_name = "shiprocket"')->fetch();
+                $srCfg = $srRow ? json_decode($srRow['value_json'], true) : [];
+                if (!empty($srCfg['autoDispatch'])) {
+                    dispatchOrderWithShiprocket($pdo, $orderId);
                 }
             } catch (Throwable $e) {}
 
@@ -762,46 +782,307 @@ try {
         ]);
     }
 
-    // --- 7B. Envia.com Multi-Carrier Shipping API ---
-    if ($route === 'shipping/envia/test' && $method === 'POST') {
-        $body = getJsonBody();
-        $token = trim((string)($body['apiKey'] ?? ENVIA_API_KEY));
-        $env = ($body['env'] ?? ENVIA_ENV) === 'test' ? 'test' : 'live';
-        $host = $env === 'test' ? 'queries.test.envia.com' : 'queries.envia.com';
+    // --- 7B. Shiprocket Multi-Carrier Shipping API ---
+    function getShiprocketToken(PDO $pdo): ?string {
+        try {
+            $tRow = $pdo->query('SELECT value_json FROM settings WHERE key_name = "shiprocket_token"')->fetch();
+            if ($tRow) {
+                $tData = json_decode($tRow['value_json'], true);
+                if (!empty($tData['token']) && !empty($tData['expires_at']) && $tData['expires_at'] > time() + 3600) {
+                    return $tData['token'];
+                }
+            }
+        } catch (Throwable $e) {}
 
-        $ch = curl_init("https://{$host}/carrier?country_code=IN");
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "Authorization: Bearer {$token}",
-            "Content-Type: application/json"
-        ]);
+        $sRow = $pdo->query('SELECT value_json FROM settings WHERE key_name = "shiprocket"')->fetch();
+        $sCfg = $sRow ? json_decode($sRow['value_json'], true) : [];
+        $email = trim((string)($sCfg['email'] ?? (defined('SHIPROCKET_EMAIL') ? SHIPROCKET_EMAIL : '')));
+        $password = trim((string)($sCfg['password'] ?? (defined('SHIPROCKET_PASSWORD') ? SHIPROCKET_PASSWORD : '')));
+
+        if (!empty($sCfg['token'])) return $sCfg['token'];
+        if (defined('SHIPROCKET_TOKEN') && SHIPROCKET_TOKEN !== '') return SHIPROCKET_TOKEN;
+
+        if (!$email || !$password) return null;
+
+        $ch = curl_init('https://apiv2.shiprocket.in/v1/external/auth/login');
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['email' => $email, 'password' => $password]));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+        $resp = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $data = json_decode((string)$resp, true);
+        if ($code === 200 && !empty($data['token'])) {
+            $token = $data['token'];
+            $expiresAt = time() + (9 * 86400);
+            try {
+                $pdo->prepare('
+                    INSERT INTO settings (key_name, value_json, updated_at) VALUES ("shiprocket_token", ?, NOW())
+                    ON DUPLICATE KEY UPDATE value_json = VALUES(value_json), updated_at = NOW()
+                ')->execute([json_encode(['token' => $token, 'expires_at' => $expiresAt])]);
+            } catch (Throwable $e) {}
+            return $token;
+        }
+        return null;
+    }
+
+    if ($route === 'shipping/shiprocket/test' && $method === 'POST') {
+        $body = getJsonBody();
+        $email = trim((string)($body['email'] ?? ''));
+        $password = trim((string)($body['password'] ?? ''));
+
+        if (!$email || str_contains($password, '••••')) {
+            $sRow = $pdo->query('SELECT value_json FROM settings WHERE key_name = "shiprocket"')->fetch();
+            $sCfg = $sRow ? json_decode($sRow['value_json'], true) : [];
+            if (!$email) $email = trim((string)($sCfg['email'] ?? (defined('SHIPROCKET_EMAIL') ? SHIPROCKET_EMAIL : '')));
+            if (!$password || str_contains($password, '••••')) $password = trim((string)($sCfg['password'] ?? (defined('SHIPROCKET_PASSWORD') ? SHIPROCKET_PASSWORD : '')));
+        }
+
+        if (!$email || !$password) {
+            sendJson(400, ['success' => false, 'error' => 'Shiprocket email and password are required.']);
+        }
+
+        $ch = curl_init('https://apiv2.shiprocket.in/v1/external/auth/login');
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['email' => $email, 'password' => $password]));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
         $resp = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         $json = json_decode((string)$resp, true);
-        if ($httpCode === 200 && !empty($json['data'])) {
-            $carriers = array_map(function($c) {
-                return [
-                    'id' => $c['id'],
-                    'name' => $c['name'],
-                    'trackUrl' => $c['track_url'] ?? ''
-                ];
-            }, $json['data']);
+        if ($httpCode === 200 && !empty($json['token'])) {
+            $expiresAt = time() + (9 * 86400);
+            try {
+                $pdo->prepare('
+                    INSERT INTO settings (key_name, value_json, updated_at) VALUES ("shiprocket_token", ?, NOW())
+                    ON DUPLICATE KEY UPDATE value_json = VALUES(value_json), updated_at = NOW()
+                ')->execute([json_encode(['token' => $json['token'], 'expires_at' => $expiresAt])]);
+            } catch (Throwable $e) {}
+
             sendJson(200, [
                 'success' => true,
-                'count' => count($carriers),
-                'carriers' => $carriers,
-                'message' => 'Envia.com connection active! ' . count($carriers) . ' couriers connected.'
+                'message' => 'Shiprocket connection verified! API authentication successful.',
+                'account' => [
+                    'id' => $json['id'] ?? null,
+                    'email' => $json['email'] ?? $email,
+                    'name' => trim(($json['first_name'] ?? '') . ' ' . ($json['last_name'] ?? ''))
+                ]
             ]);
         } else {
-            $errMsg = $json['message'] ?? 'Failed to authenticate with Envia.com. Please check your API token.';
+            $errMsg = $json['message'] ?? 'Failed to authenticate with Shiprocket API.';
+            if ($httpCode === 403 || stripos($errMsg, 'invalid') !== false) {
+                $errMsg = 'Shiprocket authentication failed (Invalid email or password). Please configure an API user in Shiprocket Dashboard -> Settings -> API -> Configure API and save the credentials.';
+            }
             sendJson(400, ['success' => false, 'error' => $errMsg, 'httpCode' => $httpCode]);
         }
     }
 
-    function dispatchOrderWithEnvia(PDO $pdo, string $orderId): array {
+    function sendOrderConfirmationEmail(array $order): bool {
+        $to = $order['customer_email'] ?? '';
+        if (!$to || !filter_var($to, FILTER_VALIDATE_EMAIL)) return false;
+
+        $orderId = htmlspecialchars($order['id'] ?? 'ODD');
+        $customerName = htmlspecialchars($order['customer_name'] ?? 'Valued Customer');
+        $shippingAddress = htmlspecialchars($order['shipping_address'] ?? '');
+        $phone = htmlspecialchars($order['customer_phone'] ?? '');
+        $subtotal = number_format((float)($order['subtotal'] ?? 0), 2);
+        $discount = (float)($order['discount_amount'] ?? 0);
+        $coupon = htmlspecialchars($order['coupon_code'] ?? '');
+        $shipping = (float)($order['shipping_fee'] ?? 0);
+        $total = number_format((float)($order['total_amount'] ?? 0), 2);
+
+        $isCod = (strtolower($order['payment_method'] ?? '') === 'cod')
+            || str_contains(strtolower($order['gateway'] ?? ''), 'cash')
+            || str_contains(strtolower($order['gateway'] ?? ''), 'cod');
+
+        $items = $order['items'] ?? [];
+        $itemsHtml = '';
+        foreach ($items as $it) {
+            $name = htmlspecialchars($it['name'] ?? 'ODD Fragrance');
+            $qty = (int)($it['quantity'] ?? 1);
+            $price = number_format((float)($it['price'] ?? 899), 2);
+            $lineTotal = number_format((float)($it['line_total'] ?? ($qty * 899)), 2);
+            $itemsHtml .= "
+                <tr>
+                    <td style='padding:10px 0; border-bottom:1px solid #eeeeee;'><strong>{$name}</strong></td>
+                    <td style='padding:10px 0; border-bottom:1px solid #eeeeee; text-align:center;'>{$qty}</td>
+                    <td style='padding:10px 0; border-bottom:1px solid #eeeeee; text-align:right;'>₹{$price}</td>
+                    <td style='padding:10px 0; border-bottom:1px solid #eeeeee; text-align:right;'>₹{$lineTotal}</td>
+                </tr>
+            ";
+        }
+
+        $paymentNotice = $isCod
+            ? "<div style='background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:14px; margin:20px 0; color:#92400e; font-size:13px;'>
+                 <strong>Payment Mode: Cash on Delivery (COD)</strong><br>
+                 Amount to pay upon arrival: <strong>₹{$total}</strong><br>
+                 Please keep exact cash ready for the courier partner upon arrival.
+               </div>"
+            : "<div style='background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; padding:14px; margin:20px 0; color:#065f46; font-size:13px;'>
+                 <strong>Payment Mode: Online Prepaid (Razorpay Live)</strong><br>
+                 Payment status: <strong>Paid &amp; Verified</strong><br>
+                 Your transaction has been securely confirmed via Razorpay. No cash needs to be paid upon delivery.
+               </div>";
+
+        $subject = "Order Confirmed: #{$orderId} | ODD Perfume";
+        $trackingLink = "https://test.oddperfume.com/order-tracking.html?orderId={$orderId}";
+
+        $html = "
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset='UTF-8'></head>
+        <body style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif; color:#111; background:#f4f4f5; margin:0; padding:20px;'>
+          <div style='max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; border:1px solid #e5e7eb;'>
+            <div style='background:#111827; padding:24px; text-align:center;'>
+              <h1 style='color:#ffffff; margin:0; font-size:24px; letter-spacing:0.05em;'>ODD<span style='color:#E86B32;'>.</span></h1>
+              <p style='color:#9ca3af; margin:4px 0 0; font-size:12px; text-transform:uppercase; letter-spacing:0.1em;'>Haute Parfumerie &middot; Order Confirmation</p>
+            </div>
+            <div style='padding:30px;'>
+              <h2 style='font-size:18px; margin-top:0;'>Thank you for your order, {$customerName}!</h2>
+              <p style='color:#4b5563; font-size:14px;'>We have received your order <strong>#{$orderId}</strong> and are preparing it at our Mumbai fulfillment studio.</p>
+              
+              {$paymentNotice}
+
+              <h3 style='font-size:14px; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin-top:24px; margin-bottom:8px; border-bottom:2px solid #111; padding-bottom:6px;'>Items in your order</h3>
+              <table style='width:100%; border-collapse:collapse; font-size:13px;'>
+                <thead>
+                  <tr style='color:#6b7280; text-align:left; font-size:11px; text-transform:uppercase;'>
+                    <th style='padding-bottom:8px;'>Item</th>
+                    <th style='padding-bottom:8px; text-align:center;'>Qty</th>
+                    <th style='padding-bottom:8px; text-align:right;'>Price</th>
+                    <th style='padding-bottom:8px; text-align:right;'>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {$itemsHtml}
+                </tbody>
+              </table>
+
+              <div style='margin-top:16px; border-top:1px solid #e5e7eb; padding-top:12px; font-size:13px;'>
+                <div style='display:flex; justify-content:space-between; margin-bottom:6px; color:#4b5563;'>
+                  <span>Subtotal:</span><strong>₹{$subtotal}</strong>
+                </div>" . ($discount > 0 ? "
+                <div style='display:flex; justify-content:space-between; margin-bottom:6px; color:#E86B32;'>
+                  <span>Coupon Discount ({$coupon}):</span><strong>-₹" . number_format($discount, 2) . "</strong>
+                </div>" : "") . "
+                <div style='display:flex; justify-content:space-between; margin-bottom:6px; color:#4b5563;'>
+                  <span>Shipping &amp; Delivery:</span><strong>" . ($shipping > 0 ? "₹" . number_format($shipping, 2) : "FREE") . "</strong>
+                </div>
+                <div style='display:flex; justify-content:space-between; font-size:16px; font-weight:800; border-top:2px solid #111; padding-top:8px; margin-top:8px;'>
+                  <span>Total Payable:</span><strong>₹{$total}</strong>
+                </div>
+              </div>
+
+              <div style='background:#f9fafb; border:1px solid #f3f4f6; border-radius:6px; padding:14px; margin-top:24px; font-size:13px;'>
+                <strong style='display:block; margin-bottom:4px;'>Delivery Address:</strong>
+                <div style='color:#4b5563;'>{$shippingAddress}</div>
+                <div style='color:#6b7280; font-size:12px; margin-top:4px;'>Contact: {$phone}</div>
+              </div>
+
+              <div style='text-align:center; margin-top:28px;'>
+                <a href='{$trackingLink}' style='background:#111827; color:#ffffff; padding:12px 24px; text-decoration:none; font-weight:700; border-radius:6px; font-size:13px; display:inline-block;'>Track Your Order Live</a>
+              </div>
+            </div>
+            <div style='background:#f9fafb; border-top:1px solid #e5e7eb; padding:16px; text-align:center; font-size:11px; color:#9ca3af;'>
+              &copy; 2026 ODD Perfumes &middot; Mumbai, India &middot; hello@oddperfume.com
+            </div>
+          </div>
+        </body>
+        </html>
+        ";
+
+        $emailsDir = __DIR__ . '/../storage/emails';
+        if (!is_dir($emailsDir)) @mkdir($emailsDir, 0755, true);
+        @file_put_contents("{$emailsDir}/{$orderId}_confirmation.html", $html);
+
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $headers .= "From: ODD Perfumes <orders@oddperfume.com>\r\n";
+        $headers .= "Reply-To: hello@oddperfume.com\r\n";
+
+        return @mail($to, $subject, $html, $headers);
+    }
+
+    function sendDispatchNotificationEmail(array $order, string $awb, string $courier, string $trackingUrl, string $labelUrl): bool {
+        $to = $order['customer_email'] ?? '';
+        if (!$to || !filter_var($to, FILTER_VALIDATE_EMAIL)) return false;
+
+        $orderId = htmlspecialchars($order['id'] ?? 'ODD');
+        $customerName = htmlspecialchars($order['customer_name'] ?? 'Valued Customer');
+        $courierSafe = htmlspecialchars($courier ?: 'Shiprocket Express');
+        $awbSafe = htmlspecialchars($awb);
+        $total = number_format((float)($order['total_amount'] ?? 0), 2);
+
+        $isCod = (strtolower($order['payment_method'] ?? '') === 'cod')
+            || str_contains(strtolower($order['gateway'] ?? ''), 'cash')
+            || str_contains(strtolower($order['gateway'] ?? ''), 'cod');
+
+        $subject = "Your Order is On Its Way: #{$orderId} | Courier AWB: {$awbSafe}";
+        $liveTrackUrl = $trackingUrl ?: "https://test.oddperfume.com/order-tracking.html?orderId={$orderId}";
+
+        $codNotice = $isCod
+            ? "<div style='background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:12px 14px; margin:16px 0; color:#92400e; font-size:13px;'>
+                 <strong>Cash on Delivery (COD) Reminder:</strong><br>
+                 Please keep exact cash amount of <strong>₹{$total}</strong> ready for the delivery partner upon arrival.
+               </div>"
+            : "<div style='background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; padding:12px 14px; margin:16px 0; color:#065f46; font-size:13px;'>
+                 <strong>Prepaid Order (Razorpay):</strong><br>
+                 Payment of ₹{$total} was verified and settled. No payment is required upon delivery.
+               </div>";
+
+        $html = "
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset='UTF-8'></head>
+        <body style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif; color:#111; background:#f4f4f5; margin:0; padding:20px;'>
+          <div style='max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; border:1px solid #e5e7eb;'>
+            <div style='background:#111827; padding:24px; text-align:center;'>
+              <h1 style='color:#ffffff; margin:0; font-size:24px; letter-spacing:0.05em;'>ODD<span style='color:#E86B32;'>.</span></h1>
+              <p style='color:#9ca3af; margin:4px 0 0; font-size:12px; text-transform:uppercase; letter-spacing:0.1em;'>Haute Parfumerie &middot; Shipment Dispatched</p>
+            </div>
+            <div style='padding:30px;'>
+              <h2 style='font-size:18px; margin-top:0;'>Your perfume is on the move, {$customerName}!</h2>
+              <p style='color:#4b5563; font-size:14px;'>Order <strong>#{$orderId}</strong> has been handed to our courier partner and is en route to your delivery address.</p>
+
+              <div style='background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin:20px 0;'>
+                <span style='font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:#64748b; display:block;'>Logistics Partner</span>
+                <strong style='font-size:15px; color:#0f172a;'>{$courierSafe}</strong>
+                <div style='margin-top:6px; font-size:13px;'>AWB Tracking: <strong style='font-family:monospace; color:#0f172a;'>{$awbSafe}</strong></div>
+              </div>
+
+              {$codNotice}
+
+              <div style='text-align:center; margin-top:28px;'>
+                <a href='{$liveTrackUrl}' style='background:#111827; color:#ffffff; padding:12px 24px; text-decoration:none; font-weight:700; border-radius:6px; font-size:13px; display:inline-block;'>Track Courier Live</a>
+              </div>
+            </div>
+            <div style='background:#f9fafb; border-top:1px solid #e5e7eb; padding:16px; text-align:center; font-size:11px; color:#9ca3af;'>
+              &copy; 2026 ODD Perfumes &middot; Mumbai, India &middot; hello@oddperfume.com
+            </div>
+          </div>
+        </body>
+        </html>
+        ";
+
+        $emailsDir = __DIR__ . '/../storage/emails';
+        if (!is_dir($emailsDir)) @mkdir($emailsDir, 0755, true);
+        @file_put_contents("{$emailsDir}/{$orderId}_dispatch.html", $html);
+
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $headers .= "From: ODD Perfumes <shipping@oddperfume.com>\r\n";
+        $headers .= "Reply-To: hello@oddperfume.com\r\n";
+
+        return @mail($to, $subject, $html, $headers);
+    }
+
+    function dispatchOrderWithShiprocket(PDO $pdo, string $orderId): array {
         $stmt = $pdo->prepare('SELECT * FROM orders WHERE id = ?');
         $stmt->execute([$orderId]);
         $order = $stmt->fetch();
@@ -826,25 +1107,20 @@ try {
             ];
         }
 
-        // Fetch Envia settings
-        $sStmt = $pdo->query('SELECT value_json FROM settings WHERE key_name = "envia"');
-        $sRow = $sStmt->fetch();
-        $enviaCfg = $sRow ? json_decode($sRow['value_json'], true) : [];
-        $token = $enviaCfg['apiKey'] ?? ENVIA_API_KEY;
-        $env = ($enviaCfg['env'] ?? ENVIA_ENV) === 'test' ? 'test' : 'live';
-        $apiHost = $env === 'test' ? 'api-test.envia.com' : 'api.envia.com';
+        // Fetch Shiprocket settings
+        $sStmt = $pdo->query('SELECT value_json FROM settings WHERE key_name = "shiprocket"');
+        $sRow = $sStmt ? $sStmt->fetch() : null;
+        $srCfg = $sRow ? json_decode($sRow['value_json'], true) : [];
+        $pickupLocation = trim((string)($srCfg['pickupLocation'] ?? (defined('SHIPROCKET_PICKUP_LOCATION') ? SHIPROCKET_PICKUP_LOCATION : 'Primary')));
+        if (!$pickupLocation) $pickupLocation = 'Primary';
 
-        // Origin Address
-        $origin = $enviaCfg['origin'] ?? [
-            'name' => 'ODD Perfumes Warehouse',
-            'phone' => '9876543210',
-            'street' => 'Industrial Area',
-            'number' => '10',
-            'city' => 'Mumbai',
-            'state' => 'MH',
-            'country' => 'IN',
-            'postalCode' => '400001'
-        ];
+        $token = getShiprocketToken($pdo);
+        if (!$token) {
+            return [
+                'success' => false,
+                'error' => 'Shiprocket API token could not be obtained. Please verify Shiprocket email and password in Shipping Settings.'
+            ];
+        }
 
         // Parse customer destination address
         $destAddress = trim((string)$order['shipping_address']);
@@ -853,305 +1129,284 @@ try {
             $pincode = $m[0];
         }
 
-        $destCity = $origin['city'] ?? 'Mumbai';
+        $destCity = 'Mumbai';
         if (preg_match('/,\s*([^,-]+?)\s*-\s*\d{6}/', $destAddress, $cm)) {
             $destCity = trim($cm[1]);
         }
 
-        // Determine destination state code from pincode prefix
         $pfx2 = (int)substr($pincode, 0, 2);
-        $destState = 'MH';
-        if ($pfx2 === 11) $destState = 'DL';
-        elseif ($pfx2 >= 12 && $pfx2 <= 13) $destState = 'HR';
-        elseif ($pfx2 >= 14 && $pfx2 <= 16) $destState = 'PB';
-        elseif ($pfx2 === 17) $destState = 'HP';
-        elseif ($pfx2 >= 18 && $pfx2 <= 19) $destState = 'JK';
-        elseif ($pfx2 >= 20 && $pfx2 <= 28) $destState = 'UP';
-        elseif ($pfx2 >= 30 && $pfx2 <= 34) $destState = 'RJ';
-        elseif ($pfx2 >= 36 && $pfx2 <= 39) $destState = 'GJ';
-        elseif ($pfx2 >= 40 && $pfx2 <= 44) $destState = 'MH';
-        elseif ($pfx2 >= 45 && $pfx2 <= 48) $destState = 'MP';
-        elseif ($pfx2 >= 50 && $pfx2 <= 53) $destState = 'TG';
-        elseif ($pfx2 >= 56 && $pfx2 <= 59) $destState = 'KA';
-        elseif ($pfx2 >= 60 && $pfx2 <= 64) $destState = 'TN';
-        elseif ($pfx2 >= 67 && $pfx2 <= 69) $destState = 'KL';
-        elseif ($pfx2 >= 70 && $pfx2 <= 74) $destState = 'WB';
-        elseif ($pfx2 >= 80 && $pfx2 <= 85) $destState = 'BR';
+        $destState = 'Maharashtra';
+        if ($pfx2 === 11) $destState = 'Delhi';
+        elseif ($pfx2 >= 12 && $pfx2 <= 13) $destState = 'Haryana';
+        elseif ($pfx2 >= 14 && $pfx2 <= 16) $destState = 'Punjab';
+        elseif ($pfx2 === 17) $destState = 'Himachal Pradesh';
+        elseif ($pfx2 >= 18 && $pfx2 <= 19) $destState = 'Jammu and Kashmir';
+        elseif ($pfx2 >= 20 && $pfx2 <= 28) $destState = 'Uttar Pradesh';
+        elseif ($pfx2 >= 30 && $pfx2 <= 34) $destState = 'Rajasthan';
+        elseif ($pfx2 >= 36 && $pfx2 <= 39) $destState = 'Gujarat';
+        elseif ($pfx2 >= 40 && $pfx2 <= 44) $destState = 'Maharashtra';
+        elseif ($pfx2 >= 45 && $pfx2 <= 48) $destState = 'Madhya Pradesh';
+        elseif ($pfx2 >= 50 && $pfx2 <= 53) $destState = 'Telangana';
+        elseif ($pfx2 >= 56 && $pfx2 <= 59) $destState = 'Karnataka';
+        elseif ($pfx2 >= 60 && $pfx2 <= 64) $destState = 'Tamil Nadu';
+        elseif ($pfx2 >= 67 && $pfx2 <= 69) $destState = 'Kerala';
+        elseif ($pfx2 >= 70 && $pfx2 <= 74) $destState = 'West Bengal';
+        elseif ($pfx2 >= 80 && $pfx2 <= 85) $destState = 'Bihar';
 
-        $chosenCarrier = !empty($enviaCfg['carrier']) && $enviaCfg['carrier'] !== 'all'
-            ? strtolower($enviaCfg['carrier'])
-            : 'delhivery';
+        $totalAmount = (float)$order['total_amount'];
+        $isCod = (strtolower($order['payment_method'] ?? '') === 'cod')
+            || (str_contains(strtolower($order['gateway'] ?? ''), 'cash'))
+            || (str_contains(strtolower($order['gateway'] ?? ''), 'cod'));
 
-        $payload = [
-            'origin' => [
-                'name' => $origin['name'] ?? 'ODD Perfumes',
-                'company' => 'ODD Perfumes',
-                'phone' => preg_replace('/[^0-9]/', '', $origin['phone'] ?? '9876543210'),
-                'street' => $origin['street'] ?? 'Main Street',
-                'number' => '1',
-                'city' => $origin['city'] ?? 'Mumbai',
-                'state' => $origin['state'] ?? 'MH',
-                'country' => 'IN',
-                'postalCode' => $origin['postalCode'] ?? '400001'
-            ],
-            'destination' => [
-                'name' => $order['customer_name'] ?: 'Valued Customer',
-                'phone' => preg_replace('/[^0-9]/', '', $order['customer_phone'] ?: '9876543210'),
-                'street' => substr($destAddress, 0, 100),
-                'number' => '1',
-                'city' => $destCity,
-                'state' => $destState,
-                'country' => 'IN',
-                'postalCode' => $pincode
-            ],
-            'packages' => [
-                [
-                    'content' => 'ODD Luxury Perfume Fragrance',
-                    'amount' => 1,
-                    'type' => 'box',
-                    'weight' => 0.4,
-                    'weightUnit' => 'KG',
-                    'lengthUnit' => 'CM',
-                    'dimensions' => [
-                        'length' => 15,
-                        'width' => 10,
-                        'height' => 8
-                    ],
-                    'declaredValue' => (float)$order['total_amount']
-                ]
-            ],
-            'shipment' => [
-                'type' => 1,
-                'carrier' => $chosenCarrier,
-                'service' => 'express',
-                'orderReference' => $orderId,
-                'totalValue' => (float)$order['total_amount']
-            ],
-            'orderData' => [
-                'orderNumber' => $orderId,
-                'orderIdentifier' => $orderId,
-                'total' => (float)$order['total_amount'],
-                'store' => 'ODD Perfumes'
-            ],
-            'settings' => [
-                'currency' => 'INR',
-                'printFormat' => 'PDF',
-                'printSize' => 'STOCK_4X6'
-            ]
+        $customerName = trim((string)($order['customer_name'] ?: 'Valued Customer'));
+        $nameParts = explode(' ', $customerName, 2);
+        $firstName = $nameParts[0];
+        $lastName = !empty($nameParts[1]) ? $nameParts[1] : 'Customer';
+
+        // Fetch order items
+        $iStmt = $pdo->prepare('SELECT * FROM order_items WHERE order_id = ?');
+        $iStmt->execute([$orderId]);
+        $items = $iStmt->fetchAll();
+
+        $orderItems = [];
+        if (!empty($items)) {
+            foreach ($items as $it) {
+                $name = $it['product_name'] ?? 'ODD Perfume';
+                $sku = 'ODD-' . strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $name), 0, 10));
+                $units = max(1, (int)($it['quantity'] ?? 1));
+                $sellingPrice = (float)($it['price'] ?? ($totalAmount / $units));
+                $orderItems[] = [
+                    'name' => $name,
+                    'sku' => $sku,
+                    'units' => $units,
+                    'selling_price' => $sellingPrice,
+                    'discount' => 0,
+                    'tax' => 0,
+                    'hsn' => 330300
+                ];
+            }
+        } else {
+            $orderItems[] = [
+                'name' => 'ODD Eau de Parfum (100ml)',
+                'sku' => 'ODD-PARFUM-100',
+                'units' => 1,
+                'selling_price' => $totalAmount,
+                'discount' => 0,
+                'tax' => 0,
+                'hsn' => 330300
+            ];
+        }
+
+        $orderDate = !empty($order['created_at']) ? date('Y-m-d H:i', strtotime($order['created_at'])) : date('Y-m-d H:i');
+
+        $srOrderPayload = [
+            'order_id' => $orderId,
+            'order_date' => $orderDate,
+            'pickup_location' => $pickupLocation,
+            'channel_id' => '',
+            'comment' => 'ODD Luxury Perfume Order',
+            'billing_customer_name' => $firstName,
+            'billing_last_name' => $lastName,
+            'billing_address' => substr($destAddress, 0, 100),
+            'billing_address_2' => '',
+            'billing_city' => $destCity,
+            'billing_pincode' => $pincode,
+            'billing_state' => $destState,
+            'billing_country' => 'India',
+            'billing_email' => $order['customer_email'] ?: 'orders@oddperfume.com',
+            'billing_phone' => preg_replace('/[^0-9]/', '', $order['customer_phone'] ?: '9876543210'),
+            'shipping_is_billing' => true,
+            'order_items' => $orderItems,
+            'payment_method' => $isCod ? 'COD' : 'Prepaid',
+            'shipping_charges' => (float)($order['shipping_fee'] ?? 0),
+            'giftwrap_charges' => 0,
+            'transaction_charges' => 0,
+            'total_discount' => (float)($order['discount_amount'] ?? 0),
+            'sub_total' => $totalAmount,
+            'length' => 15,
+            'breadth' => 10,
+            'height' => 8,
+            'weight' => 0.4
         ];
 
-        $ch = curl_init("https://{$apiHost}/ship/generate/");
+        // 1. Create Adhoc Order in Shiprocket
+        $ch = curl_init('https://apiv2.shiprocket.in/v1/external/orders/create/adhoc');
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             "Authorization: Bearer {$token}",
             "Content-Type: application/json"
         ]);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($srOrderPayload));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-        $resp = curl_exec($ch);
+        $srResp = curl_exec($ch);
         curl_close($ch);
 
-        $resJson = json_decode((string)$resp, true);
-        $shipData = $resJson['data'][0] ?? $resJson['data'] ?? [];
+        $srJson = json_decode((string)$srResp, true);
+        $shipmentId = $srJson['shipment_id'] ?? null;
 
-        $trackingNumber = $shipData['trackingNumber'] ?? $shipData['tracking_number'] ?? null;
-        $labelUrl = $shipData['label'] ?? $shipData['labelUrl'] ?? $shipData['label_url'] ?? null;
-        $carrierName = ucfirst($shipData['carrier'] ?? $chosenCarrier);
-        $trackUrl = $shipData['trackUrl'] ?? $shipData['track_url'] ?? ("https://www.delhivery.com/track/package/" . $trackingNumber);
-
-        if ($trackingNumber) {
-            $pdo->prepare('UPDATE orders SET courier_name = ?, tracking_number = ?, tracking_url = ?, label_url = ?, status = "Dispatched", dispatched_at = NOW(), updated_at = NOW() WHERE id = ?')
-                ->execute([$carrierName, $trackingNumber, $trackUrl, $labelUrl, $orderId]);
-
-            return [
-                'success' => true,
-                'trackingNumber' => $trackingNumber,
-                'tracking_number' => $trackingNumber,
-                'labelUrl' => $labelUrl,
-                'label_url' => $labelUrl,
-                'trackUrl' => $trackUrl,
-                'tracking_url' => $trackUrl,
-                'carrier' => $carrierName,
-                'courier_name' => $carrierName,
-                'message' => "Envia shipping label generated with {$carrierName}! AWB: {$trackingNumber}"
-            ];
-        } else {
-            $errMsg = 'Envia could not generate label for this address.';
-            if (!empty($resJson['error']['message'])) {
-                $rawMsg = (string)$resJson['error']['message'];
-                if (($resJson['error']['code'] ?? 0) === 1170 || stripos($rawMsg, 'Not Enough money') !== false) {
-                    $errMsg = 'Insufficient Envia wallet balance (Not Enough money). Please recharge your Envia account balance at shipping.envia.com to generate courier labels.';
-                } else {
-                    $errMsg = $rawMsg;
-                }
-            } elseif (!empty($resJson['meta']['message'])) {
-                $errMsg = (string)$resJson['meta']['message'];
-            } elseif (!empty($resJson['message']) && is_string($resJson['message'])) {
-                $errMsg = $resJson['message'];
-            } elseif (is_string($resJson['error'] ?? null)) {
-                $errMsg = $resJson['error'];
+        if (!$shipmentId) {
+            $err = $srJson['message'] ?? 'Failed to create order in Shiprocket.';
+            if (!empty($srJson['errors'])) {
+                $err .= ' Details: ' . json_encode($srJson['errors']);
             }
-
-            return ['success' => false, 'error' => $errMsg, 'raw' => $resJson];
+            return ['success' => false, 'error' => $err, 'raw' => $srJson];
         }
+
+        // 2. Assign AWB in Shiprocket
+        $awbPayload = ['shipment_id' => $shipmentId];
+        $ch2 = curl_init('https://apiv2.shiprocket.in/v1/external/courier/assign/awb');
+        curl_setopt($ch2, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer {$token}",
+            "Content-Type: application/json"
+        ]);
+        curl_setopt($ch2, CURLOPT_POST, true);
+        curl_setopt($ch2, CURLOPT_POSTFIELDS, json_encode($awbPayload));
+        curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch2, CURLOPT_TIMEOUT, 15);
+        $awbResp = curl_exec($ch2);
+        curl_close($ch2);
+
+        $awbJson = json_decode((string)$awbResp, true);
+        $awbData = $awbJson['response']['data'] ?? $awbJson['data'] ?? [];
+        $trackingNumber = $awbData['awb_code'] ?? null;
+        $courierName = $awbData['courier_name'] ?? 'Shiprocket Logistics Partner';
+
+        if (!$trackingNumber) {
+            $err = $awbJson['message'] ?? $awbJson['response']['data']['error'] ?? 'Shiprocket could not assign AWB for this shipment.';
+            return ['success' => false, 'error' => $err, 'shipment_id' => $shipmentId, 'raw' => $awbJson];
+        }
+
+        // 3. Generate Label in Shiprocket
+        $labelPayload = ['shipment_id' => [$shipmentId]];
+        $ch3 = curl_init('https://apiv2.shiprocket.in/v1/external/courier/generate/label');
+        curl_setopt($ch3, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer {$token}",
+            "Content-Type: application/json"
+        ]);
+        curl_setopt($ch3, CURLOPT_POST, true);
+        curl_setopt($ch3, CURLOPT_POSTFIELDS, json_encode($labelPayload));
+        curl_setopt($ch3, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch3, CURLOPT_TIMEOUT, 15);
+        $labelResp = curl_exec($ch3);
+        curl_close($ch3);
+
+        $labelJson = json_decode((string)$labelResp, true);
+        $labelUrl = $labelJson['label_url'] ?? $labelJson['response']['label_url'] ?? null;
+        $trackUrl = "https://shiprocket.co/tracking/" . $trackingNumber;
+
+        // 4. Update Database
+        $pdo->prepare('UPDATE orders SET courier_name = ?, tracking_number = ?, tracking_url = ?, label_url = ?, status = "Dispatched", dispatched_at = NOW(), updated_at = NOW() WHERE id = ?')
+            ->execute([$courierName, $trackingNumber, $trackUrl, $labelUrl, $orderId]);
+
+        // 5. Send dispatch notification email
+        try {
+            sendDispatchNotificationEmail($order, $trackingNumber, $courierName, $trackUrl, (string)$labelUrl);
+        } catch (Throwable $e) {}
+
+        return [
+            'success' => true,
+            'trackingNumber' => $trackingNumber,
+            'tracking_number' => $trackingNumber,
+            'labelUrl' => $labelUrl,
+            'label_url' => $labelUrl,
+            'trackUrl' => $trackUrl,
+            'tracking_url' => $trackUrl,
+            'carrier' => $courierName,
+            'courier_name' => $courierName,
+            'message' => "Shiprocket label generated with {$courierName}! AWB: {$trackingNumber}"
+        ];
     }
 
-    if ($route === 'shipping/envia/create-label' && $method === 'POST') {
+    if ($route === 'shipping/shiprocket/create-label' && $method === 'POST') {
         requireStaffAuth('shipping');
         $body = getJsonBody();
         $orderId = trim((string)($body['orderId'] ?? ''));
         if (!$orderId) sendJson(400, ['error' => 'Order ID is required.']);
 
-        $res = dispatchOrderWithEnvia($pdo, $orderId);
+        $res = dispatchOrderWithShiprocket($pdo, $orderId);
         sendJson(!empty($res['success']) ? 200 : 400, $res);
     }
 
-    if ($route === 'shipping/envia/rates' && $method === 'POST') {
+    if ($route === 'shipping/shiprocket/rates' && $method === 'POST') {
         $body = getJsonBody();
-        $pincode = trim((string)($body['postalCode'] ?? $body['pincode'] ?? '400001'));
-        if (!preg_match('/^\d{6}$/', $pincode)) {
+        $destPincode = trim((string)($body['postalCode'] ?? $body['pincode'] ?? '400001'));
+        if (!preg_match('/^\d{6}$/', $destPincode)) {
             sendJson(400, ['error' => 'Please provide a valid 6-digit Indian PIN code.']);
         }
 
-        $sStmt = $pdo->query('SELECT value_json FROM settings WHERE key_name = "envia"');
-        $sRow = $sStmt->fetch();
-        $enviaCfg = $sRow ? json_decode($sRow['value_json'], true) : [];
-        $token = $enviaCfg['apiKey'] ?? ENVIA_API_KEY;
-        $origin = $enviaCfg['origin'] ?? [
-            'name' => 'ODD Perfumes Warehouse',
-            'phone' => '9876543210',
-            'street' => 'Industrial Area',
-            'number' => '10',
-            'city' => 'Mumbai',
-            'state' => 'MH',
-            'country' => 'IN',
-            'postalCode' => '400001'
-        ];
+        $sStmt = $pdo->query('SELECT value_json FROM settings WHERE key_name = "shiprocket"');
+        $sRow = $sStmt ? $sStmt->fetch() : null;
+        $srCfg = $sRow ? json_decode($sRow['value_json'], true) : [];
+        $pickupPincode = trim((string)($srCfg['origin']['postalCode'] ?? '400001'));
 
-        $pfx2 = (int)substr($pincode, 0, 2);
-        $destState = 'MH';
-        if ($pfx2 === 11) $destState = 'DL';
-        elseif ($pfx2 >= 12 && $pfx2 <= 13) $destState = 'HR';
-        elseif ($pfx2 >= 14 && $pfx2 <= 16) $destState = 'PB';
-        elseif ($pfx2 === 17) $destState = 'HP';
-        elseif ($pfx2 >= 18 && $pfx2 <= 19) $destState = 'JK';
-        elseif ($pfx2 >= 20 && $pfx2 <= 28) $destState = 'UP';
-        elseif ($pfx2 >= 30 && $pfx2 <= 34) $destState = 'RJ';
-        elseif ($pfx2 >= 36 && $pfx2 <= 39) $destState = 'GJ';
-        elseif ($pfx2 >= 40 && $pfx2 <= 44) $destState = 'MH';
-        elseif ($pfx2 >= 45 && $pfx2 <= 48) $destState = 'MP';
-        elseif ($pfx2 >= 50 && $pfx2 <= 53) $destState = 'TG';
-        elseif ($pfx2 >= 56 && $pfx2 <= 59) $destState = 'KA';
-        elseif ($pfx2 >= 60 && $pfx2 <= 64) $destState = 'TN';
-        elseif ($pfx2 >= 67 && $pfx2 <= 69) $destState = 'KL';
-        elseif ($pfx2 >= 70 && $pfx2 <= 74) $destState = 'WB';
-        elseif ($pfx2 >= 80 && $pfx2 <= 85) $destState = 'BR';
+        $isCod = !empty($body['isCod']) || !empty($body['cod']);
+        $token = getShiprocketToken($pdo);
 
-        $destCity = trim((string)($body['city'] ?? 'Mumbai'));
-        $declaredValue = max(899, (float)($body['totalAmount'] ?? 899));
+        if (!$token) {
+            sendJson(200, [
+                'success' => true,
+                'rates' => [
+                    [
+                        'carrier' => 'Shiprocket Express',
+                        'carrierName' => 'Shiprocket Express Partner',
+                        'service' => 'Surface Express',
+                        'serviceName' => 'Standard Express (2-4 Days)',
+                        'totalPrice' => 0.00,
+                        'currency' => 'INR',
+                        'estimate' => '2-4 business days'
+                    ]
+                ]
+            ]);
+        }
 
-        $carriers = ['delhivery', 'ekart'];
+        $url = "https://apiv2.shiprocket.in/v1/external/courier/serviceability/?pickup_postcode=" . urlencode($pickupPincode) . "&delivery_postcode=" . urlencode($destPincode) . "&weight=0.4&cod=" . ($isCod ? '1' : '0');
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer {$token}",
+            "Content-Type: application/json"
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
+        $resp = curl_exec($ch);
+        curl_close($ch);
+
+        $json = json_decode((string)$resp, true);
+        $courierList = $json['data']['available_courier_companies'] ?? [];
         $rates = [];
 
-        $mh = curl_multi_init();
-        $curlHandles = [];
-
-        foreach ($carriers as $carrier) {
-            $payload = [
-                'origin' => [
-                    'name' => $origin['name'] ?? 'ODD Perfumes',
-                    'company' => 'ODD Perfumes',
-                    'phone' => preg_replace('/[^0-9]/', '', $origin['phone'] ?? '9876543210'),
-                    'street' => $origin['street'] ?? 'Main Street',
-                    'number' => '1',
-                    'city' => $origin['city'] ?? 'Mumbai',
-                    'state' => $origin['state'] ?? 'MH',
-                    'country' => 'IN',
-                    'postalCode' => $origin['postalCode'] ?? '400001'
-                ],
-                'destination' => [
-                    'name' => 'Customer',
-                    'phone' => '9876543210',
-                    'street' => 'Destination Street',
-                    'number' => '1',
-                    'city' => $destCity,
-                    'state' => $destState,
-                    'country' => 'IN',
-                    'postalCode' => $pincode
-                ],
-                'packages' => [
-                    [
-                        'content' => 'ODD Luxury Perfume Fragrance',
-                        'amount' => 1,
-                        'type' => 'box',
-                        'weight' => 0.4,
-                        'weightUnit' => 'KG',
-                        'lengthUnit' => 'CM',
-                        'dimensions' => ['length' => 15, 'width' => 10, 'height' => 8],
-                        'declaredValue' => $declaredValue
-                    ]
-                ],
-                'shipment' => [
-                    'type' => 1,
-                    'carrier' => $carrier
-                ]
+        foreach ($courierList as $c) {
+            $rates[] = [
+                'carrier' => $c['courier_name'] ?? 'Express',
+                'carrierName' => $c['courier_name'] ?? 'Courier',
+                'service' => (string)($c['courier_company_id'] ?? 'standard'),
+                'serviceName' => ($c['courier_name'] ?? 'Courier') . ' (' . ($c['etd'] ?? '2-4 days') . ')',
+                'totalPrice' => (float)($c['rate'] ?? 0),
+                'currency' => 'INR',
+                'estimate' => $c['etd'] ?? '2-4 days'
             ];
-
-            $ch = curl_init('https://api.envia.com/ship/rate/');
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                "Authorization: Bearer {$token}",
-                "Content-Type: application/json"
-            ]);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
-            curl_multi_add_handle($mh, $ch);
-            $curlHandles[$carrier] = $ch;
         }
 
-        $running = null;
-        do {
-            curl_multi_exec($mh, $running);
-            curl_multi_select($mh);
-        } while ($running > 0);
-
-        foreach ($curlHandles as $carrier => $ch) {
-            $content = curl_multi_getcontent($ch);
-            curl_multi_remove_handle($mh, $ch);
-            curl_close($ch);
-
-            $data = json_decode((string)$content, true);
-            if (!empty($data['data']) && is_array($data['data'])) {
-                foreach ($data['data'] as $quote) {
-                    $rates[] = [
-                        'carrier' => $carrier,
-                        'carrierName' => ucfirst($quote['carrier'] ?? $carrier),
-                        'service' => $quote['service'] ?? 'standard',
-                        'serviceName' => $quote['serviceDescription'] ?? ucfirst($quote['service'] ?? 'Standard Delivery'),
-                        'totalPrice' => (float)($quote['totalPrice'] ?? 0),
-                        'currency' => $quote['currency'] ?? 'INR',
-                        'estimate' => $quote['deliveryEstimate'] ?? '2-4 days',
-                        'deliveryDate' => $quote['deliveryDate']['date'] ?? null
-                    ];
-                }
-            }
+        if (empty($rates)) {
+            $rates[] = [
+                'carrier' => 'Shiprocket Express',
+                'carrierName' => 'Shiprocket Multi-Carrier',
+                'service' => 'express',
+                'serviceName' => 'Standard Fast Delivery',
+                'totalPrice' => 0.00,
+                'currency' => 'INR',
+                'estimate' => '2-4 business days'
+            ];
         }
-        curl_multi_close($mh);
-
-        usort($rates, function($a, $b) {
-            return $a['totalPrice'] <=> $b['totalPrice'];
-        });
 
         sendJson(200, ['success' => true, 'count' => count($rates), 'rates' => $rates]);
     }
 
-    if ($route === 'shipping/envia/webhook' && $method === 'POST') {
+    if ($route === 'shipping/shiprocket/webhook' && $method === 'POST') {
         $body = getJsonBody();
-        $trackingNumber = trim((string)($body['trackingNumber'] ?? $body['tracking_number'] ?? $body['data']['tracking_number'] ?? ''));
-        $rawStatus = trim((string)($body['status'] ?? $body['data']['status'] ?? ''));
-        $orderId = trim((string)($body['orderData']['orderNumber'] ?? $body['orderData']['orderIdentifier'] ?? $body['orderNumber'] ?? ''));
+        $trackingNumber = trim((string)($body['awb'] ?? $body['awb_code'] ?? $body['tracking_number'] ?? ''));
+        $rawStatus = trim((string)($body['current_status'] ?? $body['status'] ?? ''));
+        $orderId = trim((string)($body['order_id'] ?? $body['channel_order_id'] ?? ''));
 
         if (!$trackingNumber && !$orderId) {
             sendJson(200, ['success' => false, 'message' => 'No tracking number or order number supplied in webhook']);
@@ -1181,7 +1436,7 @@ try {
             } elseif (strpos($sLower, 'transit') !== false || strpos($sLower, 'picked up') !== false || strpos($sLower, 'shipped') !== false) {
                 $targetStatus = 'Dispatched';
                 $pdo->prepare('UPDATE orders SET status = "Dispatched", updated_at = NOW() WHERE id = ?')->execute([$order['id']]);
-            } elseif (strpos($sLower, 'return') !== false || strpos($sLower, 'exception') !== false || strpos($sLower, 'fail') !== false) {
+            } elseif (strpos($sLower, 'rto') !== false || strpos($sLower, 'return') !== false || strpos($sLower, 'fail') !== false) {
                 $targetStatus = 'Exception';
                 $pdo->prepare('UPDATE orders SET status = "Exception", updated_at = NOW() WHERE id = ?')->execute([$order['id']]);
             }
@@ -1195,43 +1450,6 @@ try {
         }
 
         sendJson(200, ['success' => true, 'matched' => false, 'message' => 'Webhook received and acknowledged']);
-    }
-
-    if ($route === 'shipping/envia/register-webhook' && $method === 'POST') {
-        requireStaffAuth('shipping');
-        $body = getJsonBody();
-        $targetUrl = trim((string)($body['url'] ?? 'https://test.oddperfume.com/api/shipping/envia/webhook'));
-
-        $sRow = $pdo->query('SELECT value_json FROM settings WHERE key_name = "envia"')->fetch();
-        $enviaCfg = $sRow ? json_decode($sRow['value_json'], true) : [];
-        $token = $enviaCfg['apiKey'] ?? ENVIA_API_KEY;
-
-        $payload = json_encode([
-            'type_id' => 1,
-            'url' => $targetUrl,
-            'active' => 1
-        ]);
-
-        $ch = curl_init('https://queries.envia.com/webhooks');
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "Authorization: Bearer {$token}",
-            "Content-Type: application/json"
-        ]);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        $resp = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        $json = json_decode((string)$resp, true);
-        sendJson($httpCode === 200 ? 200 : 400, [
-            'success' => $httpCode === 200,
-            'data' => $json,
-            'url' => $targetUrl,
-            'message' => $httpCode === 200 ? 'Envia tracking webhook registered successfully!' : 'Failed to register webhook with Envia.'
-        ]);
     }
 
     // --- 8. Barcodes & Scans ---
@@ -1500,21 +1718,71 @@ try {
     }
 
     // --- 10. Settings ---
+    if ($route === 'settings/razorpay-public' && $method === 'GET') {
+        $stmt = $pdo->prepare('SELECT value_json FROM settings WHERE key_name = "razorpay"');
+        $stmt->execute();
+        $row = $stmt->fetch();
+        $rzp = $row ? json_decode($row['value_json'], true) : [];
+        sendJson(200, [
+            'enabled' => $rzp['enabled'] ?? true,
+            'env' => $rzp['env'] ?? 'live',
+            'keyId' => $rzp['keyId'] ?? RAZORPAY_KEY_ID,
+            'brandName' => $rzp['brandName'] ?? 'ODD Perfume',
+            'themeColor' => $rzp['themeColor'] ?? '#E86B32'
+        ]);
+    }
+
     if (strpos($route, 'settings/') === 0 && $method === 'GET') {
         $key = substr($route, strlen('settings/'));
-        if (in_array($key, ['envia', 'razorpay'], true)) {
+        if (in_array($key, ['shiprocket', 'razorpay'], true)) {
             requireStaffAuth('admin');
         }
         $stmt = $pdo->prepare('SELECT value_json FROM settings WHERE key_name = ?');
         $stmt->execute([$key]);
         $row = $stmt->fetch();
-        sendJson(200, $row ? json_decode($row['value_json'], true) : []);
+        $data = $row ? json_decode($row['value_json'], true) : [];
+
+        if ($key === 'razorpay') {
+            if (!empty($data['keySecret'])) {
+                $data['keySecret'] = '••••••••••••';
+            }
+            if (empty($data['keyId'])) {
+                $data['keyId'] = RAZORPAY_KEY_ID;
+            }
+        } elseif ($key === 'shiprocket') {
+            if (!empty($data['password'])) {
+                $data['password'] = '••••••••••••';
+            }
+            if (empty($data['email'])) {
+                $data['email'] = defined('SHIPROCKET_EMAIL') ? SHIPROCKET_EMAIL : '';
+            }
+            if (empty($data['pickupLocation'])) {
+                $data['pickupLocation'] = defined('SHIPROCKET_PICKUP_LOCATION') ? SHIPROCKET_PICKUP_LOCATION : 'Primary';
+            }
+        }
+
+        sendJson(200, $data);
     }
 
     if (strpos($route, 'settings/') === 0 && ($method === 'POST' || $method === 'PUT')) {
         $key = substr($route, strlen('settings/'));
         requireStaffAuth($key === 'banner' ? 'marketing' : 'admin');
         $body = getJsonBody();
+
+        if ($key === 'razorpay' && (empty($body['keySecret']) || str_contains($body['keySecret'], '••••'))) {
+            $prevStmt = $pdo->prepare('SELECT value_json FROM settings WHERE key_name = "razorpay"');
+            $prevStmt->execute();
+            $prevRow = $prevStmt->fetch();
+            $prev = $prevRow ? json_decode($prevRow['value_json'], true) : [];
+            $body['keySecret'] = $prev['keySecret'] ?? RAZORPAY_KEY_SECRET;
+        } elseif ($key === 'shiprocket' && (empty($body['password']) || str_contains($body['password'], '••••'))) {
+            $prevStmt = $pdo->prepare('SELECT value_json FROM settings WHERE key_name = "shiprocket"');
+            $prevStmt->execute();
+            $prevRow = $prevStmt->fetch();
+            $prev = $prevRow ? json_decode($prevRow['value_json'], true) : [];
+            $body['password'] = $prev['password'] ?? (defined('SHIPROCKET_PASSWORD') ? SHIPROCKET_PASSWORD : '');
+        }
+
         $pdo->prepare('
             INSERT INTO settings (key_name, value_json, updated_at) VALUES (?, ?, NOW())
             ON DUPLICATE KEY UPDATE value_json = VALUES(value_json), updated_at = NOW()

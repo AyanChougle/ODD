@@ -651,58 +651,61 @@
           </form>
         </div>
 
-        <!-- Envia.com Multi-Carrier Shipping & AWB Automation Card -->
+        <!-- Shiprocket Multi-Carrier Shipping & AWB Automation Card -->
         <div class="admin-card" style="margin-top:2rem;">
           <div class="admin-card-header">
             <div>
-              <h3 class="admin-card-title">Envia.com Multi-Carrier Shipping &amp; AWB Dispatch</h3>
-              <div class="admin-card-subtitle">Automate live courier booking (Blue Dart, Delhivery, DTDC, Ekart, etc.), tracking generation, and shipping label printing</div>
+              <h3 class="admin-card-title">Shiprocket Multi-Carrier Shipping &amp; AWB Dispatch</h3>
+              <div class="admin-card-subtitle">Automate live courier booking (Delhivery, Blue Dart, DTDC, Shadowfax, Ekart, etc.), tracking generation, and shipping label printing</div>
             </div>
             <div>
-              <span id="envia-status-badge" class="badge-status info">Active (Production)</span>
+              <span id="shiprocket-status-badge" class="badge-status info">Active (Production)</span>
             </div>
           </div>
-          <form id="envia-settings-form" onsubmit="event.preventDefault(); saveEnviaSettings(event); return false;" style="max-width:760px;">
-            <div class="admin-form-group">
-              <label class="admin-label">Envia API Token</label>
-              <div style="display:flex; gap:0.5rem;">
-                <input type="password" id="envia-api-key" class="admin-input" placeholder="87e6fa5254254329cc8f21c4de06ce0dd3546197e4b55664bc3a25efcbf87236" required autocomplete="off" style="font-family:monospace; letter-spacing:0.04em;">
-                <button type="button" class="admin-btn" onclick="toggleEnviaKeyVisibility()" id="btn-toggle-envia-key" style="white-space:nowrap; padding:0 0.8rem;">Show</button>
+          <form id="shiprocket-settings-form" onsubmit="event.preventDefault(); saveShiprocketSettings(event); return false;" style="max-width:760px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.2rem;">
+              <div class="admin-form-group" style="margin:0;">
+                <label class="admin-label">Shiprocket Account / API Email</label>
+                <input type="email" id="shiprocket-email" class="admin-input" placeholder="oddperfumesocial@gmail.com" required autocomplete="off">
+                <small style="color:var(--admin-text-muted); font-size:0.75rem;">Account email or dedicated API user from Shiprocket dashboard.</small>
               </div>
-              <small style="color:var(--admin-text-muted); font-size:0.75rem;">Your account API token from Envia dashboard (Settings &rarr; API Keys).</small>
+
+              <div class="admin-form-group" style="margin:0;">
+                <label class="admin-label">Shiprocket Password / API Key</label>
+                <div style="display:flex; gap:0.5rem;">
+                  <input type="password" id="shiprocket-password" class="admin-input" placeholder="••••••••••••••••" required autocomplete="off" style="font-family:monospace; letter-spacing:0.04em;">
+                  <button type="button" class="admin-btn" onclick="(window.toggleShiprocketKeyVisibility || window.toggleshiprocketKeyVisibility)()" id="btn-toggle-shiprocket-key" style="white-space:nowrap; padding:0 0.8rem;">Show</button>
+                </div>
+                <small style="color:var(--admin-text-muted); font-size:0.75rem;">API password configured in Shiprocket &rarr; Settings &rarr; API &rarr; Configure.</small>
+              </div>
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.2rem;">
               <div class="admin-form-group" style="margin:0;">
-                <label class="admin-label">API Environment</label>
-                <select id="envia-env" class="admin-input">
-                  <option value="live" selected>Live Production (api.envia.com) — Active</option>
-                  <option value="test">Sandbox / Testing (Requires separate sandbox key)</option>
-                </select>
-                <small style="color:var(--admin-accent); font-size:0.75rem;">Your token is a Live production key. Keep set to Live Production.</small>
+                <label class="admin-label">Pickup Location Name</label>
+                <input type="text" id="shiprocket-pickup-location" class="admin-input" placeholder="Primary" value="Primary" required>
+                <small style="color:var(--admin-text-muted); font-size:0.75rem;">Registered Pickup Location nickname in your Shiprocket account.</small>
               </div>
 
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Default Carrier Partner</label>
-                <select id="envia-carrier" class="admin-input">
-                  <option value="all" selected>Cheapest / Best Available Carrier (Automatic)</option>
-                  <option value="bluedart">Blue Dart Express (Air / Express)</option>
+                <select id="shiprocket-carrier" class="admin-input">
+                  <option value="automatic" selected>Cheapest / Best Available Carrier (Automatic)</option>
                   <option value="delhivery">Delhivery Logistics (Surface / Air)</option>
+                  <option value="bluedart">Blue Dart Express (Air / Priority)</option>
                   <option value="dtdc">DTDC India</option>
-                  <option value="amazon">Amazon Shipping India</option>
+                  <option value="shadowfax">Shadowfax</option>
                   <option value="ekart">Ekart Logistics</option>
                   <option value="ecom_express">Ecom Express</option>
                   <option value="xpressbees">XpressBees</option>
-                  <option value="shadowfax">Shadowfax</option>
-                  <option value="aramex">Aramex (International Deliveries)</option>
                 </select>
-                <small style="color:var(--admin-text-muted); font-size:0.75rem;">Selected courier is requested when generating AWB labels.</small>
+                <small style="color:var(--admin-text-muted); font-size:0.75rem;">Selected courier preference when generating AWB labels.</small>
               </div>
             </div>
 
             <div class="admin-form-group" style="margin-top:0.4rem; margin-bottom:1rem;">
               <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; font-weight:600; cursor:pointer;">
-                <input type="checkbox" id="envia-auto-dispatch"> Auto-book Envia courier shipment &amp; generate AWB on new customer orders
+                <input type="checkbox" id="shiprocket-auto-dispatch"> Auto-book Shiprocket courier shipment &amp; generate AWB on new customer orders
               </label>
               <small style="color:var(--admin-text-muted); font-size:0.75rem; margin-left:1.5rem; display:block;">When checked, customer orders automatically generate an official courier AWB on checkout.</small>
             </div>
@@ -712,49 +715,48 @@
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">Sender / Brand Name</label>
-                  <input type="text" id="envia-origin-name" class="admin-input" value="ODD Perfume Fulfillment" required>
+                  <input type="text" id="shiprocket-origin-name" class="admin-input" placeholder="ODD Perfume Fulfillment" value="ODD Perfume Fulfillment" required>
                 </div>
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">Dispatch Contact Phone</label>
-                  <input type="text" id="envia-origin-phone" class="admin-input" value="+919876543210" required>
+                  <input type="text" id="shiprocket-origin-phone" class="admin-input" placeholder="+919876543210" value="+919876543210" required>
                 </div>
               </div>
 
               <div class="admin-form-group" style="margin-bottom:1rem;">
                 <label class="admin-label">Warehouse Address Line</label>
-                <input type="text" id="envia-origin-street" class="admin-input" value="Plot 42, Perfume Studio, Industrial Area" required>
+                <input type="text" id="shiprocket-origin-street" class="admin-input" placeholder="Plot 42, Perfume Studio, Industrial Area" value="Plot 42, Perfume Studio, Industrial Area" required>
               </div>
 
               <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem;">
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">City</label>
-                  <input type="text" id="envia-origin-city" class="admin-input" value="Mumbai" required>
+                  <input type="text" id="shiprocket-origin-city" class="admin-input" placeholder="Mumbai" value="Mumbai" required>
                 </div>
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">State Code (e.g. MH, DL, KA)</label>
-                  <input type="text" id="envia-origin-state" class="admin-input" value="MH" required maxlength="4" style="text-transform:uppercase;">
+                  <input type="text" id="shiprocket-origin-state" class="admin-input" placeholder="MH" value="MH" required maxlength="4" style="text-transform:uppercase;">
                 </div>
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">Postal PIN Code</label>
-                  <input type="text" id="envia-origin-postal" class="admin-input" value="400001" required pattern="[0-9]{6}">
+                  <input type="text" id="shiprocket-origin-postal" class="admin-input" placeholder="400001" value="400001" required pattern="[0-9]{6}">
                 </div>
               </div>
             </div>
 
             <div style="display:flex; gap:0.8rem; align-items:center; flex-wrap:wrap;">
-              <button type="button" id="btn-save-envia" class="admin-btn admin-btn-primary" onclick="saveEnviaSettings(event)">Save Envia Settings</button>
-              <button type="button" id="btn-test-envia" class="admin-btn" onclick="testEnviaConnection()">Test Connection</button>
-              <span id="envia-saved-msg" style="font-size:0.8rem; color:#10B981; display:none;">Settings saved successfully!</span>
+              <button type="button" id="btn-save-shiprocket" class="admin-btn admin-btn-primary" onclick="saveShiprocketSettings(event)">Save Shiprocket Settings</button>
+              <button type="button" id="btn-test-shiprocket" class="admin-btn" onclick="testShiprocketConnection()">Test Connection</button>
+              <span id="shiprocket-saved-msg" style="font-size:0.8rem; color:#10B981; display:none;">Settings saved successfully!</span>
             </div>
-            <div id="envia-test-result" style="margin-top:1rem; display:none; padding:12px 14px; border-radius:6px; font-size:0.85rem;"></div>
+            <div id="shiprocket-test-result" style="margin-top:1rem; display:none; padding:12px 14px; border-radius:6px; font-size:0.85rem;"></div>
 
             <div style="margin-top:1.2rem; padding:12px 16px; background:#0B0E14; border:1px solid var(--admin-border); border-radius:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
               <div>
                 <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--admin-accent); font-weight:700; display:block;">Production Tracking Webhook</span>
-                <span style="font-size:0.82rem; color:var(--admin-text); font-family:monospace;">https://test.oddperfume.com/api/shipping/envia/webhook</span>
-                <div style="font-size:0.75rem; color:#10B981; margin-top:2px;">Status: Active on Envia (ID #5203) &bull; Auto-syncs delivery status</div>
+                <span style="font-size:0.82rem; color:var(--admin-text); font-family:monospace;">https://test.oddperfume.com/api/shipping/shiprocket/webhook</span>
+                <div style="font-size:0.75rem; color:#10B981; margin-top:2px;">Status: Active &bull; Auto-syncs live courier tracking scans</div>
               </div>
-              <button type="button" id="btn-register-webhook" class="admin-btn admin-btn-xs admin-btn-outline" onclick="registerEnviaWebhook()" style="font-size:0.75rem; padding:6px 12px;">Sync Webhook with Envia</button>
             </div>
           </form>
         </div>
@@ -890,7 +892,7 @@
 
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Razorpay Key ID</label>
-                <input type="text" id="rzp-key-id" class="admin-input" value="rzp_live_Ti8AffHarb3tai" placeholder="rzp_live_..." required>
+                <input type="text" id="rzp-key-id" class="admin-input" placeholder="rzp_live_••••••••••••" required>
                 <small style="color:var(--admin-text-muted); font-size:0.75rem;">Live Public Key from Razorpay Dashboard &gt; API Keys.</small>
               </div>
             </div>
@@ -899,7 +901,7 @@
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Razorpay Key Secret / Pass</label>
                 <div style="position:relative; display:flex; align-items:center;">
-                  <input type="password" id="rzp-key-secret" class="admin-input" value="X4Ws6I0iovvSrTYh18i1nNjl" placeholder="Key Secret / Pass" style="padding-right:50px;" required>
+                  <input type="password" id="rzp-key-secret" class="admin-input" placeholder="••••••••••••••••" style="padding-right:50px;">
                   <button type="button" id="rzp-secret-toggle-btn" onclick="toggleSecretVisibility()" style="position:absolute; right:10px; background:none; border:none; color:var(--admin-text-muted); cursor:pointer; font-size:0.75rem; text-transform:uppercase; font-family:var(--font-mono, monospace);">Show</button>
                 </div>
                 <small style="color:var(--admin-text-muted); font-size:0.75rem;">Merchant Secret Pass for server webhooks &amp; payment reconciliation.</small>
