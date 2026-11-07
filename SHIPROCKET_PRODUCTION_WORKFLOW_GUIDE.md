@@ -21,7 +21,7 @@ sequenceDiagram
     Customer->>Checkout: Fills Name, Address & 6-Digit PIN Code
     Checkout->>Backend: POST /api/orders (COD / Razorpay)
     Backend->>Backend: Validates stock & creates order in database
-    
+
     alt If Auto-Dispatch Enabled
         Backend->>Shiprocket: POST /v1/external/auth/login (JWT Bearer Token Cached)
         Backend->>Shiprocket: POST /v1/external/orders/create/adhoc
@@ -53,6 +53,7 @@ sequenceDiagram
 All endpoints are implemented in both [api/index.php](file:///D:/AYAN/odd-perfume/api/index.php) (Hostinger PHP Production) and [server.js](file:///D:/AYAN/odd-perfume/server.js) (Node.js Development):
 
 ### 1. Test Connection & Authentication
+
 - **Endpoint:** `POST /api/shipping/shiprocket/test`
 - **Request Body:**
   ```json
@@ -75,6 +76,7 @@ All endpoints are implemented in both [api/index.php](file:///D:/AYAN/odd-perfum
   ```
 
 ### 2. Manual 1-Click Order Dispatch & Label Generation
+
 - **Endpoint:** `POST /api/shipping/shiprocket/create-label`
 - **Headers:** `X-CSRF-Token: <token>`, `Cookie: odd_session=...`
 - **Request Body:**
@@ -100,6 +102,7 @@ All endpoints are implemented in both [api/index.php](file:///D:/AYAN/odd-perfum
   ```
 
 ### 3. Courier Rate & Serviceability Calculation
+
 - **Endpoint:** `POST /api/shipping/shiprocket/rates`
 - **Request Body:**
   ```json
@@ -128,6 +131,7 @@ All endpoints are implemented in both [api/index.php](file:///D:/AYAN/odd-perfum
   ```
 
 ### 4. Live Tracking Status Webhook
+
 - **Endpoint:** `POST /api/shipping/shiprocket/webhook`
 - **Payload:** Shiprocket tracking payload containing `awb`, `current_status`, and `order_id`.
 - **Response (200 OK):**
@@ -141,6 +145,7 @@ All endpoints are implemented in both [api/index.php](file:///D:/AYAN/odd-perfum
   ```
 
 ### 5. Settings Configuration
+
 - **Endpoints:**
   - `GET /api/settings/shiprocket` (Returns masked credentials)
   - `POST /api/settings/shiprocket` or `PUT /api/settings/shiprocket` (Saves settings)
@@ -153,14 +158,14 @@ All endpoints are implemented in both [api/index.php](file:///D:/AYAN/odd-perfum
    - In Hostinger hPanel -> Advanced -> Environment Variables or `.env`:
      ```env
      SHIPROCKET_EMAIL=oddperfumesocial@gmail.com
-     SHIPROCKET_PASSWORD=Aoeo6$g4!7RYRLSLM0@V90MYX!fI*Gg!
+     SHIPROCKET_PASSWORD=Ks^U&iCv5zET!Bse*c4Ubln9y!ZkHw&o
      SHIPROCKET_PICKUP_LOCATION=Primary
      ```
 2. **Create Dedicated API User in Shiprocket Dashboard:**
    - Log into Shiprocket Dashboard (`app.shiprocket.in`).
    - Navigate to Settings -> API -> Configure.
    - Click "Create an API User".
-   - Enter your preferred email and password (e.g. `oddperfumesocial@gmail.com` and `Aoeo6$g4!7RYRLSLM0@V90MYX!fI*Gg!`).
+   - Enter your dedicated API email and generated API key.
    - Confirm permissions.
 3. **Set Pickup Address in Shiprocket:**
    - In Shiprocket Dashboard -> Settings -> Pickup Addresses.

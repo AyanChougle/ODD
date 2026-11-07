@@ -153,6 +153,10 @@
               </tbody>
             </table>
           </div>
+
+          <div id="account-orders-cards" class="account-orders-cards" style="display:none;">
+            <!-- Mobile Cards Populated Dynamically via Live API -->
+          </div>
         </div>
 
         <!-- 2. Coupons & Launch Offers Section -->
@@ -333,7 +337,7 @@
       <div class="quick-view-details">
         <span class="qv-brand">ODD PARFUMS</span>
         <h3 class="qv-title" id="qv-title">Phantom</h3>
-        <div class="qv-price" id="qv-price">&#8377; 899</div>
+        <div class="qv-price" id="qv-price"></div>
         <div class="qv-size-row">
           <span class="qv-size-label">Size: 100ml</span>
           <span class="qv-size-pill">100ml</span>
@@ -562,7 +566,7 @@
     renderAccountUI();
   }
 
-  function renderAccountUI() {
+  async function renderAccountUI() {
     const session = getCustomerSession();
     const authView = document.getElementById('account-auth-view');
     const dashView = document.getElementById('account-dashboard-view');
@@ -597,34 +601,53 @@
     if (dPhone) dPhone.value = session.phone || '';
     if (dEmail) dEmail.value = session.email || '';
 
-    // Render Tabs
-    renderCustomerOrders(session);
-    renderCustomerCoupons(session);
+    // Render Tabs asynchronously from real server database
+    await Promise.all([
+      renderCustomerOrders(session),
+      renderCustomerCoupons(session)
+    ]);
     renderCustomerAddresses(session);
   }
 
-  function renderCustomerOrders(session) {
+  async function renderCustomerOrders(session) {
     const tbody = document.getElementById('account-orders-tbody');
+    const cardsWrap = document.getElementById('account-orders-cards');
     const emptyWrap = document.getElementById('account-orders-empty');
     const tableWrap = document.getElementById('account-orders-table-wrap');
     const pill = document.getElementById('order-count-pill');
     if (!tbody) return;
 
-    const allOrders = JSON.parse(localStorage.getItem('odd_orders') || '[]');
-    const userEmail = (session.email || '').toLowerCase();
-    const userPhone = (session.phone || '').replace(/[^0-9]/g, '');
+    // Purge any stale legacy mock orders from local storage
+    try {
+      const stored = JSON.parse(localStorage.getItem('odd_orders') || '[]');
+      const filtered = stored.filter(o => !['ODD-00001', 'ODD-00002', 'ODD-00003', 'ODD-00004', 'ODD-548944', 'ODD-739182', 'ODD-518294', 'ODD-429011'].includes(o.id));
+      if (filtered.length !== stored.length) {
+        localStorage.setItem('odd_orders', JSON.stringify(filtered));
+      }
+    } catch (e) {}
 
-    const userOrders = allOrders.filter(o => {
-      const oEmail = String(o.email || '').toLowerCase();
-      const oPhone = String(o.phone || '').replace(/[^0-9]/g, '');
-      return (oEmail && oEmail === userEmail) || (userPhone && oPhone && oPhone.includes(userPhone));
-    });
+    let userOrders = [];
+    try {
+      const email = encodeURIComponent(session.email || '');
+      const phone = encodeURIComponent((session.phone || '').replace(/[^0-9]/g, ''));
+      const res = await fetch(`/api/customer/orders?email=${email}&phone=${phone}`, {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        userOrders = Array.isArray(data.orders) ? data.orders : [];
+      }
+    } catch (e) {
+      console.warn('Could not query database orders:', e);
+    }
 
     if (pill) pill.textContent = `${userOrders.length} order${userOrders.length === 1 ? '' : 's'}`;
 
     if (!userOrders.length) {
       if (emptyWrap) emptyWrap.style.display = 'block';
       if (tableWrap) tableWrap.style.display = 'none';
+      if (cardsWrap) cardsWrap.style.display = 'none';
       return;
     }
 
@@ -642,7 +665,7 @@
       return `
         <tr>
           <td>
-            <strong>${accountEscape(o.id)}</strong>
+            <strong style="font-family:var(--font-mono);">${accountEscape(o.id)}</strong>
             <small style="display:block; color:var(--text-muted); font-size:0.75rem;">${accountEscape(o.phone || '')}</small>
           </td>
           <td style="font-size:0.85rem;">${accountEscape(dateStr)}</td>
@@ -663,34 +686,96 @@
         </tr>
       `;
     }).join('');
+
+    // Also populate mobile-optimized touch cards
+    if (cardsWrap) {
+      cardsWrap.style.display = 'flex';
+      cardsWrap.innerHTML = userOrders.map(o => {
+        const rawTotal = o.total || o.amount || 0;
+        const amountStr = `₹${Number(rawTotal).toLocaleString('en-IN')}`;
+        const status = o.status || 'Confirmed';
+        const dateStr = o.date ? new Date(o.date).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : 'Recent';
+        const itemsList = Array.isArray(o.items) ? o.items.map(it => `${it.name || it.id} × ${it.qty}`).join(', ') : 'Fragrance item';
+        const isPaid = String(o.paymentMethod || '').toLowerCase().includes('razorpay') || o.paymentStatus === 'Paid';
+
+        return `
+          <div class="acc-order-mobile-card" style="background:#FFFFFF; border:1px solid var(--border-color); border-radius:8px; padding:1.1rem; display:flex; flex-direction:column; gap:0.6rem; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong style="font-family:var(--font-mono); font-size:0.95rem; color:var(--text-main);">${accountEscape(o.id)}</strong>
+              <span style="font-size:0.75rem; font-family:var(--font-mono); font-weight:600; padding:0.2rem 0.5rem; border-radius:4px; background:rgba(232,107,50,0.1); color:var(--brand-orange);">${accountEscape(status)}</span>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-muted); display:flex; justify-content:space-between;">
+              <span>${accountEscape(dateStr)}</span>
+              <span style="font-family:var(--font-mono); font-weight:600; color:${isPaid ? '#10B981' : '#F59E0B'};">${accountEscape(isPaid ? 'Razorpay Paid' : 'Cash on Delivery')}</span>
+            </div>
+            <div style="font-size:0.85rem; color:var(--text-main); padding:0.4rem 0; border-top:1px dashed var(--border-color); border-bottom:1px dashed var(--border-color);">
+              ${accountEscape(itemsList)}
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.2rem;">
+              <div>
+                <span style="font-size:0.75rem; color:var(--text-muted);">Total:</span>
+                <strong style="font-size:1rem; margin-left:4px;">${accountEscape(amountStr)}</strong>
+              </div>
+              <a href="order-tracking.html?orderId=${encodeURIComponent(o.id)}" class="btn btn-sm btn-outline" style="padding:0.35rem 0.8rem; font-size:0.75rem; text-decoration:none;">Track Order</a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
   }
 
-  function renderCustomerCoupons(session) {
+  async function renderCustomerCoupons(session) {
     const container = document.getElementById('customer-coupons-grid');
     if (!container) return;
 
-    let coupons = [
-      { code: 'LAUNCH20', discount: 20, desc: 'Site-wide 20% discount on first fragrance order.' },
-      { code: 'ODD10', discount: 10, desc: 'Collector reward: 10% off entire bag.' },
-      { code: 'WELCOME15', discount: 15, desc: 'Welcome scent invitation: 15% discount.' }
-    ];
-
+    // Purge any stale mock coupon usages and legacy coupons from local storage
     try {
-      const adminCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || '[]');
-      if (adminCoupons && adminCoupons.length) {
-        coupons = adminCoupons.map(c => ({
-          code: c.code,
-          discount: c.discount,
-          desc: `${c.discount}% discount valid at checkout across all fragrances.`
-        }));
+      const stored = JSON.parse(localStorage.getItem('odd_coupon_usages') || '[]');
+      const filtered = stored.filter(u => !['ODD-548944', 'ODD-739182', 'ODD-518294', 'ODD-429011'].includes(u.orderId));
+      if (filtered.length !== stored.length) {
+        localStorage.setItem('odd_coupon_usages', JSON.stringify(filtered));
+      }
+      const rawC = JSON.parse(localStorage.getItem('odd_coupons') || '[]');
+      const cleanC = rawC.filter(c => c.code !== 'ODD10' && c.code !== 'WELCOME15');
+      if (cleanC.length !== rawC.length) {
+        localStorage.setItem('odd_coupons', JSON.stringify(cleanC));
+      }
+      const rawAC = JSON.parse(localStorage.getItem('odd_admin_coupons') || '[]');
+      const cleanAC = rawAC.filter(c => c.code !== 'ODD10' && c.code !== 'WELCOME15');
+      if (cleanAC.length !== rawAC.length) {
+        localStorage.setItem('odd_admin_coupons', JSON.stringify(cleanAC));
       }
     } catch (e) {}
 
-    const usages = JSON.parse(localStorage.getItem('odd_coupon_usages') || '[]');
-    const userEmail = (session.email || '').toLowerCase();
+    let coupons = [];
+    let serverUsages = [];
+    try {
+      const email = encodeURIComponent(session.email || '');
+      const res = await fetch(`/api/coupons/active?email=${email}`, {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        coupons = Array.isArray(data.coupons) ? data.coupons : [];
+        serverUsages = Array.isArray(data.usages) ? data.usages : [];
+      }
+    } catch (e) {
+      console.warn('Could not query active database coupons:', e);
+    }
+
+    if (!coupons.length) {
+      container.innerHTML = `
+        <div style="grid-column:1/-1; background:#FFFFFF; border:1px dashed var(--border-color); border-radius:10px; padding:2rem; text-align:center; color:var(--text-muted);">
+          <strong style="display:block; margin-bottom:0.4rem; color:var(--text-main); font-size:1rem;">No active promotional coupons right now.</strong>
+          <span style="font-size:0.85rem;">Check back soon or subscribe to our newsletter for exclusive fragrance offers.</span>
+        </div>
+      `;
+      return;
+    }
 
     container.innerHTML = coupons.map(c => {
-      const usage = usages.find(u => (u.coupon || '').toUpperCase() === c.code.toUpperCase() && String(u.email || '').toLowerCase() === userEmail);
+      const usage = serverUsages.find(u => (u.coupon || '').toUpperCase() === (c.code || '').toUpperCase());
       const isRedeemed = !!usage;
 
       return `
@@ -699,7 +784,7 @@
             <code style="font-size:1.1rem; font-weight:700; color:var(--brand-orange); background:rgba(232,107,50,0.08); padding:0.2rem 0.6rem; border-radius:4px;">${accountEscape(c.code)}</code>
             <span style="font-size:0.95rem; font-weight:700; font-family:var(--font-mono);">${c.discount}% OFF</span>
           </div>
-          <p style="font-size:0.82rem; color:var(--text-muted); line-height:1.5; margin:0 0 1.2rem;">${accountEscape(c.desc)}</p>
+          <p style="font-size:0.82rem; color:var(--text-muted); line-height:1.5; margin:0 0 1.2rem;">${accountEscape(c.desc || `${c.discount}% discount valid at checkout across all fragrances.`)}</p>
           
           ${isRedeemed ? `
             <div style="background:#F3F4F6; color:#4B5563; font-size:0.75rem; font-family:var(--font-mono); font-weight:600; padding:0.4rem 0.8rem; border-radius:4px; text-align:center;">

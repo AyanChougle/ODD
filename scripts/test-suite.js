@@ -237,8 +237,34 @@ async function runTests() {
       body: { code: firstBarcode, mode: 'receive' }
     });
     assert(scanReceive.status === 200, 'Warehouse scan in receive mode succeeds');
+    assert(scanReceive.data.isBarcode === true, 'Scanner identifies registered barcode serial');
+    assert(scanReceive.data.serial === firstBarcode, 'Scanner returns exact scanned serial number');
+    assert(scanReceive.data.lot != null, 'Scanner returns batch lot number');
+    assert(scanReceive.data.expiry != null, 'Scanner returns batch expiry date');
+
     const stockAfterScan = db.prepare("SELECT stock FROM products WHERE sku = 'ODD-LC-003'").get().stock;
     assert(stockAfterScan === initialLucidStock + 1, `Lucid stock incremented by 1 (${initialLucidStock} -> ${stockAfterScan})`);
+
+    // Test warehouse dispatch scan on the same serial (decrements stock by 1)
+    const scanDispatch = await request('/api/scans', {
+      method: 'POST',
+      headers: {
+        Cookie: sessionCookie,
+        'X-CSRF-Token': csrfToken
+      },
+      body: { code: firstBarcode, mode: 'dispatch' }
+    });
+    assert(scanDispatch.status === 200, 'Warehouse scan in dispatch mode succeeds');
+    assert(scanDispatch.data.serial === firstBarcode, 'Dispatch scanner returns matching serial number');
+    const stockAfterDispatch = db.prepare("SELECT stock FROM products WHERE sku = 'ODD-LC-003'").get().stock;
+    assert(stockAfterDispatch === initialLucidStock, `Lucid stock decremented back to baseline (${stockAfterScan} -> ${stockAfterDispatch})`);
+
+    // Verify GET /api/barcodes endpoint
+    const barcodesList = await request('/api/barcodes', {
+      headers: { Cookie: sessionCookie }
+    });
+    assert(barcodesList.status === 200, 'GET /api/barcodes returns HTTP 200');
+    assert(Array.isArray(barcodesList.data.barcodes) && barcodesList.data.barcodes.length > 0, 'GET /api/barcodes returns registered retail barcodes list');
 
     // Test warehouse dispatch scan on 0-stock item (First Move) returns informative 400
     const fmStock = db.prepare("SELECT stock FROM products WHERE sku = 'ODD-FM-002'").get().stock;
@@ -301,6 +327,21 @@ async function runTests() {
 
     const enumOrder = await request('/api/orders/track?order=ODD-00001');
     assert(enumOrder.status === 404, 'Public order tracking by ID alone without phone rejected with HTTP 404');
+
+    // 12. Testing Dynamic Customer & Coupons API
+    console.log('\n[12] Testing Dynamic Customer & Coupons API:');
+    const pubCoupons = await request('/api/coupons/active');
+    assert(pubCoupons.status === 200, 'GET /api/coupons/active succeeds with HTTP 200');
+    assert(Array.isArray(pubCoupons.data.coupons), 'Returns active coupons array from database');
+    assert(pubCoupons.data.coupons.some(c => c.code === 'LAUNCH20'), 'Active coupons list contains LAUNCH20');
+
+    const custOrders = await request('/api/customer/orders?email=rahul.verma@example.com');
+    assert(custOrders.status === 200, 'GET /api/customer/orders succeeds with HTTP 200');
+    assert(Array.isArray(custOrders.data.orders), 'Returns customer orders array');
+
+    const emptyCustOrders = await request('/api/customer/orders?email=nonexistent@example.com');
+    assert(emptyCustOrders.status === 200, 'GET /api/customer/orders for unknown user returns HTTP 200');
+    assert(Array.isArray(emptyCustOrders.data.orders) && emptyCustOrders.data.orders.length === 0, 'Returns clean empty orders array when no database records match');
 
   } catch (err) {
     console.error('Test execution error:', err);

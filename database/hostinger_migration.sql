@@ -124,9 +124,9 @@ ON DUPLICATE KEY UPDATE `password_hash`=VALUES(`password_hash`), `role`='admin',
 
 -- 10. Seed Authentic Products (Strict Zero-Stock Rule for First Move)
 INSERT INTO `products` (`id`, `sku`, `name`, `price`, `original_price`, `stock`, `active`, `tagline`, `notes`) VALUES
-('phantom', 'ODD-PH-001', 'ODD Phantom', 899, 1199, 240, 1, 'Unseen. Unforgotten. Dominant.', 'Oud · Amber · Smoky Woods'),
-('lucid', 'ODD-LC-003', 'ODD Lucid', 899, 1199, 180, 1, 'Clear Mind. Sharp Presence.', 'Citrus · Black Tea · Clean Woods'),
-('first-move', 'ODD-FM-002', 'ODD First Move', 899, 1199, 0, 1, 'Start First. Stay Ahead.', 'Pineapple · Woods · Smoky Musk')
+('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, NULL, 240, 1, 'Unseen. Unforgotten. Dominant.', 'Oud · Amber · Smoky Woods'),
+('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, NULL, 180, 1, 'Clear Mind. Sharp Presence.', 'Citrus · Black Tea · Clean Woods'),
+('first-move', 'ODD-FM-002', 'ODD First Move', 1599, NULL, 0, 1, 'Start First. Stay Ahead.', 'Pineapple · Woods · Smoky Musk')
 ON DUPLICATE KEY UPDATE 
   `name`=VALUES(`name`), 
   `price`=VALUES(`price`), 
@@ -147,11 +147,12 @@ INSERT INTO `coupons` (`code`, `discount_percent`, `min_spend`, `max_discount`, 
 ('ODDSPOT10', 10, 0, 300, 1000, 0, 1, 1)
 ON DUPLICATE KEY UPDATE `discount_percent`=VALUES(`discount_percent`), `active`=VALUES(`active`);
 
--- 13. Seed Store Settings (Shipping, Banner Announcement, Razorpay Online Gateway)
+-- 13. Seed Store Settings (Shipping, Banner Announcement, Razorpay Online Gateway, Shiprocket)
 INSERT INTO `settings` (`key_name`, `value_json`) VALUES
 ('shipping', '{\"enabled\":true,\"standardRate\":50,\"freeThreshold\":1000,\"expressRate\":120,\"timeline\":\"3–5 Business Days Across India\"}'),
 ('banner', '{\"active\":true,\"text\":\"WE\'RE LIVE. Take 20% OFF your first order with code LAUNCH20\",\"code\":\"LAUNCH20\"}'),
-('razorpay', '{\"enabled\":true,\"env\":\"live\",\"keyId\":\"rzp_live_Ti8AffHarb3tai\",\"keySecret\":\"X4Ws6I0iovvSrTYh18i1nNjl\",\"brandName\":\"ODD Perfume\",\"themeColor\":\"#E86B32\",\"simulate\":false}')
+('razorpay', '{\"enabled\":true,\"env\":\"live\",\"keyId\":\"rzp_live_Ti8AffHarb3tai\",\"keySecret\":\"X4Ws6I0iovvSrTYh18i1nNjl\",\"brandName\":\"ODD Perfume\",\"themeColor\":\"#E86B32\",\"simulate\":false}'),
+('shiprocket', '{\"email\":\"oddperfumesocial@gmail.com\",\"password\":\"Ks^U&iCv5zET!Bse*c4Ubln9y!ZkHw&o\",\"pickupLocation\":\"Primary\",\"carrier\":\"automatic\",\"autoDispatch\":false,\"origin\":{\"name\":\"ODD Perfume Fulfillment\",\"phone\":\"+919876543210\",\"street\":\"Plot 42, Perfume Studio, Industrial Area\",\"city\":\"Mumbai\",\"state\":\"MH\",\"postalCode\":\"400001\",\"country\":\"IN\"}}')
 ON DUPLICATE KEY UPDATE `value_json`=VALUES(`value_json`);
 
 SET FOREIGN_KEY_CHECKS = 1;

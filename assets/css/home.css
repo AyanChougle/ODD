@@ -8,6 +8,7 @@
    ========================================================================== */
 .hero-section {
   position: relative;
+  background: url('../images/BGphoto.png') center center / cover no-repeat #0a0a0a;
   width: 100%; min-width: 100%;
   
   height: calc(100vh - var(--total-header-height));
@@ -1441,26 +1442,90 @@ html {
 }
 
 @media (max-width: 768px) {
+  .carousel-viewport {
+    overflow: hidden !important;
+    padding: 0 0.5rem !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+  }
   .carousel-slide {
-    width: 290px !important;
+    width: 280px !important;
+  }
+  .carousel-slide:not(.active) {
+    opacity: 0.25 !important;
+    pointer-events: none !important;
+  }
+  .carousel-slide:not(.active) * {
+    visibility: hidden !important;
+  }
+  .carousel-slide:not(.active) .slide-image-box,
+  .carousel-slide:not(.active) .slide-image-box img {
+    visibility: visible !important;
+  }
+  .carousel-slide:not(.active) .slide-title,
+  .carousel-slide:not(.active) .slide-tagline,
+  .carousel-slide:not(.active) .slide-notes,
+  .carousel-slide:not(.active) .slide-actions,
+  .carousel-slide:not(.active) .product-badge,
+  .carousel-slide:not(.active) [class*='badge'] {
+    display: none !important;
   }
   .slide-image-box {
-    min-height: 260px !important;
+    min-height: 240px !important;
+    padding: 1.2rem 1rem !important;
   }
   .carousel-bottle-img {
-    max-height: 200px !important;
+    max-height: 190px !important;
   }
   .carousel-track {
-    min-height: 480px !important;
+    min-height: 440px !important;
+  }
+  .carousel-arrow {
+    width: 36px !important;
+    height: 36px !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+    z-index: 20 !important;
+  }
+  .carousel-arrow.prev-arrow {
+    left: 6px !important;
+  }
+  .carousel-arrow.next-arrow {
+    right: 6px !important;
   }
   .hero-floating-pick-wrapper, .hero-floating-pick {
     display: none !important;
   }
 }
 
+@media (max-width: 480px) {
+  .carousel-slide {
+    width: min(270px, 78vw) !important;
+  }
+  .slide-image-box {
+    min-height: 220px !important;
+  }
+  .carousel-bottle-img {
+    max-height: 175px !important;
+  }
+  .carousel-track {
+    min-height: 410px !important;
+  }
+  .slide-title {
+    font-size: 1.55rem !important;
+  }
+  .slide-notes {
+    font-size: 0.7rem !important;
+  }
+  .slide-tagline {
+    font-size: 0.8rem !important;
+  }
+}
+
 /* Exact 1-Screen Viewport Fit for Hero & Comparison */
 .hero-section {
   position: relative !important;
+  background: url('../images/BGphoto.png') center center / cover no-repeat #0a0a0a !important;
   width: 100% !important;
   height: calc(100vh - var(--total-header-height)) !important;
   min-height: calc(100vh - var(--total-header-height)) !important;

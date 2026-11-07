@@ -2,7 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const { DatabaseSync } = require("node:sqlite");
 
-const dbPath = path.join(__dirname, "..", "storage", "odd-perfume.sqlite");
+const rootDir = path.resolve(__dirname, "..");
+const dbPath = path.join(rootDir, "storage", "odd-perfume.sqlite");
 const db = new DatabaseSync(dbPath);
 
 let passes = 0;
@@ -63,8 +64,8 @@ async function runAudit() {
   console.log(
     "\n[Flow 2] Shiprocket Payload Attributes & AWB Generation:",
   );
-  const apiPhp = fs.readFileSync("api/index.php", "utf8");
-  const serverJs = fs.readFileSync("server.js", "utf8");
+  const apiPhp = fs.readFileSync(path.join(rootDir, "api/index.php"), "utf8");
+  const serverJs = fs.readFileSync(path.join(rootDir, "server.js"), "utf8");
   assert(
     apiPhp.includes("function dispatchOrderWithShiprocket"),
     "api/index.php defines dispatchOrderWithShiprocket",
@@ -98,7 +99,7 @@ async function runAudit() {
   console.log(
     "\n[Flow 3] Customer Order Tracking, Delivery Dates & Printable Invoices:",
   );
-  const trackingJs = fs.readFileSync("assets/js/tracking.js", "utf8");
+  const trackingJs = fs.readFileSync(path.join(rootDir, "assets/js/tracking.js"), "utf8");
   assert(
     trackingJs.includes("formatMilestoneDate"),
     "tracking.js includes formatMilestoneDate helper",
@@ -122,7 +123,7 @@ async function runAudit() {
 
   // 4. Admin Orders Table Date & Time Rendering + Bill Generation
   console.log("\n[Flow 4] Admin Portal Order Milestones & Printable Bills:");
-  const adminJs = fs.readFileSync("assets/js/admin.js", "utf8");
+  const adminJs = fs.readFileSync(path.join(rootDir, "assets/js/admin.js"), "utf8");
   assert(
     adminJs.includes("Shipped:"),
     "admin.js displays Shipped timestamp in orders table",
@@ -167,7 +168,7 @@ async function runAudit() {
 
   // 6. Access Control & Critical File Hardening
   console.log("\n[Flow 6] Server Configuration & Directory Protection:");
-  const htaccess = fs.readFileSync(".htaccess", "utf8");
+  const htaccess = fs.readFileSync(path.join(rootDir, ".htaccess"), "utf8");
   assert(htaccess.includes(".env"), ".htaccess forbids direct access to .env");
   assert(
     htaccess.includes("api/config.php") ||
@@ -185,7 +186,7 @@ async function runAudit() {
 
   // 7. Script Security Guards
   console.log("\n[Flow 7] Maintenance Script Security:");
-  const adminScript = fs.readFileSync("scripts/create-admin.php", "utf8");
+  const adminScript = fs.readFileSync(path.join(rootDir, "scripts/create-admin.php"), "utf8");
   assert(
     adminScript.includes("PHP_SAPI !== 'cli'"),
     "scripts/create-admin.php strictly restricts execution to CLI",
@@ -197,8 +198,8 @@ async function runAudit() {
 
   // 8. Config Guards & Shiprocket Credentials
   console.log("\n[Flow 8] PHP Direct Inclusion Guards & Shiprocket Credentials:");
-  const configPhp = fs.readFileSync("api/config.php", "utf8");
-  const envContent = fs.readFileSync(".env", "utf8");
+  const configPhp = fs.readFileSync(path.join(rootDir, "api/config.php"), "utf8");
+  const envContent = fs.readFileSync(path.join(rootDir, ".env"), "utf8");
   assert(
     configPhp.includes(
       "basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'config.php'",
@@ -214,7 +215,7 @@ async function runAudit() {
     "api/config.php defines SHIPROCKET_PASSWORD",
   );
   assert(
-    envContent.includes("SHIPROCKET_PASSWORD=Aoeo6$g4!7RYRLSLM0@V90MYX!fI*Gg!"),
+    envContent.includes("SHIPROCKET_PASSWORD=Ks^U&iCv5zET!Bse*c4Ubln9y!ZkHw&o"),
     ".env stores user Shiprocket credentials",
   );
 
@@ -222,11 +223,11 @@ async function runAudit() {
   console.log(
     "\n[Flow 9] Client Sanitization (No Hardcoded Credentials or Plaintext Secrets):",
   );
-  const adminHtml = fs.readFileSync("admin.html", "utf8");
-  const checkoutJs = fs.readFileSync("assets/js/checkout.js", "utf8");
-  const myAccountHtml = fs.readFileSync("my-account.html", "utf8");
+  const adminHtml = fs.readFileSync(path.join(rootDir, "admin.html"), "utf8");
+  const checkoutJs = fs.readFileSync(path.join(rootDir, "assets/js/checkout.js"), "utf8");
+  const myAccountHtml = fs.readFileSync(path.join(rootDir, "my-account.html"), "utf8");
   assert(
-    !adminHtml.includes("Aoeo6$g4!7RYRLSLM0@V90MYX!fI*Gg!"),
+    !adminHtml.includes("Ks^U&iCv5zET!Bse*c4Ubln9y!ZkHw&o"),
     "admin.html does not expose plaintext Shiprocket password",
   );
   assert(

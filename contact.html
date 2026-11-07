@@ -59,12 +59,70 @@
     </section>
 
     <section class="page-content-wrapper">
-      <p>Have questions, feedback, or custom order inquiries? Reach out directly to our studio team.</p>
+      <p style="font-size:1.05rem; color:var(--text-muted); line-height:1.6; max-width:680px; margin:0 auto 2.5rem; text-align:center;">Have questions, feedback, bespoke gifting, or custom order inquiries? Reach out directly to our studio team in Mumbai.</p>
       
-      <div style="background:var(--bg-subtle); padding:2rem; border-radius:var(--radius-sm); border:1px solid var(--border-color); margin-top:2rem;">
-        <p><strong>Email:</strong> <a href="mailto:hello@oddperfume.com" style="color:var(--text-main); text-decoration:underline;">hello@oddperfume.com</a></p>
-        <p style="margin-top:0.6rem;"><strong>Support Hours:</strong> Mon—Sat · 10am—7pm IST</p>
-        <p style="margin-top:0.6rem;"><strong>Studio Location:</strong> Mumbai, Maharashtra, India</p>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:2rem; max-width:960px; margin:0 auto 3rem;">
+        <!-- Studio Info & Quick Mail Redirection Card -->
+        <div style="background:var(--bg-subtle); padding:2rem; border-radius:var(--radius-sm); border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <h3 style="font-family:var(--font-serif); font-size:1.4rem; margin-bottom:1rem; color:var(--text-main);">Studio Direct Contacts</h3>
+            
+            <div style="margin-bottom:1.5rem;">
+              <span style="display:block; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:0.3rem;">Primary Studio Email</span>
+              <a href="mailto:hello@oddperfume.com" id="studio-mail-link" onclick="openStudioEmail(event, 'hello@oddperfume.com')" style="color:var(--brand-orange); font-size:1.15rem; font-weight:600; text-decoration:none; word-break:break-all;">hello@oddperfume.com</a>
+              <small style="display:block; color:var(--text-muted); font-size:0.75rem; margin-top:0.3rem;">Clicking directly opens your email client or web Gmail.</small>
+            </div>
+
+            <!-- Direct Action Buttons for Guaranteed Redirection -->
+            <div style="display:flex; flex-wrap:wrap; gap:0.6rem; margin-bottom:1.5rem;">
+              <a href="https://mail.google.com/mail/?view=cm&fs=1&to=hello@oddperfume.com&su=Inquiry%20-%20ODD%20Perfume" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary" style="padding:0.45rem 0.9rem; font-size:0.8rem; text-decoration:none;">Open in Gmail &nearr;</a>
+              <a href="mailto:hello@oddperfume.com?subject=Inquiry%20-%20ODD%20Perfume" class="btn btn-sm btn-outline" style="padding:0.45rem 0.9rem; font-size:0.8rem; text-decoration:none;">Default Mail App</a>
+              <button type="button" class="btn btn-sm btn-outline" onclick="copyContactEmail('hello@oddperfume.com')" style="padding:0.45rem 0.9rem; font-size:0.8rem;">Copy Address</button>
+            </div>
+
+            <div style="border-top:1px solid var(--border-color); padding-top:1.2rem; font-size:0.88rem; color:var(--text-main); line-height:1.7;">
+              <p style="margin:0 0 0.5rem;"><strong>Support Hours:</strong> Mon&mdash;Sat &middot; 10am&mdash;7pm IST</p>
+              <p style="margin:0 0 0.5rem;"><strong>Studio Location:</strong> Mumbai, Maharashtra, India</p>
+              <p style="margin:0;"><strong>Orders &amp; Tracking:</strong> Track in real time via our <a href="order-tracking.html" style="color:var(--brand-orange); text-decoration:underline;">Tracking Portal</a></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Direct Contact Form -->
+        <div style="background:#FFFFFF; padding:2rem; border-radius:var(--radius-sm); border:1px solid var(--border-color); box-shadow:0 4px 20px rgba(0,0,0,0.03);">
+          <h3 style="font-family:var(--font-serif); font-size:1.4rem; margin-bottom:0.5rem; color:var(--text-main);">Send A Message</h3>
+          <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1.5rem;">Send a direct inquiry to our perfumer and customer care studio.</p>
+
+          <form id="contact-studio-form" onsubmit="handleContactFormSubmit(event)" style="display:flex; flex-direction:column; gap:1rem;">
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.3rem;">Your Name</label>
+              <input type="text" id="contact-name" class="form-control" placeholder="Full name" required style="width:100%; padding:0.65rem; border:1px solid var(--border-color); border-radius:4px;">
+            </div>
+
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.3rem;">Email Address</label>
+              <input type="email" id="contact-email" class="form-control" placeholder="your@email.com" required style="width:100%; padding:0.65rem; border:1px solid var(--border-color); border-radius:4px;">
+            </div>
+
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.3rem;">Subject</label>
+              <select id="contact-subject" class="form-control" style="width:100%; padding:0.65rem; border:1px solid var(--border-color); border-radius:4px; background:#FFF;">
+                <option value="General Inquiry">General Fragrance Inquiry</option>
+                <option value="Order Tracking & Delivery">Order Status &amp; Shipping</option>
+                <option value="Bespoke Gifting & Corporate">Custom Gifting / Corporate</option>
+                <option value="Wholesale / Partnership">Wholesale &amp; Retail Inquiries</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.3rem;">Your Message</label>
+              <textarea id="contact-message" class="form-control" rows="4" placeholder="How can our studio team assist you?" required style="width:100%; padding:0.65rem; border:1px solid var(--border-color); border-radius:4px; resize:vertical;"></textarea>
+            </div>
+
+            <button type="submit" id="btn-contact-submit" class="btn btn-primary full-width btn-water-float" style="padding:0.75rem 1.5rem; font-weight:600; margin-top:0.5rem;">Send Message</button>
+            <div id="contact-form-status" style="display:none; font-size:0.85rem; text-align:center; padding:0.6rem; border-radius:4px; margin-top:0.5rem;"></div>
+          </form>
+        </div>
       </div>
     </section>
   </main>
@@ -160,7 +218,7 @@
       <div class="quick-view-details">
         <span class="qv-brand">ODD PARFUMS</span>
         <h3 class="qv-title" id="qv-title">Phantom</h3>
-        <div class="qv-price" id="qv-price">&#8377; 899</div>
+        <div class="qv-price" id="qv-price"></div>
         <div class="qv-size-row">
           <span class="qv-size-label">Size: 100ml</span>
           <span class="qv-size-pill">100ml</span>
@@ -182,9 +240,101 @@
     </div>
   </div>
 
-  <script src="assets/js/global.js"></script>
+  <!-- Global Search Modal -->
+  <div class="search-modal-backdrop" id="search-modal" onclick="if(event.target===this) closeSearchModal()">
+    <div class="search-modal-card">
+      <div class="search-modal-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" class="search-modal-input" placeholder="Search by name, notes, or occasion..." oninput="handleSearchInput(this.value)">
+        <button class="search-modal-close" onclick="closeSearchModal()">&times;</button>
+      </div>
+      <div class="search-modal-results" id="search-modal-results"></div>
+    </div>
+  </div>
 
-  <!-- Global Mobile Navigation Drawer -->
+  <script src="assets/js/global.js"></script>
+  <script>
+    function copyContactEmail(email) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(email).then(() => {
+          showToast(`Copied ${email} to clipboard!`);
+        }).catch(() => {
+          prompt('Copy email:', email);
+        });
+      } else {
+        prompt('Copy email:', email);
+      }
+    }
+
+    function openStudioEmail(e, email) {
+      e.preventDefault();
+      copyContactEmail(email);
+      // Open web Gmail in new tab for guaranteed browser delivery
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent('Inquiry - ODD Perfume')}`;
+      window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+      // Also trigger mailto fallback after slight tick
+      setTimeout(() => {
+        window.location.href = `mailto:${email}?subject=${encodeURIComponent('Inquiry - ODD Perfume')}`;
+      }, 300);
+    }
+
+    async function handleContactFormSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-contact-submit');
+      const statusDiv = document.getElementById('contact-form-status');
+      const name = document.getElementById('contact-name').value.trim();
+      const email = document.getElementById('contact-email').value.trim();
+      const subject = document.getElementById('contact-subject').value.trim();
+      const message = document.getElementById('contact-message').value.trim();
+
+      if (!name || !email || !message) {
+        showToast('Please fill out all required fields.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Sending Message…';
+      if (statusDiv) statusDiv.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ name, email, subject, message })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          if (statusDiv) {
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+            statusDiv.style.color = '#10B981';
+            statusDiv.style.border = '1px solid #10B981';
+            statusDiv.textContent = data.message || 'Thank you! Your message has been sent to our studio team.';
+          }
+          showToast('Message sent! Our studio team will get back to you shortly.');
+          document.getElementById('contact-studio-form').reset();
+        } else {
+          throw new Error(data.error || 'Failed to submit message.');
+        }
+      } catch (err) {
+        // Graceful fallback: Open Gmail compose with pre-filled content
+        const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=hello@oddperfume.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent('Name: ' + name + '\nEmail: ' + email + '\n\n' + message)}`;
+        window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+        if (statusDiv) {
+          statusDiv.style.display = 'block';
+          statusDiv.style.background = 'rgba(232, 107, 50, 0.1)';
+          statusDiv.style.color = 'var(--brand-orange)';
+          statusDiv.style.border = '1px solid var(--brand-orange)';
+          statusDiv.textContent = 'Opening your email client to send message to hello@oddperfume.com…';
+        }
+        showToast('Opening Gmail to send your message.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Message';
+      }
+    }
+  </script>
+</body>
   <div class="mobile-nav-drawer" id="mobile-nav">
     <div class="drawer-header">
       <span class="brand-logo-cr7" style="font-size: 1.8rem;">ODD<span class="logo-dot" style="color: var(--brand-orange);">.</span></span>

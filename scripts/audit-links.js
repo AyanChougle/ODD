@@ -3,13 +3,15 @@
 const fs = require('fs');
 const path = require('path');
 
-const htmlFiles = fs.readdirSync('.').filter(f => f.endsWith('.html'));
-console.log('Auditing ' + htmlFiles.length + ' HTML files...');
+const rootDir = path.resolve(__dirname, '..');
+const htmlFiles = fs.readdirSync(rootDir).filter(f => f.endsWith('.html'));
+console.log('Auditing ' + htmlFiles.length + ' HTML files in ' + rootDir + '...');
 
 let issues = 0;
 
 for (const file of htmlFiles) {
-  const content = fs.readFileSync(file, 'utf8');
+  const filePath = path.join(rootDir, file);
+  const content = fs.readFileSync(filePath, 'utf8');
 
   // Check script tags
   const scriptRegex = /<script[^>]+src=["']([^"']+)["']/gi;
@@ -18,7 +20,7 @@ for (const file of htmlFiles) {
     const src = sm[1];
     if (src.startsWith('http://') || src.startsWith('https://')) continue;
     const cleanSrc = src.split('?')[0];
-    if (!fs.existsSync(cleanSrc)) {
+    if (!fs.existsSync(path.join(rootDir, cleanSrc))) {
       console.error(`[BROKEN SCRIPT] in ${file}: ${src}`);
       issues++;
     }
@@ -31,7 +33,7 @@ for (const file of htmlFiles) {
     const href = cm[1];
     if (href.startsWith('http://') || href.startsWith('https://')) continue;
     const cleanHref = href.split('?')[0];
-    if (!fs.existsSync(cleanHref)) {
+    if (!fs.existsSync(path.join(rootDir, cleanHref))) {
       console.error(`[BROKEN CSS] in ${file}: ${href}`);
       issues++;
     }
@@ -44,7 +46,7 @@ for (const file of htmlFiles) {
     const src = im[1];
     if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) continue;
     const cleanSrc = decodeURIComponent(src.split('?')[0]);
-    if (!fs.existsSync(cleanSrc)) {
+    if (!fs.existsSync(path.join(rootDir, cleanSrc))) {
       console.error(`[BROKEN IMAGE] in ${file}: ${src}`);
       issues++;
     }
@@ -57,7 +59,7 @@ for (const file of htmlFiles) {
     const href = hm[1];
     if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('javascript:')) continue;
     const cleanHref = href.split('?')[0];
-    if (cleanHref.endsWith('.html') && !fs.existsSync(cleanHref)) {
+    if (cleanHref.endsWith('.html') && !fs.existsSync(path.join(rootDir, cleanHref))) {
       console.error(`[BROKEN LINK] in ${file}: ${href}`);
       issues++;
     }

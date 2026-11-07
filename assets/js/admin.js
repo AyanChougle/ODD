@@ -29,7 +29,8 @@ const SKU_LABELS = {
 };
 
 // Immediate global exposure with distinct delegate names to guarantee zero ReferenceErrors and zero RangeError recursions
-window.toggleShiprocketKeyVisibility = function() {
+window.toggleShiprocketKeyVisibility = function(e) {
+  if (e && e.preventDefault) e.preventDefault();
   const input = document.getElementById('shiprocket-password');
   const btn = document.getElementById('btn-toggle-shiprocket-key');
   if (!input) return;
@@ -180,7 +181,7 @@ function normalizeOrder(o) {
       sku: sku,
       name: name,
       qty: Number(it.qty) || 1,
-      price: Number(it.price) || 899
+      price: Number(it.price) || 1599
     };
   });
 
@@ -872,6 +873,24 @@ function renderOrdersTable() {
   });
 }
 
+async function clearAllTestOrders() {
+  if (!confirm('Are you sure you want to permanently clear all test orders from the database?\n\nThis will delete all test orders, wipe order line items, and reset "Committed in Active Orders" and "Dispatched / Delivered" to 0 for a clean production launch.')) {
+    return;
+  }
+  try {
+    const res = await adminApi('/api/orders/clear-test-orders', { method: 'POST' });
+    showAdminToast(res.message || 'All test orders cleared. Store reset to zero active orders.');
+    saveOfflineOrders([]);
+    ordersData = [];
+    await loadOrders();
+    await loadInventory();
+    await loadPaymentsSummary();
+  } catch (err) {
+    showAdminToast('Failed to clear test orders: ' + (err.message || 'Server error'), true);
+  }
+}
+window.clearAllTestOrders = clearAllTestOrders;
+
 /* ==========================================================================
    Tab 3: Fragrance Inventory Management
    ========================================================================== */
@@ -884,6 +903,9 @@ async function loadInventory() {
   if (Array.isArray(ordData?.orders)) {
     ordersData = ordData.orders;
     saveOfflineOrders(ordersData);
+  } else {
+    ordersData = [];
+    saveOfflineOrders([]);
   }
 
   // Sync offline storage cache with live inventory
@@ -927,7 +949,7 @@ function updateScannerLiveStock() {
 
 function updateInventoryKpis() {
   const totalUnits = inventoryData.reduce((sum, it) => sum + (Number(it.stock) || 0), 0);
-  const totalValuation = inventoryData.reduce((sum, it) => sum + ((Number(it.stock) || 0) * (Number(it.price) || 899)), 0);
+  const totalValuation = inventoryData.reduce((sum, it) => sum + ((Number(it.stock) || 0) * (Number(it.price) || 1599)), 0);
 
   const orders = Array.isArray(ordersData) ? ordersData : [];
   const activeOrders = orders.filter(o => ['Confirmed', 'Processing', 'Packed'].includes(o.status));
@@ -1006,13 +1028,18 @@ function renderInventoryTable() {
   tbody.querySelectorAll('[data-edit-price]').forEach(btn => btn.addEventListener('click', () => {
     const item = inventoryData.find(row => row.sku === btn.dataset.editPrice);
     if (!item) return;
-    const value = prompt(`Set selling price for ${item.name} (₹):`, item.price);
-    if (value === null) return;
-    const price = Number(value);
+    const priceInput = prompt(`Enter selling price for ${item.name} (₹):`, item.price || 1599);
+    if (priceInput === null) return;
+    const price = Number(priceInput);
     if (!Number.isInteger(price) || price <= 0 || price > 1_000_000) {
       return showAdminToast('Enter a valid whole rupee price from ₹1 to ₹10,00,000.', true);
     }
-    saveInventoryItem(item, { price });
+    const currentOrig = (item.originalPrice && Number(item.originalPrice) > price) ? item.originalPrice : '';
+    const origInput = prompt(`(Optional) Enter original MRP for ${item.name} (₹) to show a strikethrough discount:\nLeave BLANK or 0 if NO discount is offered.`, currentOrig);
+    if (origInput === null) return;
+    const originalPrice = (origInput.trim() !== '' && Number(origInput) > price) ? Number(origInput) : null;
+
+    saveInventoryItem(item, { price, originalPrice });
   }));
 }
 
@@ -1020,6 +1047,7 @@ async function saveInventoryItem(item, changes) {
   try {
     const payload = {};
     if (changes.price !== undefined) payload.price = changes.price;
+    if (changes.originalPrice !== undefined) payload.originalPrice = changes.originalPrice;
     if (changes.stock !== undefined) payload.stock = changes.stock;
 
     const result = await adminApi(`/api/inventory/${encodeURIComponent(item.sku)}`, {
@@ -1028,6 +1056,14 @@ async function saveInventoryItem(item, changes) {
     });
     const saved = result.item || { ...item, ...changes };
     inventoryData = inventoryData.map(row => row.sku === saved.sku ? { ...row, ...saved } : row);
+
+    // Sync offline storage cache with live inventory so storefront updates immediately
+    const cacheObj = {};
+    inventoryData.forEach(it => {
+      cacheObj[it.sku] = { stock: it.stock, price: it.price, originalPrice: it.originalPrice };
+    });
+    saveOfflineInventory(cacheObj);
+
     renderInventoryTable();
     updateInventoryKpis();
     showAdminToast(`${item.name} price updated to ${formatINR(saved.price)}.`);
@@ -1043,7 +1079,7 @@ function exportInventoryCSV() {
     ['SKU', 'Product', 'Current Stock', 'Stock Status', 'Price INR', 'Valuation INR', 'Last Modified'],
     ...inventoryData.map(item => {
       const stock = Math.max(0, Number(item.stock) || 0);
-      const price = Number(item.price) || 899;
+      const price = Number(item.price) || 1599;
       const status = stock === 0 ? 'Out of Stock' : (stock <= 25 ? 'Low Stock' : 'In Stock');
       const val = stock * price;
       return [item.sku, item.name, stock, status, price, val, item.updated || '—'];
@@ -1122,7 +1158,8 @@ async function processScannedCode(rawCode) {
       showAdminToast(result.message || `Order ${result.code} dispatched!`);
       await loadOrders();
     } else {
-      showAdminToast(`${result.name}: ${scannerMode === 'receive' ? '+1 received' : '−1 dispatched'} · stock now ${result.stock}`);
+      const serialPart = (result.isBarcode && result.serial) ? ` [Serial: ${result.serial}]` : '';
+      showAdminToast(`${result.name}${serialPart}: ${scannerMode === 'receive' ? '+1 received' : '−1 dispatched'} · stock now ${result.stock}`);
     }
 
     const input = document.getElementById('barcode-scan-input');
@@ -1168,7 +1205,7 @@ let nativeDetectorInterval = null;
 if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
   try {
     nativeBarcodeDetector = new BarcodeDetector({
-      formats: ['code_128', 'code_39', 'qr_code', 'ean_13', 'upc_a']
+      formats: ['code_128', 'ean_13', 'upc_a', 'code_39', 'code_93', 'itf', 'qr_code']
     });
   } catch (e) {
     nativeBarcodeDetector = null;
@@ -1197,11 +1234,15 @@ async function startCameraScanner() {
 
     if (!html5QrScannerInstance) {
       const formats = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
-        Html5QrcodeSupportedFormats.QR_CODE,
         Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.CODE_39,
         Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.UPC_A
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.CODE_93,
+        Html5QrcodeSupportedFormats.ITF,
+        Html5QrcodeSupportedFormats.QR_CODE
       ] : undefined;
 
       html5QrScannerInstance = new Html5Qrcode('camera-reader-viewport', {
@@ -1213,12 +1254,17 @@ async function startCameraScanner() {
       });
     }
 
-    // High definition video constraints & continuous autofocus for maximum 2D QR & 1D barcode legibility
+    // High definition video constraints & continuous autofocus for maximum 1D barcode legibility
     const qrConfig = {
-      fps: 20,
+      fps: 25,
+      qrbox: (viewfinderWidth, viewfinderHeight) => {
+        const boxWidth = Math.max(260, Math.floor(viewfinderWidth * 0.85));
+        const boxHeight = Math.max(130, Math.floor(viewfinderHeight * 0.5));
+        return { width: boxWidth, height: boxHeight };
+      },
       videoConstraints: {
         facingMode: { ideal: 'environment' },
-        width: { min: 1024, ideal: 1920 },
+        width: { min: 1280, ideal: 1920 },
         height: { min: 720, ideal: 1080 }
       }
     };
@@ -1258,7 +1304,7 @@ async function startCameraScanner() {
       }
     }
 
-    if (feedback) feedback.textContent = 'Camera active. Point at QR code or barcode to scan.';
+    if (feedback) feedback.textContent = 'Camera active. Point at barcode on bottle or packaging to scan.';
     checkTorchCapability();
 
   } catch (err) {
@@ -1367,7 +1413,10 @@ async function onCameraCodeDetected(decodedText) {
       if (res.isOrder) {
         feedback.innerHTML = `<span style="color:#34D399; font-weight:700;">Order Dispatched: ${escapeHtml(res.code)}</span>`;
       } else {
-        feedback.innerHTML = `<span style="color:#34D399; font-weight:700;">${escapeHtml(res.name)} (${res.sku})</span>: ${scannerMode === 'receive' ? '+1 Stock Added' : '−1 Stock Dispatched'} (Current Stock: ${res.stock})`;
+        const serialInfo = (res.isBarcode && res.serial)
+          ? ` · Serial: <b style="color:var(--admin-accent);">${escapeHtml(res.serial)}</b>${res.lot ? ' (Lot: ' + escapeHtml(res.lot) + ')' : ''}`
+          : '';
+        feedback.innerHTML = `<span style="color:#34D399; font-weight:700;">${escapeHtml(res.name)} (${res.sku})</span>: ${scannerMode === 'receive' ? '+1 Stock Added' : '−1 Stock Dispatched'} (Current Stock: <b>${res.stock}</b>)${serialInfo}`;
       }
     }
   } catch (err) {
@@ -1422,12 +1471,15 @@ async function loadRecentScans() {
     return;
   }
 
-  container.innerHTML = recentScansLog.slice(0, 15).map(scan => `
+  container.innerHTML = recentScansLog.slice(0, 25).map(scan => `
     <div class="admin-scan-row">
       <div>
-        <strong>${escapeHtml(scan.name)}</strong>
-        <code>${escapeHtml(scan.sku || scan.code)}</code>
-        <small>${escapeHtml(formatDate(scan.time))} · ${escapeHtml(scan.staff || 'Staff')} · ${escapeHtml(scan.mode)}${scan.details ? ' · ' + escapeHtml(scan.details) : ''}</small>
+        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:2px;">
+          <strong>${escapeHtml(scan.name)}</strong>
+          <code style="font-size:0.75rem; background:rgba(232,107,50,0.12); color:var(--admin-accent); border:1px solid rgba(232,107,50,0.3); padding:2px 6px; border-radius:4px; font-weight:700;">${escapeHtml(scan.code)}</code>
+          ${scan.sku && scan.sku !== scan.code ? `<span style="font-size:0.7rem; color:var(--admin-text-muted); font-family:var(--font-mono);">${escapeHtml(scan.sku)}</span>` : ''}
+        </div>
+        <small>${escapeHtml(formatDate(scan.time))} · ${escapeHtml(scan.staff || 'Staff')} · <span style="text-transform:uppercase; font-weight:700; color:${scan.mode === 'receive' ? '#34D399' : '#F59E0B'};">${escapeHtml(scan.mode)}</span>${scan.details ? ' · ' + escapeHtml(scan.details) : ''}</small>
       </div>
       <strong class="${scan.delta > 0 ? 'scan-plus' : 'scan-minus'}">
         ${scan.delta > 0 ? '+' + scan.delta : scan.delta} <small>${scan.newStock !== undefined ? 'Stock: ' + scan.newStock : ''}</small>
@@ -1452,9 +1504,9 @@ function code128Svg(value, barHeight = 45) {
   for (let i = 1; i < values.length; i++) sum += values[i] * i;
   values.push(sum % 103, 106);
 
-  // High precision integer module width & standard 6-module quiet zone
+  // High precision integer module width & standard 10-module quiet zone
   const moduleWidth = 2;
-  const quietZonePx = 6 * moduleWidth;
+  const quietZonePx = 10 * moduleWidth;
   let x = quietZonePx;
   const bars = [];
   values.forEach(valuePart => {
@@ -1487,11 +1539,14 @@ function applyLabelPreset(preset) {
   if (!widthInput || !heightInput) return;
 
   const presets = {
+    '50x25': { w: 50, h: 25, cols: 3 },
+    '60x25': { w: 60, h: 25, cols: 3 },
+    '70x25': { w: 70, h: 25, cols: 3 },
+    '40x25': { w: 40, h: 25, cols: 4 },
+    '30x25': { w: 30, h: 25, cols: 4 },
     '50x15': { w: 50, h: 15, cols: 3 },
     '60x20': { w: 60, h: 20, cols: 3 },
-    '70x25': { w: 70, h: 25, cols: 3 },
     '70x35': { w: 70, h: 35, cols: 3 },
-    '50x25': { w: 50, h: 25, cols: 3 },
     '80x40': { w: 80, h: 40, cols: 2 },
     '100x50': { w: 100, h: 50, cols: 2 }
   };
@@ -1559,14 +1614,13 @@ async function generateBarcodeSheet(event) {
   }
 
   try {
-    const width = Number(document.getElementById('batch-label-width')?.value || 70);
-    const height = Number(document.getElementById('batch-label-height')?.value || 35);
-    const cols = Number(document.getElementById('batch-label-cols')?.value || 4);
+    const width = Number(document.getElementById('batch-label-width')?.value || 30);
+    const height = Number(document.getElementById('batch-label-height')?.value || 25);
+    const cols = Number(document.getElementById('batch-label-cols')?.value || 3);
     const lot = document.getElementById('batch-lot-no')?.value.trim() || '01';
     const mfg = document.getElementById('batch-mfg-date')?.value || new Date().toISOString().slice(0, 10);
     const shelfLife = Number(document.getElementById('batch-shelf-life')?.value || 36);
-    const mrp = Number(document.getElementById('batch-mrp')?.value || 899);
-    const codeFormat = document.getElementById('batch-code-format')?.value || 'dual';
+    const mrp = Number(document.getElementById('batch-mrp')?.value || 1599);
     const startSerialVal = document.getElementById('batch-start-serial')?.value.trim();
     const startSerial = (startSerialVal !== '' && startSerialVal != null) ? Number(startSerialVal) : null;
 
@@ -1582,10 +1636,6 @@ async function generateBarcodeSheet(event) {
     preview.style.setProperty('--label-height', `${height}mm`);
     preview.style.setProperty('--label-cols', cols);
 
-    const formatDesc = codeFormat === 'dual'
-      ? 'Dual: Small Barcode + QR'
-      : (codeFormat === 'barcode' ? 'Small Barcode Only' : 'QR Code Only');
-
     preview.innerHTML = `
       <div class="wp-barcode-actions-bar">
         <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
@@ -1593,59 +1643,29 @@ async function generateBarcodeSheet(event) {
           <button type="button" class="wp-btn-back" onclick="backToBarcodeSelection()">Back to Selection</button>
         </div>
         <div class="wp-barcode-meta-summary">
-          <span>${labels.length} labels</span> · Format: <strong>${formatDesc}</strong> · Size: <strong>${width} × ${height} mm</strong> (${cols} cols) · Series: <strong>${labels[0]?.serial ? escapeHtml(labels[0].serial) + ' … ' + escapeHtml(labels[labels.length - 1].serial) : 'Generated'}</strong> · Lot: <strong>${escapeHtml(lot)}</strong> · Exp: <strong>${escapeHtml(expiry)}</strong>
+          <span>${labels.length} labels</span> · Format: <strong>1D Barcode (Code 128)</strong> · Size: <strong>${width} × ${height} mm</strong> (${cols} cols) · Series: <strong>${labels[0]?.serial ? escapeHtml(labels[0].serial) + ' … ' + escapeHtml(labels[labels.length - 1].serial) : 'Generated'}</strong> · Lot: <strong>${escapeHtml(lot)}</strong> · Exp: <strong>${escapeHtml(expiry)}</strong>
         </div>
       </div>
       <div class="barcode-label-grid" style="grid-template-columns: repeat(${cols}, minmax(0, 1fr)) !important;">
-        ${labels.map(label => {
-          if (codeFormat === 'dual') {
-            return `
-              <article class="barcode-sticker sticker-format-dual" style="height:${height}mm; border:0 !important; outline:0 !important; box-shadow:none !important; border-radius:0 !important; background:#ffffff !important; padding:1.5mm !important;">
-                <div class="sticker-body-row">
-                  <div class="sticker-barcode-pane">
-                    <svg class="sticker-barcode-svg" data-barcode="${escapeHtml(label.barcode)}"></svg>
-                    <div class="sticker-code-text">${escapeHtml(label.barcode)}</div>
-                  </div>
-                  <div class="sticker-qr-pane">
-                    <div class="sticker-qr-frame">
-                      <div class="sticker-qr-box" data-qr="${escapeHtml(label.barcode)}"></div>
-                    </div>
-                  </div>
-                </div>
-              </article>
-            `;
-          } else if (codeFormat === 'qr') {
-            return `
-              <article class="barcode-sticker sticker-format-qr" style="height:${height}mm; border:0 !important; outline:0 !important; box-shadow:none !important; border-radius:0 !important; background:#ffffff !important; padding:1.5mm !important;">
-                <div class="sticker-qr-pane full-center">
-                  <div class="sticker-qr-frame">
-                    <div class="sticker-qr-box" data-qr="${escapeHtml(label.barcode)}"></div>
-                  </div>
-                  <div class="sticker-code-text">${escapeHtml(label.barcode)}</div>
-                </div>
-              </article>
-            `;
-          } else {
-            return `
-              <article class="barcode-sticker sticker-format-barcode" style="height:${height}mm; border:0 !important; outline:0 !important; box-shadow:none !important; border-radius:0 !important; background:#ffffff !important; padding:1.5mm !important;">
-                <div class="sticker-barcode-pane full-width">
-                  <svg class="sticker-barcode-svg" data-barcode="${escapeHtml(label.barcode)}"></svg>
-                  <div class="sticker-code-text">${escapeHtml(label.barcode)}</div>
-                </div>
-              </article>
-            `;
-          }
-        }).join('')}
+        ${labels.map(label => `
+          <article class="barcode-sticker sticker-format-barcode" style="height:${height}mm; border:0 !important; outline:0 !important; box-shadow:none !important; border-radius:0 !important; background:#ffffff !important; padding:1.5mm !important;">
+            <div class="sticker-barcode-pane full-width">
+              <svg class="sticker-barcode-svg" data-barcode="${escapeHtml(label.barcode)}"></svg>
+              <div class="sticker-code-text">${escapeHtml(label.barcode)}</div>
+            </div>
+          </article>
+        `).join('')}
       </div>
     `;
 
     const printBorder = document.getElementById('batch-print-border')?.checked ?? false;
     preview.classList.toggle('has-print-borders', printBorder);
 
-    // 1. Render Barcodes (Crisp Vector Bars with Visible Bold Text Below)
+    // 1. Render Barcodes (Crisp High-Density Code 128 Bars with Visible Bold Text Below)
     const stickerSvgs = preview.querySelectorAll('svg.sticker-barcode-svg[data-barcode]');
-    const targetBarHeight = Math.max(28, Math.round((height - 7) * 3.78));
-    const barWidth = (codeFormat === 'dual') ? 1.4 : 1.7;
+    const targetBarHeight = Math.max(24, Math.round((height - 7) * 3.78));
+    const barWidth = width <= 35 ? 1.2 : (width <= 45 ? 1.5 : 1.9);
+    const barMargin = width <= 35 ? 6 : 10;
     const barHeight = targetBarHeight;
     stickerSvgs.forEach(svgEl => {
       const code = svgEl.dataset.barcode;
@@ -1657,11 +1677,15 @@ async function generateBarcodeSheet(event) {
             width: barWidth,
             height: barHeight,
             displayValue: false, // Clean bold HTML text below ensures 100% visibility!
-            margin: 0,
+            margin: barMargin, // ISO Quiet Zone for 100% hardware laser & camera decodability
             background: '#FFFFFF',
             lineColor: '#000000',
             flat: true
           });
+          svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          svgEl.style.width = '100%';
+          svgEl.style.height = 'auto';
+          svgEl.style.maxHeight = `${height - 6}mm`;
           rendered = true;
         } catch (e) {
           rendered = false;
@@ -1672,28 +1696,7 @@ async function generateBarcodeSheet(event) {
       }
     });
 
-    // 2. Render QR Codes (High DPI 256x256, Level M)
-    const qrBoxes = preview.querySelectorAll('.sticker-qr-box[data-qr]');
-    qrBoxes.forEach(container => {
-      const qrData = container.dataset.qr;
-      if (typeof window.QRCode === 'function') {
-        try {
-          container.innerHTML = '';
-          new window.QRCode(container, {
-            text: qrData,
-            width: 256,
-            height: 256,
-            colorDark: '#000000',
-            colorLight: '#FFFFFF',
-            correctLevel: window.QRCode.CorrectLevel.M
-          });
-        } catch (e) {
-          console.warn('QR Code generation error:', e);
-        }
-      }
-    });
-
-    showAdminToast(`${labels.length} labels generated (${width} × ${height} mm).`);
+    showAdminToast(`${labels.length} barcode labels generated (${width} × ${height} mm).`);
   } catch (error) {
     showAdminToast(error.message, true);
   } finally {
@@ -2029,7 +2032,8 @@ function saveOfflineShiprocket(cfg) {
   } catch (e) {}
 }
 
-function toggleShiprocketKeyVisibility() {
+function toggleShiprocketKeyVisibility(e) {
+  if (e && e.preventDefault) e.preventDefault();
   const input = document.getElementById('shiprocket-password');
   const btn = document.getElementById('btn-toggle-shiprocket-key');
   if (!input || !btn) return;
@@ -2075,6 +2079,10 @@ async function loadShiprocketSettings() {
       badge.textContent = 'Active (Live Production)';
       badge.className = 'badge-status info';
     }
+    const webhookSpan = document.getElementById('shiprocket-webhook-url');
+    if (webhookSpan) {
+      webhookSpan.textContent = window.location.origin + '/api/shipping/shiprocket/webhook';
+    }
   };
 
   // 1. Immediately apply cached/offline settings so fields never remain blank
@@ -2093,10 +2101,14 @@ async function loadShiprocketSettings() {
       badge.textContent = 'Active (Live Production)';
       badge.className = 'badge-status info';
     }
+    const webhookSpan = document.getElementById('shiprocket-webhook-url');
+    if (webhookSpan) {
+      webhookSpan.textContent = window.location.origin + '/api/shipping/shiprocket/webhook';
+    }
   }
 }
 
-function handleSaveShiprocketSettings(event) {
+async function handleSaveShiprocketSettings(event) {
   if (event) {
     event.preventDefault();
     event.stopPropagation();
@@ -2119,26 +2131,29 @@ function handleSaveShiprocketSettings(event) {
   const cfg = { email, password, pickupLocation, carrier, origin, autoDispatch };
   saveOfflineShiprocket(cfg);
 
-  const badge = document.getElementById('shiprocket-status-badge');
-  if (badge) {
-    badge.textContent = 'Active (Saved)';
-    badge.className = 'badge-status info';
+  try {
+    await adminApi('/api/settings/shiprocket', {
+      method: 'POST',
+      body: cfg
+    });
+
+    const badge = document.getElementById('shiprocket-status-badge');
+    if (badge) {
+      badge.textContent = 'Active (Saved in Database)';
+      badge.className = 'badge-status info';
+    }
+
+    const msg = document.getElementById('shiprocket-saved-msg');
+    if (msg) {
+      msg.textContent = 'Shiprocket settings saved directly to database!';
+      msg.style.display = 'inline';
+      setTimeout(() => { msg.style.display = 'none'; }, 3000);
+    }
+
+    showAdminToast('Shiprocket shipping configuration saved directly to database.');
+  } catch (err) {
+    showAdminToast('Failed to save Shiprocket settings to database: ' + err.message, true);
   }
-
-  const msg = document.getElementById('shiprocket-saved-msg');
-  if (msg) {
-    msg.style.display = 'inline';
-    setTimeout(() => { msg.style.display = 'none'; }, 3000);
-  }
-
-  showAdminToast('Shiprocket shipping configuration saved successfully.');
-
-  adminApi('/api/settings/shiprocket', {
-    method: 'PUT',
-    body: cfg
-  }).catch(err => {
-    console.warn('Sync note:', err.message);
-  });
 
   return false;
 }
@@ -2298,11 +2313,9 @@ async function loadRazorpaySettings() {
     }
     if (brandInput) brandInput.value = cfg.brandName || 'ODD Perfume';
     if (colorInput) colorInput.value = cfg.themeColor || '#E86B32';
-    if (simCheck) simCheck.checked = cfg.simulate === true;
     if (badge) {
-      const isLive = (cfg.env || 'live') === 'live';
       badge.className = `badge-status ${cfg.enabled !== false ? 'success' : 'danger'}`;
-      badge.textContent = cfg.enabled !== false ? (isLive ? 'Live Gateway (Active)' : 'Test Mode Active') : 'Disabled';
+      badge.textContent = cfg.enabled !== false ? 'Live Gateway (Active)' : 'Disabled';
     }
   } catch (err) {
     console.error('Failed to load Razorpay settings:', err);
@@ -2314,36 +2327,86 @@ async function saveRazorpaySettings(event) {
   const rawSecret = document.getElementById('rzp-key-secret')?.value?.trim() || '';
   const cfg = {
     enabled: document.getElementById('rzp-enabled-check')?.checked ?? true,
-    env: document.getElementById('rzp-env-select')?.value || 'live',
+    env: 'live',
     keyId: document.getElementById('rzp-key-id')?.value?.trim() || '',
     brandName: document.getElementById('rzp-brand-name')?.value?.trim() || 'ODD Perfume',
     themeColor: document.getElementById('rzp-theme-color')?.value?.trim() || '#E86B32',
-    simulate: document.getElementById('rzp-simulate-check')?.checked ?? false
+    simulate: false
   };
   if (rawSecret && !rawSecret.includes('••••')) {
     cfg.keySecret = rawSecret;
   }
 
   try {
-    await adminApi('/api/settings/razorpay', { method: 'PUT', body: cfg });
+    await adminApi('/api/settings/razorpay', { method: 'POST', body: cfg });
     const msg = document.getElementById('rzp-saved-msg');
     if (msg) {
+      msg.textContent = 'Razorpay settings saved directly to database!';
       msg.style.display = 'inline';
-      setTimeout(() => { msg.style.display = 'none'; }, 2500);
+      setTimeout(() => { msg.style.display = 'none'; }, 3000);
     }
     const badge = document.getElementById('rzp-active-badge');
     if (badge) {
       const isLive = cfg.env === 'live';
       badge.className = `badge-status ${cfg.enabled ? 'success' : 'danger'}`;
-      badge.textContent = cfg.enabled ? (isLive ? 'Live Gateway (Active)' : 'Test Mode Active') : 'Disabled';
+      badge.textContent = cfg.enabled ? 'Live Gateway (Active)' : 'Disabled';
     }
-    showAdminToast(`Razorpay configuration saved (${cfg.env.toUpperCase()} mode).`);
+    showAdminToast('Razorpay configuration saved directly to database (LIVE mode).');
   } catch (err) {
-    showAdminToast(err.message || 'Failed to save Razorpay configuration', true);
+    showAdminToast(err.message || 'Failed to save Razorpay configuration to database', true);
   }
 }
 
-window.toggleSecretVisibility = function() {
+async function handleTestRazorpayConnection() {
+  const resultDiv = document.getElementById('rzp-test-result');
+  const badge = document.getElementById('rzp-active-badge');
+  const keyId = document.getElementById('rzp-key-id')?.value?.trim() || '';
+  const keySecret = document.getElementById('rzp-key-secret')?.value?.trim() || '';
+
+  if (resultDiv) {
+    resultDiv.style.display = 'block';
+    resultDiv.style.background = '#1E232D';
+    resultDiv.style.color = '#F3F4F6';
+    resultDiv.style.border = '1px solid var(--admin-border)';
+    resultDiv.innerHTML = 'Connecting to Razorpay API…';
+  }
+
+  try {
+    const res = await adminApi('/api/settings/razorpay/test', {
+      method: 'POST',
+      body: { keyId, keySecret }
+    });
+
+    if (res.success) {
+      if (badge) {
+        badge.className = 'badge-status success';
+        badge.textContent = 'Live Gateway (Verified)';
+      }
+      if (resultDiv) {
+        resultDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+        resultDiv.style.color = '#10B981';
+        resultDiv.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+        resultDiv.innerHTML = `<strong>Active!</strong> ${escapeHtml(res.message || 'Razorpay API credentials verified successfully.')}`;
+      }
+      showAdminToast('Razorpay API connected and verified successfully!');
+    } else {
+      throw new Error(res.error || 'Authentication failed');
+    }
+  } catch (err) {
+    if (resultDiv) {
+      resultDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+      resultDiv.style.color = '#EF4444';
+      resultDiv.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+      resultDiv.innerHTML = `<strong>Connection Failed:</strong> ${escapeHtml(err.message)}`;
+    }
+    showAdminToast(err.message, true);
+  }
+}
+window.handleTestRazorpayConnection = handleTestRazorpayConnection;
+window.saveRazorpaySettings = saveRazorpaySettings;
+
+window.toggleSecretVisibility = function(e) {
+  if (e && e.preventDefault) e.preventDefault();
   const input = document.getElementById('rzp-key-secret');
   const btn = document.getElementById('rzp-secret-toggle-btn');
   if (!input) return;
@@ -2359,18 +2422,18 @@ window.toggleSecretVisibility = function() {
 function handlePrintOrderInvoice(orderId) {
   const order = ordersData.find(o => o.id === orderId) || { id: orderId };
   const items = Array.isArray(order.items) && order.items.length ? order.items : [
-    { name: 'ODD Fragrance', sku: 'ODD-PARFUM', qty: 1, price: order.amount || 899 }
+    { name: 'ODD Fragrance', sku: 'ODD-PARFUM', qty: 1, price: order.amount || 1599 }
   ];
   const customerName = order.customer || 'Valued Customer';
   const customerPhone = order.phone || '';
   const customerEmail = order.email || '';
   const customerAddress = order.address || 'Standard Delivery Address';
   const orderDate = order.date ? formatDate(order.date) : new Date().toLocaleDateString('en-IN');
-  const subtotal = order.subtotal || order.amount || 899;
+  const subtotal = order.subtotal || order.amount || 1599;
   const discount = order.discount || 0;
   const coupon = order.coupon || '';
   const shipping = order.shipping || 0;
-  const total = order.amount || 899;
+  const total = order.amount || 1599;
 
   const rawMethod = String(order.paymentMethod || order.method || order.gateway || '').toLowerCase();
   const isCod = rawMethod.includes('cod') || rawMethod.includes('cash');
@@ -2380,7 +2443,7 @@ function handlePrintOrderInvoice(orderId) {
 
   const rowsHtml = items.map((it, idx) => {
     const qty = it.qty || it.quantity || 1;
-    const price = it.price || 899;
+    const price = it.price || 1599;
     const lineTotal = price * qty;
     return `
       <tr>
@@ -2663,6 +2726,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 2. Populate Header & Sidebar Info
     const userLabel = document.getElementById('admin-user-name');
     if (userLabel) userLabel.textContent = `${adminSession.user.name} · ${adminSession.user.role.toUpperCase()}`;
+    const roleTag = document.getElementById('admin-user-role-tag');
+    if (roleTag) roleTag.textContent = 'Hostinger Database (Live)';
 
     setConnectionStatus('Production API Connected (Active)', true);
 
@@ -2675,7 +2740,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 3. Tab Routing
     try {
       const stored = JSON.parse(localStorage.getItem('odd_orders') || '[]');
-      const cleaned = stored.filter(o => o.customer !== 'Rohit Sharma' && o.customer !== 'Priya Mehta' && o.customer !== 'Ananya Verma' && o.id !== 'ODD-739182' && o.id !== 'ODD-518294' && o.id !== 'ODD-429011');
+      const legacyMockIds = ['ODD-00001', 'ODD-00002', 'ODD-00003', 'ODD-00004', 'ODD-548944', 'ODD-739182', 'ODD-518294', 'ODD-429011'];
+      const cleaned = stored.filter(o => !legacyMockIds.includes(o.id) && o.customer !== 'Rohit Sharma' && o.customer !== 'Priya Mehta' && o.customer !== 'Ananya Verma');
       if (cleaned.length !== stored.length) {
         localStorage.setItem('odd_orders', JSON.stringify(cleaned));
       }
@@ -2709,9 +2775,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const shiprocketForm = document.getElementById('shiprocket-settings-form');
     shiprocketForm?.addEventListener('submit', saveShiprocketSettings);
-    document.getElementById('btn-toggle-shiprocket-key')?.addEventListener('click', toggleShiprocketKeyVisibility);
-    document.getElementById('btn-save-shiprocket')?.addEventListener('click', saveShiprocketSettings);
-    document.getElementById('btn-test-shiprocket')?.addEventListener('click', testShiprocketConnection);
 
     const razorpayForm = document.getElementById('razorpay-settings-form');
     razorpayForm?.addEventListener('submit', saveRazorpaySettings);
@@ -2721,13 +2784,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     let lastKeyTime = 0;
 
     window.addEventListener('keydown', (e) => {
-      const activeNavTab = document.querySelector('.admin-nav-item[data-tab].active')?.dataset.tab;
       const scanInput = document.getElementById('barcode-scan-input');
       const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
 
       if (e.target === scanInput) return;
       if (isInput) return;
-      if (activeNavTab !== 'scanner') return;
 
       const now = Date.now();
       if (now - lastKeyTime > 150) {
@@ -2736,14 +2797,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       lastKeyTime = now;
 
       if (e.key === 'Enter') {
-        if (hardwareScanBuffer.trim().length >= 3) {
+        const scannedCode = hardwareScanBuffer.trim();
+        if (scannedCode.length >= 3) {
           e.preventDefault();
-          if (scanInput) {
-            scanInput.value = hardwareScanBuffer.trim();
-            hardwareScanBuffer = '';
-            const form = document.getElementById('barcode-scan-form');
-            if (form) form.dispatchEvent(new Event('submit', { cancelable: true }));
+          hardwareScanBuffer = '';
+          const activeNavTab = document.querySelector('.admin-nav-item[data-tab].active')?.dataset.tab;
+          if (activeNavTab !== 'scanner') {
+            switchTab('scanner');
           }
+          if (scanInput) scanInput.value = scannedCode;
+          processScannedCode(scannedCode);
         }
         hardwareScanBuffer = '';
       } else if (e.key.length === 1) {

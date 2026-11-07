@@ -29,6 +29,35 @@ function sendJson(int $status, array $data): void {
     exit;
 }
 
+function getRazorpayConfig(PDO $pdo): array {
+    try {
+        $stmt = $pdo->prepare('SELECT value_json FROM settings WHERE key_name = "razorpay"');
+        $stmt->execute();
+        $row = $stmt->fetch();
+        $cfg = $row ? json_decode($row['value_json'], true) : [];
+        if (!is_array($cfg)) $cfg = [];
+    } catch (Throwable $e) {
+        $cfg = [];
+    }
+    $keyId = !empty($cfg['keyId']) ? trim($cfg['keyId']) : (defined('RAZORPAY_KEY_ID') ? RAZORPAY_KEY_ID : '');
+    $keySecret = !empty($cfg['keySecret']) && !str_contains($cfg['keySecret'], '••••')
+        ? trim($cfg['keySecret'])
+        : (defined('RAZORPAY_KEY_SECRET') ? RAZORPAY_KEY_SECRET : '');
+    $enabled = ($cfg['enabled'] ?? true) !== false;
+    $env = $cfg['env'] ?? 'live';
+    $brandName = $cfg['brandName'] ?? 'ODD Perfume';
+    $themeColor = $cfg['themeColor'] ?? '#E86B32';
+
+    return [
+        'keyId' => $keyId,
+        'keySecret' => $keySecret,
+        'enabled' => $enabled,
+        'env' => $env,
+        'brandName' => $brandName,
+        'themeColor' => $themeColor
+    ];
+}
+
 function getJsonBody(): array {
     $raw = file_get_contents('php://input');
     if (!$raw) return [];
@@ -237,6 +266,11 @@ try {
         if (!$prod) sendJson(404, ['error' => "Product '{$sku}' not found."]);
 
         $newPrice = isset($body['price']) ? max(1, (int)$body['price']) : (int)$prod['price'];
+        // If originalPrice was explicitly provided and is strictly greater than newPrice, store it to show discount.
+        // Otherwise (no discount requested), set to NULL so no strikethrough or discount badge is displayed.
+        $newOriginalPrice = (!empty($body['originalPrice']) && (int)$body['originalPrice'] > $newPrice)
+            ? (int)$body['originalPrice']
+            : null;
         // Per business rule: stock is managed authoritatively by QR/barcode scanner.
         // Direct inventory endpoint updates price. If stock was explicitly supplied with admin flag, allow it.
         $newStock = (int)$prod['stock'];
@@ -246,7 +280,7 @@ try {
         $delta = $newStock - (int)$prod['stock'];
 
         $pdo->beginTransaction();
-        $pdo->prepare('UPDATE products SET stock = ?, price = ?, updated_at = NOW() WHERE sku = ?')->execute([$newStock, $newPrice, $sku]);
+        $pdo->prepare('UPDATE products SET stock = ?, price = ?, original_price = ?, updated_at = NOW() WHERE sku = ?')->execute([$newStock, $newPrice, $newOriginalPrice, $sku]);
         if ($delta !== 0) {
             $pdo->prepare('
                 INSERT INTO inventory_movements (sku, product_id, delta, stock_after, reason, staff_name)
@@ -260,11 +294,13 @@ try {
             'sku' => $sku,
             'stock' => $newStock,
             'price' => $newPrice,
+            'originalPrice' => $newOriginalPrice,
             'item' => [
                 'sku' => $sku,
                 'name' => $prod['name'],
                 'stock' => $newStock,
                 'price' => $newPrice,
+                'originalPrice' => $newOriginalPrice,
                 'updated' => date('Y-m-d H:i:s')
             ]
         ]);
@@ -325,6 +361,32 @@ try {
             $usages = [];
         }
         sendJson(200, ['usages' => $usages]);
+    }
+
+    // Public active coupons for storefront & customer portal
+    if (($route === 'coupons/active' || $route === 'coupons/public') && $method === 'GET') {
+        $email = strtolower(trim((string)($_GET['email'] ?? '')));
+        $stmt = $pdo->query('
+            SELECT id, code, discount_percent as discount, min_spend as minSpend, max_discount as maxDiscount, max_uses as maxUses,
+                   CASE 
+                     WHEN code = "LAUNCH20" THEN "Site-wide 20% discount on first fragrance order."
+                     WHEN min_spend > 0 THEN CONCAT(discount_percent, "% discount on orders above ₹", min_spend, ".")
+                     ELSE CONCAT(discount_percent, "% discount across all fragrances.")
+                   END as `desc`
+            FROM coupons 
+            WHERE active = 1 
+            ORDER BY discount_percent DESC, id DESC
+        ');
+        $coupons = $stmt->fetchAll();
+
+        $userUsages = [];
+        if ($email) {
+            $uStmt = $pdo->prepare('SELECT coupon_code as coupon, order_id as orderId, discount_amount as discount FROM coupon_usages WHERE LOWER(customer_email) = ?');
+            $uStmt->execute([$email]);
+            $userUsages = $uStmt->fetchAll();
+        }
+
+        sendJson(200, ['coupons' => $coupons, 'usages' => $userUsages]);
     }
 
     if ($route === 'coupons/validate' && $method === 'POST') {
@@ -558,6 +620,21 @@ try {
         }
     }
 
+    if ($route === 'orders/clear-test-orders' && $method === 'POST') {
+        requireStaffAuth('admin');
+        try {
+            $pdo->beginTransaction();
+            $pdo->exec('DELETE FROM order_items');
+            $pdo->exec('DELETE FROM orders');
+            $pdo->exec('DELETE FROM inventory_movements WHERE reason LIKE "%test%" OR reason LIKE "%COD%" OR reason LIKE "%order%" OR reason LIKE "%batch receipt%"');
+            $pdo->commit();
+            sendJson(200, ['success' => true, 'message' => 'All test orders and stock commitments have been cleared. Store reset to zero active orders.']);
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            sendJson(500, ['error' => 'Failed to clear test orders: ' . $e->getMessage()]);
+        }
+    }
+
     if ($route === 'orders' && $method === 'GET') {
         requireStaffAuth('orders');
 
@@ -700,18 +777,68 @@ try {
         ]);
     }
 
+    // Customer Portal: Live Customer Orders Query
+    if (($route === 'customer/orders' || $route === 'orders/my') && $method === 'GET') {
+        $cSession = getCustomerSession();
+        $email = strtolower(trim((string)($_GET['email'] ?? ($cSession['email'] ?? ''))));
+        $rawPhone = trim((string)($_GET['phone'] ?? ($cSession['phone'] ?? '')));
+        $cleanPhone = preg_replace('/[^0-9]/', '', $rawPhone);
+
+        if (!$email && !$cleanPhone) {
+            sendJson(200, ['orders' => []]);
+        }
+
+        $clauses = [];
+        $params = [];
+        if ($email) {
+            $clauses[] = 'LOWER(customer_email) = ?';
+            $params[] = $email;
+        }
+        if ($cleanPhone) {
+            $clauses[] = 'REPLACE(REPLACE(customer_phone, "+91", ""), " ", "") LIKE ?';
+            $params[] = '%' . substr($cleanPhone, -10);
+        }
+
+        $query = '
+            SELECT id, customer_name as customer, customer_email as email, customer_phone as phone,
+                   shipping_address as address, subtotal, discount_amount as discount, coupon_code as coupon,
+                   shipping_fee as shipping, total_amount as total, total_amount as amount,
+                   payment_method as paymentMethod, payment_status as paymentStatus, status,
+                   courier_name as courier, tracking_number as trackingNumber, tracking_url as trackingUrl,
+                   created_at as date, dispatched_at as dispatchedAt, delivered_at as deliveredAt
+            FROM orders
+            WHERE (' . implode(' OR ', $clauses) . ')
+            ORDER BY created_at DESC';
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        $orders = $stmt->fetchAll();
+
+        $iStmt = $pdo->prepare('SELECT product_id as id, sku, name, price, quantity as qty, line_total FROM order_items WHERE order_id = ?');
+        foreach ($orders as &$o) {
+            $iStmt->execute([$o['id']]);
+            $o['items'] = $iStmt->fetchAll();
+        }
+
+        sendJson(200, ['orders' => $orders]);
+    }
+
     // --- 7. Razorpay Payments ---
     if ($route === 'payments/create-order' && $method === 'POST') {
         $body = getJsonBody();
         $amount = (int)round((float)($body['amount'] ?? 0));
         if ($amount <= 0) sendJson(400, ['error' => 'Invalid amount.']);
 
-        if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+        $rzpCfg = getRazorpayConfig($pdo);
+        if (!$rzpCfg['enabled']) {
+            sendJson(503, ['error' => 'Razorpay online payments are currently disabled in store settings. Please choose Cash on Delivery (COD).']);
+        }
+        if (!$rzpCfg['keyId'] || !$rzpCfg['keySecret']) {
             sendJson(503, ['error' => 'Razorpay gateway not configured. Please choose Cash on Delivery (COD).']);
         }
 
         $ch = curl_init('https://api.razorpay.com/v1/orders');
-        curl_setopt($ch, CURLOPT_USERPWD, RAZORPAY_KEY_ID . ':' . RAZORPAY_KEY_SECRET);
+        curl_setopt($ch, CURLOPT_USERPWD, $rzpCfg['keyId'] . ':' . $rzpCfg['keySecret']);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
             'amount' => $amount * 100,
@@ -728,7 +855,7 @@ try {
         $rzp = json_decode((string)$resp, true);
         if ($code >= 400) sendJson(400, ['error' => $rzp['error']['description'] ?? 'Failed to create Razorpay order.']);
 
-        sendJson(200, ['orderId' => $rzp['id'], 'amount' => $rzp['amount'], 'currency' => $rzp['currency'], 'keyId' => RAZORPAY_KEY_ID]);
+        sendJson(200, ['orderId' => $rzp['id'], 'amount' => $rzp['amount'], 'currency' => $rzp['currency'], 'keyId' => $rzpCfg['keyId']]);
     }
 
     if ($route === 'payments/verify' && $method === 'POST') {
@@ -740,7 +867,8 @@ try {
 
         if (!$rOrderId || !$rPayId || !$rSig) sendJson(400, ['error' => 'Missing signature components.']);
 
-        $expected = hash_hmac('sha256', $rOrderId . '|' . $rPayId, RAZORPAY_KEY_SECRET);
+        $rzpCfg = getRazorpayConfig($pdo);
+        $expected = hash_hmac('sha256', $rOrderId . '|' . $rPayId, $rzpCfg['keySecret']);
         if (!hash_equals($expected, $rSig)) {
             sendJson(400, ['verified' => false, 'error' => 'Signature verification failed.']);
         }
@@ -906,8 +1034,8 @@ try {
         foreach ($items as $it) {
             $name = htmlspecialchars($it['name'] ?? 'ODD Fragrance');
             $qty = (int)($it['quantity'] ?? 1);
-            $price = number_format((float)($it['price'] ?? 899), 2);
-            $lineTotal = number_format((float)($it['line_total'] ?? ($qty * 899)), 2);
+            $price = number_format((float)($it['price'] ?? 1599), 2);
+            $lineTotal = number_format((float)($it['line_total'] ?? ($qty * 1599)), 2);
             $itemsHtml .= "
                 <tr>
                     <td style='padding:10px 0; border-bottom:1px solid #eeeeee;'><strong>{$name}</strong></td>
@@ -1460,7 +1588,7 @@ try {
         $lot = trim((string)($body['lot'] ?? '01'));
         $mfg = (string)($body['mfg'] ?? date('Y-m-d'));
         $shelfLife = (int)($body['shelfLife'] ?? 36);
-        $mrp = (int)($body['mrp'] ?? 899);
+        $mrp = (int)($body['mrp'] ?? 1599);
         $startSerialParam = isset($body['startSerial']) && $body['startSerial'] !== '' ? max(1, (int)$body['startSerial']) : null;
 
         $expiry = date('Y-m-d', strtotime("+{$shelfLife} months", strtotime($mfg)));
@@ -1511,6 +1639,20 @@ try {
         }
         $pdo->commit();
         sendJson(200, ['success' => true, 'labels' => $labels, 'expiry' => $expiry]);
+    }
+
+    if ($route === 'barcodes' && $method === 'GET') {
+        requireStaffAuth('barcodes');
+        $q = trim((string)($_GET['q'] ?? ''));
+        if ($q !== '') {
+            $stmt = $pdo->prepare('SELECT * FROM barcodes WHERE serial LIKE ? OR sku LIKE ? OR product_name LIKE ? ORDER BY id DESC LIMIT 100');
+            $stmt->execute(["%{$q}%", "%{$q}%", "%{$q}%"]);
+            $barcodes = $stmt->fetchAll();
+        } else {
+            $stmt = $pdo->query('SELECT * FROM barcodes ORDER BY id DESC LIMIT 100');
+            $barcodes = $stmt->fetchAll();
+        }
+        sendJson(200, ['barcodes' => $barcodes]);
     }
 
     if ($route === 'scans' && $method === 'GET') {
@@ -1591,18 +1733,47 @@ try {
                 ]);
             }
 
-            // Otherwise code is SKU or barcode serial
+            // Otherwise code is SKU or registered barcode serial
+            $cleanCode = str_replace(' ', '-', $rawCode);
+            $noHyphens = str_replace(['-', ' '], '', $rawCode);
+
+            // 1. Look up registered unique serial in barcodes table
+            $stBarcode = $pdo->prepare("SELECT * FROM barcodes WHERE serial = ? OR REPLACE(serial, '-', '') = ? OR serial = ? LIMIT 1");
+            $stBarcode->execute([$rawCode, $noHyphens, $cleanCode]);
+            $barcodeRow = $stBarcode->fetch();
+
             $matchedProduct = null;
-            if (str_contains($rawCode, 'FM') || str_contains($rawCode, 'FIRST-MOVE') || str_contains($rawCode, 'MOVE')) {
-                $matchedProduct = $pdo->query("SELECT * FROM products WHERE sku = 'ODD-FM-002'")->fetch();
-            } elseif (str_contains($rawCode, 'LC') || str_contains($rawCode, 'LUCID')) {
-                $matchedProduct = $pdo->query("SELECT * FROM products WHERE sku = 'ODD-LC-003'")->fetch();
-            } elseif (str_contains($rawCode, 'PH') || str_contains($rawCode, 'PHANTOM')) {
-                $matchedProduct = $pdo->query("SELECT * FROM products WHERE sku = 'ODD-PH-001'")->fetch();
+            $isBarcode = false;
+            $serialNumber = $rawCode;
+            $lotNumber = null;
+            $mfgDate = null;
+            $expDate = null;
+            $mrpVal = null;
+
+            if ($barcodeRow) {
+                $isBarcode = true;
+                $serialNumber = $barcodeRow['serial'];
+                $lotNumber = $barcodeRow['lot_number'];
+                $mfgDate = $barcodeRow['mfg_date'];
+                $expDate = $barcodeRow['expiry_date'];
+                $mrpVal = $barcodeRow['mrp'];
+
+                $stProd = $pdo->prepare('SELECT * FROM products WHERE sku = ?');
+                $stProd->execute([$barcodeRow['sku']]);
+                $matchedProduct = $stProd->fetch();
             } else {
-                $st = $pdo->prepare('SELECT * FROM products WHERE sku = ?');
-                $st->execute([$rawCode]);
-                $matchedProduct = $st->fetch();
+                // 2. Fallback to SKU matching
+                if (str_contains($rawCode, 'FM') || str_contains($rawCode, 'FIRST-MOVE') || str_contains($rawCode, 'MOVE')) {
+                    $matchedProduct = $pdo->query("SELECT * FROM products WHERE sku = 'ODD-FM-002'")->fetch();
+                } elseif (str_contains($rawCode, 'LC') || str_contains($rawCode, 'LUCID')) {
+                    $matchedProduct = $pdo->query("SELECT * FROM products WHERE sku = 'ODD-LC-003'")->fetch();
+                } elseif (str_contains($rawCode, 'PH') || str_contains($rawCode, 'PHANTOM')) {
+                    $matchedProduct = $pdo->query("SELECT * FROM products WHERE sku = 'ODD-PH-001'")->fetch();
+                } else {
+                    $st = $pdo->prepare('SELECT * FROM products WHERE sku = ?');
+                    $st->execute([$rawCode]);
+                    $matchedProduct = $st->fetch();
+                }
             }
 
             if (!$matchedProduct) {
@@ -1610,7 +1781,7 @@ try {
                 $isLikelyOrder = preg_match('/^ODD-?\d+$/i', $rawCode) || preg_match('/^\d{5,}$/', $rawCode);
                 $errMsg = $isLikelyOrder
                     ? "Order {$rawCode} was not found in the database. Please verify the order number."
-                    : "Unrecognized product or barcode: {$rawCode}";
+                    : "Unrecognized product or barcode serial: {$rawCode}";
                 sendJson(404, ['error' => $errMsg]);
             }
 
@@ -1624,24 +1795,32 @@ try {
 
             $pdo->prepare('UPDATE products SET stock = ?, updated_at = NOW() WHERE id = ?')->execute([$newStock, $matchedProduct['id']]);
 
+            $movementReason = $isBarcode
+                ? 'Warehouse Scanner ' . strtoupper($mode) . " (Serial: {$serialNumber})"
+                : 'Warehouse Scanner ' . strtoupper($mode);
+
             $pdo->prepare('INSERT INTO inventory_movements (sku, product_id, delta, stock_after, reason, staff_name) VALUES (?, ?, ?, ?, ?, ?)')->execute([
                 $matchedProduct['sku'],
                 $matchedProduct['id'],
                 $delta,
                 $newStock,
-                'Warehouse Scanner ' . strtoupper($mode),
+                $movementReason,
                 $session['name'] ?? 'Staff'
             ]);
 
+            $scanDetails = $isBarcode
+                ? "Serial: {$serialNumber} · Lot: {$lotNumber} · Exp: {$expDate} · MRP: ₹{$mrpVal}"
+                : "Stock adjusted to {$newStock}";
+
             $pdo->prepare('INSERT INTO scans (code, sku, item_name, mode, delta, stock_after, staff_name, details) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')->execute([
-                $rawCode,
+                $serialNumber,
                 $matchedProduct['sku'],
                 $matchedProduct['name'],
                 $mode,
                 $delta,
                 (string)$newStock,
                 $session['name'] ?? 'Staff',
-                "Stock adjusted to {$newStock}"
+                $scanDetails
             ]);
 
             $pdo->commit();
@@ -1649,10 +1828,17 @@ try {
             sendJson(200, [
                 'success' => true,
                 'isOrder' => false,
+                'isBarcode' => $isBarcode,
+                'serial' => $serialNumber,
                 'sku' => $matchedProduct['sku'],
                 'name' => $matchedProduct['name'],
+                'lot' => $lotNumber,
+                'mfg' => $mfgDate,
+                'expiry' => $expDate,
+                'mrp' => $mrpVal,
                 'stock' => $newStock,
-                'delta' => $delta
+                'delta' => $delta,
+                'mode' => $mode
             ]);
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
@@ -1719,17 +1905,46 @@ try {
 
     // --- 10. Settings ---
     if ($route === 'settings/razorpay-public' && $method === 'GET') {
-        $stmt = $pdo->prepare('SELECT value_json FROM settings WHERE key_name = "razorpay"');
-        $stmt->execute();
-        $row = $stmt->fetch();
-        $rzp = $row ? json_decode($row['value_json'], true) : [];
+        $rzpCfg = getRazorpayConfig($pdo);
         sendJson(200, [
-            'enabled' => $rzp['enabled'] ?? true,
-            'env' => $rzp['env'] ?? 'live',
-            'keyId' => $rzp['keyId'] ?? RAZORPAY_KEY_ID,
-            'brandName' => $rzp['brandName'] ?? 'ODD Perfume',
-            'themeColor' => $rzp['themeColor'] ?? '#E86B32'
+            'enabled' => $rzpCfg['enabled'],
+            'env' => $rzpCfg['env'],
+            'keyId' => $rzpCfg['keyId'],
+            'brandName' => $rzpCfg['brandName'],
+            'themeColor' => $rzpCfg['themeColor']
         ]);
+    }
+
+    if ($route === 'settings/razorpay/test' && $method === 'POST') {
+        requireStaffAuth('admin');
+        $body = getJsonBody();
+        $keyId = trim((string)($body['keyId'] ?? ''));
+        $keySecret = trim((string)($body['keySecret'] ?? ''));
+
+        if (!$keyId || str_contains($keySecret, '••••')) {
+            $rzpCfg = getRazorpayConfig($pdo);
+            if (!$keyId) $keyId = $rzpCfg['keyId'];
+            if (!$keySecret || str_contains($keySecret, '••••')) $keySecret = $rzpCfg['keySecret'];
+        }
+
+        if (!$keyId || !$keySecret) {
+            sendJson(400, ['success' => false, 'error' => 'Razorpay Key ID and Key Secret are required to test connection.']);
+        }
+
+        $ch = curl_init('https://api.razorpay.com/v1/orders?count=1');
+        curl_setopt($ch, CURLOPT_USERPWD, $keyId . ':' . $keySecret);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $resp = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($code === 200) {
+            sendJson(200, ['success' => true, 'message' => 'Razorpay API credentials verified and active with Razorpay servers!']);
+        } else {
+            $parsed = json_decode((string)$resp, true);
+            sendJson(400, ['success' => false, 'error' => $parsed['error']['description'] ?? 'Razorpay authentication failed. Please verify Key ID and Key Secret.']);
+        }
     }
 
     if (strpos($route, 'settings/') === 0 && $method === 'GET') {
@@ -1743,18 +1958,18 @@ try {
         $data = $row ? json_decode($row['value_json'], true) : [];
 
         if ($key === 'razorpay') {
-            if (!empty($data['keySecret'])) {
-                $data['keySecret'] = '••••••••••••';
-            }
             if (empty($data['keyId'])) {
-                $data['keyId'] = RAZORPAY_KEY_ID;
+                $data['keyId'] = defined('RAZORPAY_KEY_ID') ? RAZORPAY_KEY_ID : '';
+            }
+            if (empty($data['keySecret'])) {
+                $data['keySecret'] = defined('RAZORPAY_KEY_SECRET') ? RAZORPAY_KEY_SECRET : '';
             }
         } elseif ($key === 'shiprocket') {
-            if (!empty($data['password'])) {
-                $data['password'] = '••••••••••••';
-            }
             if (empty($data['email'])) {
                 $data['email'] = defined('SHIPROCKET_EMAIL') ? SHIPROCKET_EMAIL : '';
+            }
+            if (empty($data['password'])) {
+                $data['password'] = defined('SHIPROCKET_PASSWORD') ? SHIPROCKET_PASSWORD : '';
             }
             if (empty($data['pickupLocation'])) {
                 $data['pickupLocation'] = defined('SHIPROCKET_PICKUP_LOCATION') ? SHIPROCKET_PICKUP_LOCATION : 'Primary';
@@ -1788,6 +2003,61 @@ try {
             ON DUPLICATE KEY UPDATE value_json = VALUES(value_json), updated_at = NOW()
         ')->execute([$key, json_encode($body)]);
         sendJson(200, ['success' => true]);
+    }
+
+    // --- 11. Contact & Studio Inquiries ---
+    if ($route === 'contact' && $method === 'POST') {
+        $body = getJsonBody();
+        $name = trim((string)($body['name'] ?? ''));
+        $email = strtolower(trim((string)($body['email'] ?? '')));
+        $subject = trim((string)($body['subject'] ?? 'Studio Inquiry'));
+        $message = trim((string)($body['message'] ?? ''));
+
+        if (!$name || !$email || !filter_var($email, FILTER_VALIDATE_EMAIL) || !$message) {
+            sendJson(400, ['error' => 'Please provide your full name, a valid email address, and message.']);
+        }
+
+        $headers = [
+            'From: ODD Perfume Studio <hello@oddperfume.com>',
+            "Reply-To: {$name} <{$email}>",
+            'X-Mailer: PHP/' . phpversion(),
+            'Content-Type: text/plain; charset=UTF-8'
+        ];
+        $bodyText = "New contact message from oddperfume.com:\n\nName: {$name}\nEmail: {$email}\nSubject: {$subject}\n\nMessage:\n{$message}\n\nTime: " . date('Y-m-d H:i:s');
+        @mail('hello@oddperfume.com', "ODD Contact: {$subject}", $bodyText, implode("\r\n", $headers));
+
+        sendJson(200, [
+            'success' => true,
+            'message' => 'Thank you! Your message has been sent to our studio team. We will get back to you shortly.'
+        ]);
+    }
+
+    // --- 12. Newsletter Subscriptions ---
+    if ($route === 'newsletter/subscribe' && $method === 'POST') {
+        $body = getJsonBody();
+        $email = strtolower(trim((string)($body['email'] ?? '')));
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            sendJson(400, ['error' => 'Please enter a valid email address.']);
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT value_json FROM settings WHERE key_name = "newsletter_subscribers"');
+            $stmt->execute();
+            $row = $stmt->fetch();
+            $subs = $row ? json_decode($row['value_json'], true) : [];
+            if (!is_array($subs)) $subs = [];
+            if (!in_array($email, $subs, true)) {
+                $subs[] = $email;
+                $pdo->prepare('
+                    INSERT INTO settings (key_name, value_json, updated_at) VALUES ("newsletter_subscribers", ?, NOW())
+                    ON DUPLICATE KEY UPDATE value_json = VALUES(value_json), updated_at = NOW()
+                ')->execute([json_encode($subs)]);
+            }
+        } catch (Throwable $e) {}
+
+        sendJson(200, [
+            'success' => true,
+            'message' => 'Thank you for subscribing to ODD Fragrance Notes.'
+        ]);
     }
 
     // Route not found

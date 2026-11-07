@@ -67,8 +67,8 @@ function initDatabase() {
       id TEXT PRIMARY KEY,
       sku TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
-      price INTEGER NOT NULL DEFAULT 899,
-      original_price INTEGER NOT NULL DEFAULT 1199,
+      price INTEGER NOT NULL DEFAULT 1599,
+      original_price INTEGER DEFAULT NULL,
       stock INTEGER NOT NULL DEFAULT 0,
       active INTEGER NOT NULL DEFAULT 1,
       tagline TEXT,
@@ -208,7 +208,7 @@ function initDatabase() {
       lot_number TEXT NOT NULL,
       mfg_date TEXT NOT NULL,
       expiry_date TEXT NOT NULL,
-      mrp INTEGER NOT NULL DEFAULT 899,
+      mrp INTEGER NOT NULL DEFAULT 1599,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -258,9 +258,9 @@ function initDatabase() {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     // CRITICAL: First Move strictly starts with 0 units as documented
-    insertProd.run('phantom', 'ODD-PH-001', 'ODD Phantom', 899, 1199, 240, 1, 'Unseen. Unforgotten. Dominant.', 'Oud · Amber · Smoky Woods');
-    insertProd.run('lucid', 'ODD-LC-003', 'ODD Lucid', 899, 1199, 180, 1, 'Clear Mind. Sharp Presence.', 'Citrus · Black Tea · Clean Woods');
-    insertProd.run('first-move', 'ODD-FM-002', 'ODD First Move', 899, 1199, 0, 1, 'Start First. Stay Ahead.', 'Pineapple · Woods · Smoky Musk');
+    insertProd.run('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, 1599, 0, 1, 'Unseen. Unforgotten. Dominant.', 'Oud · Amber · Smoky Woods');
+    insertProd.run('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, 1599, 0, 1, 'Clear Mind. Sharp Presence.', 'Citrus · Black Tea · Clean Woods');
+    insertProd.run('first-move', 'ODD-FM-002', 'ODD First Move', 1599, 1599, 0, 1, 'Start First. Stay Ahead.', 'Pineapple · Woods · Smoky Musk');
 
     const insertMov = db.prepare(`
       INSERT INTO inventory_movements (sku, product_id, delta, stock_after, reason, staff_name)
@@ -292,7 +292,7 @@ function initDatabase() {
   setSetting.run('shiprocket', JSON.stringify({
     enabled: true,
     email: process.env.SHIPROCKET_EMAIL || 'oddperfumesocial@gmail.com',
-    password: process.env.SHIPROCKET_PASSWORD || 'Aoeo6$g4!7RYRLSLM0@V90MYX!fI*Gg!',
+    password: process.env.SHIPROCKET_PASSWORD || 'Ks^U&iCv5zET!Bse*c4Ubln9y!ZkHw&o',
     pickupLocation: process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary',
     carrier: 'automatic',
     autoDispatch: false,
@@ -323,6 +323,22 @@ function initDatabase() {
 }
 
 initDatabase();
+
+function getRazorpayConfig(database) {
+  try {
+    const row = database.prepare("SELECT value_json FROM settings WHERE key_name = 'razorpay'").get();
+    const cfg = row ? JSON.parse(row.value_json) : {};
+    const keyId = (cfg.keyId && cfg.keyId.trim()) ? cfg.keyId.trim() : (RAZORPAY_CONFIG.keyId || '');
+    const keySecret = (cfg.keySecret && !cfg.keySecret.includes('••••')) ? cfg.keySecret.trim() : (RAZORPAY_CONFIG.keySecret || '');
+    const enabled = cfg.enabled !== undefined ? cfg.enabled : (RAZORPAY_CONFIG.enabled !== false);
+    const env = cfg.env || RAZORPAY_CONFIG.env || 'live';
+    const brandName = cfg.brandName || RAZORPAY_CONFIG.brandName || 'ODD Perfume';
+    const themeColor = cfg.themeColor || RAZORPAY_CONFIG.themeColor || '#E86B32';
+    return { keyId, keySecret, enabled, env, brandName, themeColor };
+  } catch (e) {
+    return { ...RAZORPAY_CONFIG };
+  }
+}
 
 // --- Cryptographic Security Helpers ---
 function hashPassword(password) {
@@ -636,12 +652,16 @@ const server = http.createServer(async (req, res) => {
 
         let newStock = product.stock;
         let newPrice = product.price;
+        let newOriginalPrice = product.original_price || Math.round(product.price / 0.75);
         let delta = 0;
 
         if (body.price !== undefined) {
           const p = Number(body.price);
           if (isNaN(p) || p <= 0) return sendJson(res, 400, { error: 'Price must be greater than zero.' });
-          newPrice = p;
+          newPrice = Math.round(p);
+          newOriginalPrice = (body.originalPrice && Number(body.originalPrice) > newPrice)
+            ? Math.round(Number(body.originalPrice))
+            : null;
         }
 
         // Per business rule: stock is managed authoritatively by QR / barcode scanner.
@@ -655,7 +675,7 @@ const server = http.createServer(async (req, res) => {
 
         db.exec('BEGIN IMMEDIATE TRANSACTION;');
         try {
-          db.prepare("UPDATE products SET stock = ?, price = ?, updated_at = datetime('now') WHERE sku = ?").run(newStock, newPrice, sku);
+          db.prepare("UPDATE products SET stock = ?, price = ?, original_price = ?, updated_at = datetime('now') WHERE sku = ?").run(newStock, newPrice, newOriginalPrice, sku);
 
           if (delta !== 0) {
             db.prepare(`
@@ -675,11 +695,13 @@ const server = http.createServer(async (req, res) => {
           sku,
           stock: newStock,
           price: newPrice,
+          originalPrice: newOriginalPrice,
           item: {
             sku,
             name: product.name,
             stock: newStock,
             price: newPrice,
+            originalPrice: newOriginalPrice,
             updated: new Date().toISOString()
           }
         });
@@ -760,6 +782,29 @@ const server = http.createServer(async (req, res) => {
           FROM coupon_usages ORDER BY id DESC LIMIT 100
         `).all();
         return sendJson(res, 200, { usages });
+      }
+
+      // Public Active Coupons (Dynamic Database Query for Customer & Storefront)
+      if ((pathname === '/api/coupons/active' || pathname === '/api/coupons/public') && method === 'GET') {
+        const email = String(urlObj.searchParams.get('email') || '').trim().toLowerCase();
+        const coupons = db.prepare(`
+          SELECT id, code, discount_percent as discount, min_spend as minSpend, max_discount as maxDiscount, max_uses as maxUses,
+                 CASE 
+                   WHEN code = 'LAUNCH20' THEN 'Site-wide 20% discount on first fragrance order.'
+                   WHEN min_spend > 0 THEN (discount_percent || '% discount on orders above ₹' || min_spend || '.')
+                   ELSE (discount_percent || '% discount valid across all fragrances.')
+                 END as desc
+          FROM coupons
+          WHERE active = 1
+          ORDER BY discount_percent DESC, id DESC
+        `).all();
+
+        let userUsages = [];
+        if (email) {
+          userUsages = db.prepare('SELECT coupon_code as coupon, order_id as orderId, discount_amount as discount FROM coupon_usages WHERE lower(customer_email) = ?').all(email);
+        }
+
+        return sendJson(res, 200, { coupons, usages: userUsages });
       }
 
       // Public Coupon Validation
@@ -1040,6 +1085,22 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      if (pathname === '/api/orders/clear-test-orders' && method === 'POST') {
+        const session = requireStaffAuth(req, res, 'admin');
+        if (!session) return;
+        try {
+          db.exec('BEGIN IMMEDIATE TRANSACTION;');
+          db.prepare('DELETE FROM order_items').run();
+          db.prepare('DELETE FROM orders').run();
+          db.prepare("DELETE FROM inventory_movements WHERE reason LIKE '%test%' OR reason LIKE '%COD%' OR reason LIKE '%order%' OR reason LIKE '%batch receipt%'").run();
+          db.exec('COMMIT;');
+          return sendJson(res, 200, { success: true, message: 'All test orders and stock commitments have been cleared. Store reset to zero active orders.' });
+        } catch (err) {
+          try { db.exec('ROLLBACK;'); } catch (e) {}
+          return sendJson(res, 500, { error: 'Failed to clear test orders: ' + err.message });
+        }
+      }
+
       if (pathname === '/api/orders' && method === 'GET') {
         const session = requireStaffAuth(req, res, 'orders');
         if (!session) return;
@@ -1178,6 +1239,49 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
+      // Customer Portal: Live Customer Orders Query
+      if ((pathname === '/api/customer/orders' || pathname === '/api/orders/my') && method === 'GET') {
+        const cSession = getCustomerSession(req);
+        const email = String(urlObj.searchParams.get('email') || (cSession ? cSession.email : '')).trim().toLowerCase();
+        const rawPhone = String(urlObj.searchParams.get('phone') || (cSession ? cSession.phone : '')).trim();
+        const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+
+        if (!email && !cleanPhone) {
+          return sendJson(res, 200, { orders: [] });
+        }
+
+        const clauses = [];
+        const params = [];
+        if (email) {
+          clauses.push('lower(customer_email) = ?');
+          params.push(email);
+        }
+        if (cleanPhone) {
+          clauses.push("replace(replace(customer_phone, '+91', ''), ' ', '') LIKE ?");
+          params.push(`%${cleanPhone.slice(-10)}%`);
+        }
+
+        const query = `
+          SELECT id, customer_name as customer, customer_email as email, customer_phone as phone,
+                 shipping_address as address, subtotal, discount_amount as discount, coupon_code as coupon,
+                 shipping_fee as shipping, total_amount as total, total_amount as amount,
+                 payment_method as paymentMethod, payment_status as paymentStatus, status,
+                 courier_name as courier, tracking_number as trackingNumber, tracking_url as trackingUrl,
+                 created_at as date, dispatched_at as dispatchedAt, delivered_at as deliveredAt
+          FROM orders
+          WHERE (${clauses.join(' OR ')})
+          ORDER BY datetime(created_at) DESC
+        `;
+
+        const orders = db.prepare(query).all(...params);
+        const getItems = db.prepare('SELECT product_id as id, sku, name, price, quantity as qty, line_total FROM order_items WHERE order_id = ?');
+        for (const order of orders) {
+          order.items = getItems.all(order.id);
+        }
+
+        return sendJson(res, 200, { orders });
+      }
+
       // --- 7. Razorpay Payments Integration (/api/payments) ---
       if (pathname === '/api/payments/create-order' && method === 'POST') {
         const body = await parseJsonBody(req);
@@ -1187,7 +1291,14 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 400, { error: 'Invalid order amount.' });
         }
 
-        if (!RAZORPAY_CONFIG.keyId || !RAZORPAY_CONFIG.keySecret) {
+        const rzpCfg = getRazorpayConfig(db);
+        if (!rzpCfg.enabled) {
+          return sendJson(res, 503, {
+            error: 'Razorpay online payments are currently disabled in store settings. Please choose Cash on Delivery (COD).'
+          });
+        }
+
+        if (!rzpCfg.keyId || !rzpCfg.keySecret) {
           return sendJson(res, 503, {
             error: 'Razorpay gateway is not configured on this server. Please choose Cash on Delivery (COD).'
           });
@@ -1195,7 +1306,7 @@ const server = http.createServer(async (req, res) => {
 
         // Call Razorpay API: POST https://api.razorpay.com/v1/orders
         try {
-          const authHeader = 'Basic ' + Buffer.from(`${RAZORPAY_CONFIG.keyId}:${RAZORPAY_CONFIG.keySecret}`).toString('base64');
+          const authHeader = 'Basic ' + Buffer.from(`${rzpCfg.keyId}:${rzpCfg.keySecret}`).toString('base64');
           const rzpReqData = JSON.stringify({
             amount: amount * 100, // paise
             currency: 'INR',
@@ -1231,7 +1342,7 @@ const server = http.createServer(async (req, res) => {
             orderId: rzpParsed.id,
             amount: rzpParsed.amount,
             currency: rzpParsed.currency,
-            keyId: RAZORPAY_CONFIG.keyId
+            keyId: rzpCfg.keyId
           });
         } catch (err) {
           console.error('Razorpay API request error:', err);
@@ -1247,8 +1358,9 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 400, { error: 'Missing payment signature components.' });
         }
 
+        const rzpCfg = getRazorpayConfig(db);
         const expectedSig = crypto
-          .createHmac('sha256', RAZORPAY_CONFIG.keySecret)
+          .createHmac('sha256', rzpCfg.keySecret)
           .update(`${razorpay_order_id}|${razorpay_payment_id}`)
           .digest('hex');
 
@@ -1846,7 +1958,7 @@ const server = http.createServer(async (req, res) => {
         const lot = String(body.lot || '01').trim();
         const mfg = String(body.mfg || new Date().toISOString().slice(0, 10));
         const shelfLife = Number(body.shelfLife) || 36;
-        const mrp = Number(body.mrp) || 899;
+        const mrp = Number(body.mrp) || 1599;
         const startSerialParam = body.startSerial != null && body.startSerial !== '' ? Math.max(1, Number(body.startSerial)) : null;
 
         const mfgDate = new Date(mfg);
@@ -1915,6 +2027,21 @@ const server = http.createServer(async (req, res) => {
         }
 
         return sendJson(res, 200, { success: true, labels: generatedLabels, expiry });
+      }
+
+      if (pathname === '/api/barcodes' && method === 'GET') {
+        const session = requireStaffAuth(req, res, 'barcodes');
+        if (!session) return;
+
+        const urlObj = new URL(req.url, 'http://localhost');
+        const search = (urlObj.searchParams.get('q') || '').trim();
+        let barcodes;
+        if (search) {
+          barcodes = db.prepare('SELECT * FROM barcodes WHERE serial LIKE ? OR sku LIKE ? OR product_name LIKE ? ORDER BY id DESC LIMIT 100').all(`%${search}%`, `%${search}%`, `%${search}%`);
+        } else {
+          barcodes = db.prepare('SELECT * FROM barcodes ORDER BY id DESC LIMIT 100').all();
+        }
+        return sendJson(res, 200, { barcodes });
       }
 
       if (pathname === '/api/scans' && method === 'GET') {
@@ -1989,16 +2116,44 @@ const server = http.createServer(async (req, res) => {
             });
           }
 
-          // Otherwise code is SKU or barcode serial
+          // Otherwise code is SKU or registered barcode serial
+          const cleanCode = rawCode.replace(/\s+/g, '-');
+          const noHyphens = rawCode.replace(/[-\s]/g, '');
+
+          // 1. Look up registered unique serial in barcodes table
+          const barcodeRow = db.prepare(`
+            SELECT * FROM barcodes
+            WHERE serial = ? OR REPLACE(serial, '-', '') = ? OR serial = ?
+            LIMIT 1
+          `).get(rawCode, noHyphens, cleanCode);
+
           let matchedProduct = null;
-          if (rawCode.includes('FM') || rawCode.includes('FIRST-MOVE') || rawCode.includes('MOVE')) {
-            matchedProduct = db.prepare("SELECT * FROM products WHERE sku = 'ODD-FM-002'").get();
-          } else if (rawCode.includes('LC') || rawCode.includes('LUCID')) {
-            matchedProduct = db.prepare("SELECT * FROM products WHERE sku = 'ODD-LC-003'").get();
-          } else if (rawCode.includes('PH') || rawCode.includes('PHANTOM')) {
-            matchedProduct = db.prepare("SELECT * FROM products WHERE sku = 'ODD-PH-001'").get();
+          let isBarcode = false;
+          let serialNumber = rawCode;
+          let lotNumber = null;
+          let mfgDate = null;
+          let expDate = null;
+          let mrpVal = null;
+
+          if (barcodeRow) {
+            isBarcode = true;
+            serialNumber = barcodeRow.serial;
+            lotNumber = barcodeRow.lot_number;
+            mfgDate = barcodeRow.mfg_date;
+            expDate = barcodeRow.expiry_date;
+            mrpVal = barcodeRow.mrp;
+            matchedProduct = db.prepare('SELECT * FROM products WHERE sku = ?').get(barcodeRow.sku);
           } else {
-            matchedProduct = db.prepare('SELECT * FROM products WHERE sku = ?').get(rawCode);
+            // 2. Fallback to SKU lookup
+            if (rawCode.includes('FM') || rawCode.includes('FIRST-MOVE') || rawCode.includes('MOVE')) {
+              matchedProduct = db.prepare("SELECT * FROM products WHERE sku = 'ODD-FM-002'").get();
+            } else if (rawCode.includes('LC') || rawCode.includes('LUCID')) {
+              matchedProduct = db.prepare("SELECT * FROM products WHERE sku = 'ODD-LC-003'").get();
+            } else if (rawCode.includes('PH') || rawCode.includes('PHANTOM')) {
+              matchedProduct = db.prepare("SELECT * FROM products WHERE sku = 'ODD-PH-001'").get();
+            } else {
+              matchedProduct = db.prepare('SELECT * FROM products WHERE sku = ?').get(rawCode);
+            }
           }
 
           if (!matchedProduct) {
@@ -2006,7 +2161,7 @@ const server = http.createServer(async (req, res) => {
             const isLikelyOrder = /^ODD-?\d+$/i.test(rawCode) || /^\d{5,}$/.test(rawCode);
             const errMsg = isLikelyOrder
               ? `Order ${rawCode} was not found in the database. Please verify the order number.`
-              : `Unrecognized product or barcode: ${rawCode}`;
+              : `Unrecognized product or barcode serial: ${rawCode}`;
             return sendJson(res, 404, { error: errMsg });
           }
 
@@ -2022,25 +2177,40 @@ const server = http.createServer(async (req, res) => {
 
           db.prepare("UPDATE products SET stock = ?, updated_at = datetime('now') WHERE id = ?").run(newStock, matchedProduct.id);
 
+          const movementReason = isBarcode
+            ? `Warehouse Scanner ${mode.toUpperCase()} (Serial: ${serialNumber})`
+            : `Warehouse Scanner ${mode.toUpperCase()}`;
+
           db.prepare(`
             INSERT INTO inventory_movements (sku, product_id, delta, stock_after, reason, staff_name)
             VALUES (?, ?, ?, ?, ?, ?)
-          `).run(matchedProduct.sku, matchedProduct.id, delta, newStock, `Warehouse Scanner ${mode.toUpperCase()}`, session.name);
+          `).run(matchedProduct.sku, matchedProduct.id, delta, newStock, movementReason, session.name);
+
+          const scanDetails = isBarcode
+            ? `Serial: ${serialNumber} · Lot: ${lotNumber} · Exp: ${expDate} · MRP: ₹${mrpVal}`
+            : `Stock adjusted to ${newStock}`;
 
           db.prepare(`
             INSERT INTO scans (code, sku, item_name, mode, delta, stock_after, staff_name, details)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          `).run(rawCode, matchedProduct.sku, matchedProduct.name, mode, delta, String(newStock), session.name, `Stock adjusted to ${newStock}`);
+          `).run(serialNumber, matchedProduct.sku, matchedProduct.name, mode, delta, String(newStock), session.name, scanDetails);
 
           db.exec('COMMIT;');
 
           return sendJson(res, 200, {
             success: true,
             isOrder: false,
+            isBarcode,
+            serial: serialNumber,
             sku: matchedProduct.sku,
             name: matchedProduct.name,
+            lot: lotNumber,
+            mfg: mfgDate,
+            expiry: expDate,
+            mrp: mrpVal,
             stock: newStock,
-            delta
+            delta,
+            mode
           });
         } catch (err) {
           db.exec('ROLLBACK;');
@@ -2117,15 +2287,58 @@ const server = http.createServer(async (req, res) => {
 
       // --- 10. Store Settings (/api/settings) ---
       if (pathname === '/api/settings/razorpay-public' && method === 'GET') {
-        const setting = db.prepare("SELECT value_json FROM settings WHERE key_name = 'razorpay'").get();
-        const rzp = setting ? JSON.parse(setting.value_json) : {};
+        const rzpCfg = getRazorpayConfig(db);
         return sendJson(res, 200, {
-          enabled: rzp.enabled !== undefined ? rzp.enabled : (RAZORPAY_CONFIG.enabled !== false),
-          env: rzp.env || RAZORPAY_CONFIG.env || 'live',
-          keyId: rzp.keyId || RAZORPAY_CONFIG.keyId,
-          brandName: rzp.brandName || RAZORPAY_CONFIG.brandName || 'ODD Perfume',
-          themeColor: rzp.themeColor || RAZORPAY_CONFIG.themeColor || '#E86B32'
+          enabled: rzpCfg.enabled,
+          env: rzpCfg.env,
+          keyId: rzpCfg.keyId,
+          brandName: rzpCfg.brandName,
+          themeColor: rzpCfg.themeColor
         });
+      }
+
+      if (pathname === '/api/settings/razorpay/test' && method === 'POST') {
+        const session = requireStaffAuth(req, res, 'admin');
+        if (!session) return;
+        const body = await parseJsonBody(req);
+        let keyId = String(body.keyId || '').trim();
+        let keySecret = String(body.keySecret || '').trim();
+
+        if (!keyId || keySecret.includes('••••')) {
+          const rzpCfg = getRazorpayConfig(db);
+          if (!keyId) keyId = rzpCfg.keyId;
+          if (!keySecret || keySecret.includes('••••')) keySecret = rzpCfg.keySecret;
+        }
+
+        if (!keyId || !keySecret) {
+          return sendJson(res, 400, { success: false, error: 'Razorpay Key ID and Key Secret are required to test connection.' });
+        }
+
+        try {
+          const https = require('node:https');
+          const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+          const testRes = await new Promise((resolve, reject) => {
+            const tReq = https.request('https://api.razorpay.com/v1/orders?count=1', {
+              method: 'GET',
+              headers: { 'Authorization': authHeader }
+            }, tRes => {
+              let tBody = '';
+              tRes.on('data', c => tBody += c);
+              tRes.on('end', () => resolve({ statusCode: tRes.statusCode, body: tBody }));
+            });
+            tReq.on('error', reject);
+            tReq.end();
+          });
+
+          if (testRes.statusCode === 200) {
+            return sendJson(res, 200, { success: true, message: 'Razorpay API credentials verified and active with Razorpay servers!' });
+          } else {
+            const parsed = JSON.parse(testRes.body || '{}');
+            return sendJson(res, 400, { success: false, error: parsed.error?.description || 'Razorpay authentication failed. Please verify Key ID and Key Secret.' });
+          }
+        } catch (err) {
+          return sendJson(res, 502, { success: false, error: 'Failed to communicate with Razorpay servers: ' + err.message });
+        }
       }
 
       if (pathname.startsWith('/api/settings/') && method === 'GET') {
@@ -2138,11 +2351,11 @@ const server = http.createServer(async (req, res) => {
         const data = setting ? JSON.parse(setting.value_json) : {};
 
         if (key === 'razorpay') {
-          if (data.keySecret) data.keySecret = '••••••••••••';
           if (!data.keyId) data.keyId = RAZORPAY_CONFIG.keyId;
+          if (!data.keySecret) data.keySecret = RAZORPAY_CONFIG.keySecret;
         } else if (key === 'shiprocket') {
-          if (data.password) data.password = '••••••••••••';
           if (!data.email) data.email = process.env.SHIPROCKET_EMAIL || 'oddperfumesocial@gmail.com';
+          if (!data.password) data.password = process.env.SHIPROCKET_PASSWORD || '';
           if (!data.pickupLocation) data.pickupLocation = process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary';
         }
 
@@ -2164,7 +2377,7 @@ const server = http.createServer(async (req, res) => {
         } else if (key === 'shiprocket' && (!body.password || body.password.includes('••••'))) {
           const prev = db.prepare("SELECT value_json FROM settings WHERE key_name = 'shiprocket'").get();
           const prevJson = prev ? JSON.parse(prev.value_json) : {};
-          body.password = prevJson.password || process.env.SHIPROCKET_PASSWORD || 'Aoeo6$g4!7RYRLSLM0@V90MYX!fI*Gg!';
+          body.password = prevJson.password || process.env.SHIPROCKET_PASSWORD || 'Ks^U&iCv5zET!Bse*c4Ubln9y!ZkHw&o';
         }
 
         db.prepare(`
@@ -2308,6 +2521,53 @@ const server = http.createServer(async (req, res) => {
         `).run(session.user_id, label || 'Home', name, phone, address, city, pincode);
 
         return sendJson(res, 201, { success: true });
+      }
+
+      // --- 12. Contact & Inquiries (/api/contact) ---
+      if (pathname === '/api/contact' && method === 'POST') {
+        const body = await parseJsonBody(req);
+        const name = String(body.name || '').trim();
+        const email = String(body.email || '').trim().toLowerCase();
+        const subject = String(body.subject || 'Studio Inquiry').trim();
+        const message = String(body.message || '').trim();
+
+        if (!name || !email || !message) {
+          return sendJson(res, 400, { error: 'Please provide full name, email, and message.' });
+        }
+
+        console.log(`[CONTACT INQUIRY] From: ${name} <${email}> | Subject: ${subject}\nMessage: ${message}`);
+        return sendJson(res, 200, {
+          success: true,
+          message: 'Thank you! Your message has been sent to our studio team. We will get back to you shortly.'
+        });
+      }
+
+      // --- 13. Newsletter Subscriptions (/api/newsletter/subscribe) ---
+      if (pathname === '/api/newsletter/subscribe' && method === 'POST') {
+        const body = await parseJsonBody(req);
+        const email = String(body.email || '').trim().toLowerCase();
+        if (!email || !email.includes('@')) {
+          return sendJson(res, 400, { error: 'Please enter a valid email address.' });
+        }
+
+        try {
+          const row = db.prepare("SELECT value_json FROM settings WHERE key_name = 'newsletter_subscribers'").get();
+          let subs = row ? JSON.parse(row.value_json) : [];
+          if (!Array.isArray(subs)) subs = [];
+          if (!subs.includes(email)) {
+            subs.push(email);
+            db.prepare(`
+              INSERT INTO settings (key_name, value_json, updated_at)
+              VALUES ('newsletter_subscribers', ?, datetime('now'))
+              ON CONFLICT(key_name) DO UPDATE SET value_json = excluded.value_json, updated_at = datetime('now')
+            `).run(JSON.stringify(subs));
+          }
+        } catch (e) {}
+
+        return sendJson(res, 200, {
+          success: true,
+          message: 'Thank you for subscribing to ODD Fragrance Notes.'
+        });
       }
 
       // Route not found

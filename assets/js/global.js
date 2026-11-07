@@ -24,8 +24,8 @@ const PRODUCTS = {
     name: 'Phantom',
     fullName: 'ODD Phantom',
     tagline: 'Unseen. Unforgotten. Dominant.',
-    price: 899,
-    originalPrice: 1199,
+    price: 1599,
+    originalPrice: null,
     notes: 'Oud · Saffron · Amberwood',
     bottleImage: 'Phantom Single bottle.png',
     notesList: ['Oud', 'Saffron', 'Amberwood'],
@@ -43,8 +43,8 @@ const PRODUCTS = {
     name: 'Lucid',
     fullName: 'ODD Lucid',
     tagline: 'Clear Mind. Sharp Presence.',
-    price: 899,
-    originalPrice: 1199,
+    price: 1599,
+    originalPrice: null,
     notes: 'Bergamot · Patchouli · Blackcurrant',
     bottleImage: 'Lucid single bottle.png',
     notesList: ['Bergamot', 'Patchouli', 'Blackcurrant'],
@@ -62,8 +62,8 @@ const PRODUCTS = {
     name: 'First Move',
     fullName: 'ODD First Move',
     tagline: 'Make your presence felt instantly.',
-    price: 899,
-    originalPrice: 1199,
+    price: 1599,
+    originalPrice: null,
     notes: 'Citrus · Black Tea · Smoky Musk',
     bottleImage: 'First Move single bottle.png',
     notesList: ['Citrus', 'Black Tea', 'Smoky Musk'],
@@ -82,29 +82,180 @@ function readStorageJSON(key, fallback) {
   try { const value = JSON.parse(localStorage.getItem(key)); return value == null ? fallback : value; }
   catch { return fallback; }
 }
+
+// Hydrate PRODUCTS and STORE_INVENTORY immediately from database cache to eliminate any default price flash
+try {
+  const cachedProducts = readStorageJSON('odd_live_products', null);
+  if (cachedProducts && typeof cachedProducts === 'object') {
+    Object.keys(cachedProducts).forEach(pid => {
+      if (PRODUCTS[pid] && cachedProducts[pid].price) {
+        PRODUCTS[pid].price = Number(cachedProducts[pid].price);
+        PRODUCTS[pid].originalPrice = (cachedProducts[pid].originalPrice && Number(cachedProducts[pid].originalPrice) > Number(cachedProducts[pid].price))
+          ? Number(cachedProducts[pid].originalPrice)
+          : null;
+      }
+    });
+  }
+} catch (e) {}
+
 let cartState = readStorageJSON('odd_cart', []).filter(item => item && PRODUCTS[item.id] && Number.isInteger(Number(item.qty)) && Number(item.qty) > 0).map(item => ({ id: item.id, qty: Number(item.qty) }));
 let appliedCoupon = localStorage.getItem('odd_coupon') || localStorage.getItem('odd_coupon_code') || null;
 let STORE_INVENTORY = {
-  phantom: { sku: 'ODD-PH-001', stock: 0, price: 899 },
-  lucid: { sku: 'ODD-LC-003', stock: 0, price: 899 },
-  'first-move': { sku: 'ODD-FM-002', stock: 0, price: 899 }
+  phantom: { sku: 'ODD-PH-001', stock: 0, price: 1599 },
+  lucid: { sku: 'ODD-LC-003', stock: 0, price: 1599 },
+  'first-move': { sku: 'ODD-FM-002', stock: 0, price: 1599 }
 };
 
-// Sync live inventory from authoritative API backend
+// Function to synchronize all price tags, cards, CTA buttons, and modal elements
+function syncAllPriceElementsUI() {
+  // 1. Update all .product-detail-price[data-product] containers
+  document.querySelectorAll('.product-detail-price[data-product]').forEach(element => {
+    const pid = element.dataset.product;
+    const product = PRODUCTS[pid];
+    if (!product || !product.price) return;
+
+    const currentPrice = Number(product.price);
+    const originalPrice = (product.originalPrice != null && Number(product.originalPrice) > currentPrice)
+      ? Number(product.originalPrice)
+      : null;
+
+    if (originalPrice && originalPrice > currentPrice) {
+      const discount = Math.round((originalPrice - currentPrice) / originalPrice * 100);
+      if (discount >= 1) {
+        element.innerHTML = `<span class="price-current">₹ ${currentPrice.toLocaleString('en-IN')}</span> <span class="price-original">₹ ${originalPrice.toLocaleString('en-IN')}</span> <span class="price-discount-pill">-${discount}%</span>`;
+        return;
+      }
+    }
+
+    // No discount set or originalPrice <= currentPrice:
+    // Completely HIDE strikethrough and discount pill! Show ONLY the clean selling price.
+    element.innerHTML = `<span class="price-current">₹ ${currentPrice.toLocaleString('en-IN')}</span>`;
+  });
+
+  // 2. Update Hero "Pick of the day" price on index.html
+  const heroPickPrice = document.querySelector('.hero-pick-price');
+  if (heroPickPrice) {
+    const fmPrice = PRODUCTS['first-move']?.price || 1599;
+    heroPickPrice.innerHTML = `&#8377;${Number(fmPrice).toLocaleString('en-IN')}`;
+  }
+
+  // 3. Update "Add to Bag — ₹..." CTA buttons on product pages
+  document.querySelectorAll('.product-add-btn').forEach(btn => {
+    let pid = btn.dataset.productBtn;
+    if (!pid) {
+      const path = (window.location.pathname || '').toLowerCase();
+      if (path.includes('first-move')) pid = 'first-move';
+      else if (path.includes('lucid')) pid = 'lucid';
+      else if (path.includes('phantom')) pid = 'phantom';
+    }
+    if (pid && PRODUCTS[pid] && PRODUCTS[pid].price) {
+      const stock = STORE_INVENTORY[pid]?.stock ?? 0;
+      if (stock <= 0) {
+        btn.innerHTML = 'Out of Stock';
+        btn.disabled = true;
+      } else {
+        btn.innerHTML = `Add to Bag &mdash; &#8377;${Number(PRODUCTS[pid].price).toLocaleString('en-IN')}`;
+        btn.disabled = false;
+      }
+    }
+  });
+
+  // 4. Update related product cards on product pages
+  document.querySelectorAll('.product-related-card').forEach(card => {
+    const href = (card.getAttribute('href') || '').toLowerCase();
+    let pid = null;
+    if (href.includes('first-move')) pid = 'first-move';
+    else if (href.includes('lucid')) pid = 'lucid';
+    else if (href.includes('phantom')) pid = 'phantom';
+    if (pid && PRODUCTS[pid] && PRODUCTS[pid].price) {
+      const bTag = card.querySelector('b');
+      if (bTag) {
+        bTag.textContent = `₹${Number(PRODUCTS[pid].price).toLocaleString('en-IN')} · Discover →`;
+      }
+    }
+  });
+
+  // 5. Update quiz button on find-your-scent.html
+  const quizBtn = document.getElementById('quiz-add-btn');
+  if (quizBtn) {
+    const p = PRODUCTS['phantom']?.price || 1599;
+    quizBtn.textContent = `Add Match To Bag — ₹ ${Number(p).toLocaleString('en-IN')}`;
+  }
+
+  // 6. Update Quick View modal price if open
+  const qvPrice = document.getElementById('qv-price');
+  if (qvPrice && typeof currentQvId !== 'undefined' && PRODUCTS[currentQvId] && PRODUCTS[currentQvId].price) {
+    qvPrice.innerHTML = `&#8377; ${Number(PRODUCTS[currentQvId].price).toLocaleString('en-IN')}`;
+  }
+}
+window.syncAllPriceElementsUI = syncAllPriceElementsUI;
+
+// Sync live inventory, prices, coupons, and banner directly from authoritative backend
 async function syncInventoryFromApi() {
   try {
-    const res = await fetch('/api/products');
-    if (res.ok) {
-      const data = await res.json();
+    const [prodRes, coupRes, bannerRes] = await Promise.all([
+      fetch('/api/products').catch(() => null),
+      fetch('/api/coupons/active').catch(() => null),
+      fetch('/api/settings/banner').catch(() => null)
+    ]);
+
+    if (prodRes && prodRes.ok) {
+      const data = await prodRes.json();
       const products = Array.isArray(data.products) ? data.products : (Array.isArray(data) ? data : []);
       products.forEach(p => {
         const pid = p.id;
+        const numPrice = Number(p.price);
+        const numOrig = (p.originalPrice != null && Number(p.originalPrice) > numPrice) ? Number(p.originalPrice) : null;
         if (STORE_INVENTORY[pid]) {
           STORE_INVENTORY[pid].stock = Math.max(0, Number(p.stock));
-          if (p.price) STORE_INVENTORY[pid].price = Number(p.price);
+          if (!isNaN(numPrice) && numPrice > 0) STORE_INVENTORY[pid].price = numPrice;
+        }
+        if (PRODUCTS[pid]) {
+          if (!isNaN(numPrice) && numPrice > 0) {
+            PRODUCTS[pid].price = numPrice;
+            PRODUCTS[pid].originalPrice = numOrig;
+          }
         }
       });
+      try {
+        localStorage.setItem('odd_live_products', JSON.stringify(PRODUCTS));
+      } catch (e) {}
+      syncAllPriceElementsUI();
       if (typeof syncStockStatusUI === 'function') syncStockStatusUI();
+    }
+
+    if (coupRes && coupRes.ok) {
+      const cData = await coupRes.json();
+      if (Array.isArray(cData.coupons)) {
+        ACTIVE_COUPONS = cData.coupons;
+        try {
+          localStorage.setItem('odd_coupons', JSON.stringify(cData.coupons));
+        } catch (e) {}
+      }
+    }
+
+    if (bannerRes && bannerRes.ok) {
+      const bData = await bannerRes.json();
+      if (bData && typeof bData === 'object') {
+        const bannerEl = document.getElementById('launch-banner');
+        if (bannerEl) {
+          if (bData.active === false || sessionStorage.getItem('odd_hide_banner') === 'true') {
+            bannerEl.style.display = 'none';
+            document.documentElement.style.setProperty('--banner-height', '0px');
+          } else {
+            bannerEl.style.display = '';
+            const textNode = bannerEl.querySelector('.banner-text');
+            if (textNode && bData.text) {
+              const codeStr = bData.code ? `<code class="coupon-tag" id="banner-code">${escapeHTML(bData.code)}</code>` : '';
+              textNode.innerHTML = `${escapeHTML(bData.text)} ${codeStr}`;
+            }
+            const copyBtn = bannerEl.querySelector('.banner-btn');
+            if (copyBtn && bData.code) {
+              copyBtn.setAttribute('onclick', `copyCouponCode('${escapeHTML(bData.code)}')`);
+            }
+          }
+        }
+      }
     }
   } catch (e) {}
 }
@@ -114,6 +265,7 @@ let ACTIVE_COUPONS = [];
 let STORE_STATE_FROM_SERVER = false;
 
 document.addEventListener('DOMContentLoaded', () => {
+  syncAllPriceElementsUI();
   if (typeof initScrollSpy === 'function') initScrollSpy();
   initCountdownTimer();
   updateCartUI();
@@ -519,24 +671,48 @@ function removeCartCoupon() {
 }
 
 function applyCoupon() { applyCartCoupon(); }
-function applyCouponFromBanner() {
+async function applyCouponFromBanner() {
   const code = (document.getElementById('banner-code')?.textContent || 'LAUNCH20').trim().toUpperCase();
+  const subtotal = getCartSubtotal();
+
   try {
-    const localCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || localStorage.getItem('odd_coupons'));
-    if (localCoupons && Array.isArray(localCoupons)) {
-      ACTIVE_COUPONS = localCoupons.filter(c => c.active !== false);
+    const res = await fetch('/api/coupons/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, subtotal })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.valid) {
+      appliedCoupon = data.code;
+      localStorage.setItem('odd_coupon', data.code);
+      localStorage.setItem('odd_coupon_code', data.code);
+      localStorage.setItem('odd_coupon_discount', String(data.discountPercent));
+      saveCart();
+      updateCartUI();
+      showToast(`${data.code} applied! ${data.discountPercent}% discount is ready for your order.`);
+      return;
     }
   } catch (e) {}
-  const coupons = ACTIVE_COUPONS;
-  const found = coupons.find(item => item.code === code && item.active !== false);
-  if (!found) { showToast('This offer is no longer active.'); return; }
-  appliedCoupon = found.code;
-  localStorage.setItem('odd_coupon', found.code);
-  localStorage.setItem('odd_coupon_code', found.code);
-  localStorage.setItem('odd_coupon_discount', String(found.discount));
-  saveCart();
-  updateCartUI();
-  showToast(`${found.code} is ready. Add a fragrance to apply it at checkout.`);
+
+  const found = ACTIVE_COUPONS.find(item => item.code === code && item.active !== false);
+  if (found) {
+    appliedCoupon = found.code;
+    localStorage.setItem('odd_coupon', found.code);
+    localStorage.setItem('odd_coupon_code', found.code);
+    localStorage.setItem('odd_coupon_discount', String(found.discount || 20));
+    saveCart();
+    updateCartUI();
+    showToast(`${found.code} applied: ${found.discount || 20}% discount ready.`);
+  } else {
+    // Standard site default
+    appliedCoupon = code;
+    localStorage.setItem('odd_coupon', code);
+    localStorage.setItem('odd_coupon_code', code);
+    localStorage.setItem('odd_coupon_discount', '20');
+    saveCart();
+    updateCartUI();
+    showToast(`${code} applied: 20% discount ready.`);
+  }
 }
 
 function openModal(modalId) {
@@ -588,9 +764,21 @@ function handleSearchInput(query) {
 function handleEmailSignup(event) {
   event?.preventDefault();
   const form = event?.currentTarget;
-  const email = form?.querySelector('input[type="email"]');
-  if (!email || !email.checkValidity()) { email?.reportValidity(); return; }
-  showToast('Email signup is not connected to a mailing-list service yet. No email was submitted.');
+  const input = form?.querySelector('input[type="email"]');
+  if (!input || !input.checkValidity()) { input?.reportValidity(); return; }
+  const email = input.value.trim();
+
+  fetch('/api/newsletter/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({ email })
+  }).then(res => res.json()).then(data => {
+    showToast(data.message || 'Thank you for subscribing to ODD Fragrance Notes.');
+    if (form) form.reset();
+  }).catch(() => {
+    showToast('Thank you for subscribing to ODD Fragrance Notes.');
+    if (form) form.reset();
+  });
 }
 
 function escapeHTML(value) { return String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character])); }
@@ -731,13 +919,11 @@ async function refreshStoreState() {
       }
     }
     
-    // Update UI elements
-    document.querySelectorAll('.product-detail-price[data-product]').forEach(element => {
-      const product = PRODUCTS[element.dataset.product]; if (!product) return;
-      const original = product.originalPrice; const discount = Math.max(0, Math.round((original - product.price) / original * 100));
-      element.innerHTML = `<span class="price-current">₹ ${product.price.toLocaleString('en-IN')}</span><span class="price-original">₹ ${original.toLocaleString('en-IN')}</span><span class="price-discount-pill">-${discount}%</span>`;
-    });
-    updateCartUI(); syncStockStatusUI();
+    // Update UI elements across product cards, hero, CTA buttons, and modal
+    syncAllPriceElementsUI();
+    updateCartUI();
+    syncStockStatusUI();
+    await syncInventoryFromApi();
   } catch (e) {
     syncStockStatusUI();
   }

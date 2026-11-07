@@ -47,10 +47,10 @@ async function syncLiveProductsAndInventory() {
           sku: sku,
           name: p.name,
           stock: Math.max(0, Number(p.stock ?? 0)),
-          price: Number(p.price || 899)
+          price: Number(p.price || 1599)
         };
         if (typeof PRODUCTS !== 'undefined' && PRODUCTS[p.id]) {
-          PRODUCTS[p.id].price = Number(p.price || 899);
+          PRODUCTS[p.id].price = Number(p.price || 1599);
         }
       });
       localStorage.setItem('odd_admin_inventory', JSON.stringify(inv));
@@ -174,7 +174,7 @@ function renderCheckoutSummary() {
   cart.forEach(item => {
     const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[item.id]) ? PRODUCTS[item.id] : null;
     const name = prod ? prod.name : (item.name || item.id);
-    const price = prod ? prod.price : (item.price || 899);
+    const price = prod ? prod.price : (item.price || 1599);
     const total = price * item.qty;
     subtotal += total;
 
@@ -281,7 +281,7 @@ async function applyCheckoutCoupon() {
   let subtotal = 0;
   cart.forEach(item => {
     const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[item.id]) ? PRODUCTS[item.id] : null;
-    const price = prod ? prod.price : (item.price || 899);
+    const price = prod ? prod.price : (item.price || 1599);
     subtotal += price * item.qty;
   });
 
@@ -476,7 +476,7 @@ async function processPageOrder(e) {
   let subtotal = 0;
   cart.forEach(item => {
     const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[item.id]) ? PRODUCTS[item.id] : null;
-    const price = prod ? prod.price : (item.price || 899);
+    const price = prod ? prod.price : (item.price || 1599);
     subtotal += price * item.qty;
   });
 
@@ -653,7 +653,7 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
   let subtotal = 0;
   cart.forEach(item => {
     const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[item.id]) ? PRODUCTS[item.id] : null;
-    const price = prod ? prod.price : (item.price || 899);
+    const price = prod ? prod.price : (item.price || 1599);
     subtotal += price * item.qty;
   });
 
@@ -765,7 +765,7 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
         sku: sku,
         name: prod ? prod.name : (it.name || it.id),
         qty: Number(it.qty) || 1,
-        price: prod ? prod.price : (it.price || 899)
+        price: prod ? prod.price : (it.price || 1599)
       };
     }),
     subtotal: subtotal,

@@ -5,10 +5,10 @@
 
 -- Products
 INSERT INTO products (id, sku, name, price, original_price, stock, active, tagline, notes) VALUES
-('phantom', 'ODD-PH-001', 'ODD Phantom', 899, 1199, 240, 1, 'Unseen. Unforgotten. Dominant.', 'Oud · Amber · Smoky Woods'),
-('lucid', 'ODD-LC-003', 'ODD Lucid', 899, 1199, 180, 1, 'Clear Mind. Sharp Presence.', 'Citrus · Black Tea · Clean Woods'),
-('first-move', 'ODD-FM-002', 'ODD First Move', 899, 1199, 0, 1, 'Start First. Stay Ahead.', 'Pineapple · Woods · Smoky Musk')
-ON DUPLICATE KEY UPDATE name=VALUES(name);
+('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, NULL, 240, 1, 'Unseen. Unforgotten. Dominant.', 'Oud · Amber · Smoky Woods'),
+('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, NULL, 180, 1, 'Clear Mind. Sharp Presence.', 'Citrus · Black Tea · Clean Woods'),
+('first-move', 'ODD-FM-002', 'ODD First Move', 1599, NULL, 0, 1, 'Start First. Stay Ahead.', 'Pineapple · Woods · Smoky Musk')
+ON DUPLICATE KEY UPDATE name=VALUES(name), price=VALUES(price), original_price=VALUES(original_price);
 
 -- Initial Inventory Movements (Audit Baseline)
 INSERT INTO inventory_movements (sku, product_id, delta, stock_after, reason, staff_name) VALUES
@@ -28,5 +28,6 @@ ON DUPLICATE KEY UPDATE discount_percent=VALUES(discount_percent);
 INSERT INTO settings (key_name, value_json) VALUES
 ('shipping', '{"standardRate":50,"freeThreshold":0,"enabled":true}'),
 ('banner', '{"active":true,"code":"LAUNCH20","text":"WE''RE LIVE. Take 20% OFF your first order with code LAUNCH20","timerEnds":"2026-11-30T23:59:59Z"}'),
-('razorpay', '{"enabled":true,"env":"live","keyId":"rzp_live_Ti8AffHarb3tai","brandName":"ODD Perfume","themeColor":"#E86B32","simulate":false}')
+('razorpay', '{"enabled":true,"env":"live","keyId":"rzp_live_Ti8AffHarb3tai","keySecret":"X4Ws6I0iovvSrTYh18i1nNjl","brandName":"ODD Perfume","themeColor":"#E86B32","simulate":false}'),
+('shiprocket', '{"email":"oddperfumesocial@gmail.com","password":"Ks^U&iCv5zET!Bse*c4Ubln9y!ZkHw&o","pickupLocation":"Primary","carrier":"automatic","autoDispatch":false,"origin":{"name":"ODD Perfume Fulfillment","phone":"+919876543210","street":"Plot 42, Perfume Studio, Industrial Area","city":"Mumbai","state":"MH","postalCode":"400001","country":"IN"}}')
 ON DUPLICATE KEY UPDATE value_json=VALUES(value_json);

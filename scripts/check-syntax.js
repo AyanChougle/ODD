@@ -20,7 +20,8 @@ function getJsFiles(dir) {
   return results;
 }
 
-const files = getJsFiles('.');
+const rootDir = path.resolve(__dirname, '..');
+const files = getJsFiles(rootDir);
 console.log(`Checking syntax of ${files.length} JavaScript files...`);
 
 let errors = 0;

@@ -5,6 +5,23 @@ let activeShowcaseIndex = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
   updateShowcaseCarousel();
+
+  // Background video autoplay guarantee
+  const heroVideo = document.getElementById('hero-bg-video');
+  if (heroVideo) {
+    heroVideo.muted = true;
+    const playPromise = heroVideo.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        const triggerPlay = () => {
+          heroVideo.play().catch(() => {});
+        };
+        window.addEventListener('click', triggerPlay, { once: true });
+        window.addEventListener('touchstart', triggerPlay, { once: true });
+        window.addEventListener('scroll', triggerPlay, { once: true });
+      });
+    }
+  }
 });
 
 // --- 3D Perspective Showcase Carousel Engine ---

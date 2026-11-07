@@ -50,7 +50,7 @@ define('RAZORPAY_WEBHOOK_SECRET', getenv('RAZORPAY_WEBHOOK_SECRET') ?: '');
 
 // Shiprocket Multi-Carrier Shipping API v2
 define('SHIPROCKET_EMAIL', getenv('SHIPROCKET_EMAIL') ?: 'oddperfumesocial@gmail.com');
-define('SHIPROCKET_PASSWORD', getenv('SHIPROCKET_PASSWORD') ?: 'Aoeo6$g4!7RYRLSLM0@V90MYX!fI*Gg!');
+define('SHIPROCKET_PASSWORD', getenv('SHIPROCKET_PASSWORD') ?: 'Ks^U&iCv5zET!Bse*c4Ubln9y!ZkHw&o');
 define('SHIPROCKET_TOKEN', getenv('SHIPROCKET_TOKEN') ?: '');
 define('SHIPROCKET_PICKUP_LOCATION', getenv('SHIPROCKET_PICKUP_LOCATION') ?: 'Primary');
 
