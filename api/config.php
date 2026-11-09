@@ -57,3 +57,11 @@ define('SHIPROCKET_PICKUP_LOCATION', getenv('SHIPROCKET_PICKUP_LOCATION') ?: 'Pr
 // Session Lifetime & Secrets
 define('SESSION_SECRET', getenv('SESSION_SECRET') ?: '38c6dfef5c36c359974c53677a1598ccc604729db7670a28825b827fd247aeb3');
 define('SESSION_LIFETIME', 7 * 86400); // 7 days
+
+// Hostinger Email & SMTP Configuration
+define('SMTP_HOST', getenv('SMTP_HOST') ?: 'smtp.hostinger.com');
+define('SMTP_PORT', (int)(getenv('SMTP_PORT') ?: 465));
+define('SMTP_USER', getenv('SMTP_USER') ?: 'hello@oddperfume.com');
+define('SMTP_PASS', getenv('SMTP_PASS') ?: '');
+define('SMTP_FROM', getenv('SMTP_FROM') ?: 'hello@oddperfume.com');
+define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: 'ODD Perfume Studio');

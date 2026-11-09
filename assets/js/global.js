@@ -27,7 +27,7 @@ const PRODUCTS = {
     price: 1599,
     originalPrice: null,
     notes: 'Oud · Saffron · Amberwood',
-    bottleImage: 'Phantom Single bottle.png',
+    bottleImage: 'Phantom Single bottle.webp',
     notesList: ['Oud', 'Saffron', 'Amberwood'],
     intensity: '5/5',
     warmth: '4/5',
@@ -46,7 +46,7 @@ const PRODUCTS = {
     price: 1599,
     originalPrice: null,
     notes: 'Bergamot · Patchouli · Blackcurrant',
-    bottleImage: 'Lucid single bottle.png',
+    bottleImage: 'Lucid single bottle.webp',
     notesList: ['Bergamot', 'Patchouli', 'Blackcurrant'],
     intensity: '2/5',
     warmth: '1/5',
@@ -65,7 +65,7 @@ const PRODUCTS = {
     price: 1599,
     originalPrice: null,
     notes: 'Citrus · Black Tea · Smoky Musk',
-    bottleImage: 'First Move single bottle.png',
+    bottleImage: 'First Move single bottle.webp',
     notesList: ['Citrus', 'Black Tea', 'Smoky Musk'],
     intensity: '4/5',
     warmth: '3/5',
@@ -459,7 +459,7 @@ function updateCartUI() {
     itemsHtml += `
       <div class="cart-item-single${unavailable ? ' cart-item-unavailable' : ''}">
         <div class="cart-item-img">
-          <img src="assets/images/${prod.bottleImage || 'Final-Logo-768x768.png'}" alt="${prod.name} perfume bottle">
+          <img src="assets/images/${prod.bottleImage || 'Final-Logo-768x768.png'}" alt="${prod.name} perfume bottle" width="60" height="60" loading="lazy">
         </div>
         <div class="cart-item-details">
           <h4>${prod.name}</h4>
@@ -1006,7 +1006,7 @@ function openQuickView(productId) {
     name: targetId.charAt(0).toUpperCase() + targetId.slice(1),
     price: 899,
     notes: 'Luxury Perfume',
-    bottleImage: targetId === 'lucid' ? 'Lucid single bottle.png' : targetId === 'first-move' ? 'First Move single bottle.png' : 'Phantom Single bottle.png'
+    bottleImage: targetId === 'lucid' ? 'Lucid single bottle.webp' : targetId === 'first-move' ? 'First Move single bottle.webp' : 'Phantom Single bottle.webp'
   };
 
   currentQvId = targetId;

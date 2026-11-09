@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ODD Admin & Inventory Management Portal</title>
-  <link rel="stylesheet" href="assets/css/global.css?v=5.0">
-  <link rel="stylesheet" href="assets/css/admin.css?v=4.0">
+  <link rel="stylesheet" href="assets/css/global.css?v=6.1">
+  <link rel="stylesheet" href="assets/css/admin.css?v=5.0">
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="assets/js/html5-qrcode.min.js"></script>
   <script>
@@ -78,6 +78,13 @@
         </svg>
         ODD Orders
       </a>
+      <a class="admin-nav-item" data-tab="inquiries">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+        Customer Inquiries
+        <span class="admin-nav-badge" id="nav-inquiries-badge" style="display:none; margin-left:auto; background:var(--brand-orange); color:#fff; font-size:0.7rem; padding:2px 7px; border-radius:10px; font-weight:700;">0</span>
+      </a>
 
       <div class="admin-nav-group-title">Warehouse & Inventory</div>
       <a class="admin-nav-item" data-tab="inventory">
@@ -129,6 +136,12 @@
         </svg>
         Razorpay Settings
       </a>
+      <a class="admin-nav-item" data-tab="smtp">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+        </svg>
+        Email &amp; SMTP Settings
+      </a>
     </nav>
 
     <div class="admin-sidebar-footer">
@@ -166,12 +179,14 @@
     <div class="admin-mobile-quicktabs" id="admin-mobile-quicktabs">
       <button type="button" class="quicktab-btn active" data-tab="payments">Payments</button>
       <button type="button" class="quicktab-btn" data-tab="orders">Orders</button>
+      <button type="button" class="quicktab-btn" data-tab="inquiries">Inquiries</button>
       <button type="button" class="quicktab-btn" data-tab="inventory">Stock</button>
       <button type="button" class="quicktab-btn" data-tab="scanner">Scanner</button>
       <button type="button" class="quicktab-btn" data-tab="barcodes">Labels</button>
       <button type="button" class="quicktab-btn" data-tab="shipping">Shipping</button>
       <button type="button" class="quicktab-btn" data-tab="launch-offer">Offers</button>
       <button type="button" class="quicktab-btn" data-tab="razorpay">Razorpay</button>
+      <button type="button" class="quicktab-btn" data-tab="smtp">Email &amp; SMTP</button>
       <button type="button" class="quicktab-btn" data-tab="access-links">Staff</button>
     </div>
 
@@ -1150,6 +1165,120 @@
           </form>
         </div>
       </div>
+    
+      <!-- 10. Customer Inquiries Tab -->
+      <div class="admin-tab-pane" id="tab-inquiries">
+        <div class="admin-card">
+          <div class="admin-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <div>
+              <h2 class="admin-card-title">Customer &amp; Studio Inquiries</h2>
+              <p class="admin-card-subtitle">All incoming messages submitted through the website contact form, stored directly in the database.</p>
+            </div>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <div class="btn-group" role="group" style="display:inline-flex; border:1px solid var(--admin-border); border-radius:6px; overflow:hidden;">
+                <button type="button" class="admin-btn admin-btn-sm active" id="btn-inq-filter-all" onclick="filterInquiries('all')" style="border:none; border-radius:0;">All (<span id="inq-count-all">0</span>)</button>
+                <button type="button" class="admin-btn admin-btn-sm" id="btn-inq-filter-new" onclick="filterInquiries('new')" style="border:none; border-radius:0; border-left:1px solid var(--admin-border);">New (<span id="inq-count-new">0</span>)</button>
+                <button type="button" class="admin-btn admin-btn-sm" id="btn-inq-filter-read" onclick="filterInquiries('read')" style="border:none; border-radius:0; border-left:1px solid var(--admin-border);">Read</button>
+                <button type="button" class="admin-btn admin-btn-sm" id="btn-inq-filter-replied" onclick="filterInquiries('replied')" style="border:none; border-radius:0; border-left:1px solid var(--admin-border);">Replied</button>
+              </div>
+              <button type="button" class="admin-btn admin-btn-sm" onclick="loadInquiries()" title="Refresh Inquiries">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px; height:14px; vertical-align:middle; margin-right:4px;">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          <div style="padding:1.5rem;">
+            <div id="inquiries-loading" style="text-align:center; padding:2rem; color:var(--admin-text-muted);">
+              Loading customer inquiries...
+            </div>
+            <div id="inquiries-empty" style="display:none; text-align:center; padding:3rem 1rem; color:var(--admin-text-muted);">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:40px; height:40px; margin:0 auto 1rem; opacity:0.4;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <div style="font-size:0.95rem; font-weight:600; color:var(--admin-text);">No inquiries in this view</div>
+              <div style="font-size:0.8rem; margin-top:0.3rem;">Customer submissions from oddperfume.com/contact.html will appear here.</div>
+            </div>
+            <div id="inquiries-list" style="display:none; display:flex; flex-direction:column; gap:1rem;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11. Email & Hostinger SMTP Settings Tab -->
+      <div class="admin-tab-pane" id="tab-smtp">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2 class="admin-card-title">Hostinger SMTP &amp; Studio Mail Configuration</h2>
+            <p class="admin-card-subtitle">Connect your official Hostinger mailbox (hello@oddperfume.com) via authenticated SSL SMTP to guarantee inbox delivery for all inquiries and order confirmations.</p>
+          </div>
+
+          <div style="padding:1.5rem;">
+            <!-- Hostinger Guidance Banner -->
+            <div style="background:rgba(232, 107, 50, 0.08); border-left:3px solid var(--brand-orange); padding:1rem 1.2rem; border-radius:4px; margin-bottom:1.5rem; font-size:0.85rem; line-height:1.6;">
+              <strong style="color:var(--admin-text); display:block; margin-bottom:0.3rem;">Why Authenticated SMTP is Required on Hostinger</strong>
+              Hostinger Email (Titan Mail) strictly blocks unauthenticated PHP <code style="background:rgba(255,255,255,0.08); padding:1px 5px; border-radius:3px;">mail()</code> calls because they lack SPF, DKIM, and DMARC alignment. Connecting via <strong style="color:var(--brand-orange);">smtp.hostinger.com:465 (SSL)</strong> with your mailbox credentials ensures that every inquiry and order receipt reaches <strong style="color:var(--admin-text);">hello@oddperfume.com</strong> without getting dropped or marked as spam.
+            </div>
+
+            <form id="smtp-settings-form" onsubmit="handleSaveSmtpSettings(event)">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.5rem;">
+                <div class="admin-form-group" style="margin:0;">
+                  <label class="admin-label">SMTP Host Server</label>
+                  <input type="text" id="smtp-host" class="admin-input" value="smtp.hostinger.com" placeholder="smtp.hostinger.com" required>
+                  <small style="color:var(--admin-text-muted); font-size:0.75rem;">Default for Hostinger &amp; Titan Mail: smtp.hostinger.com</small>
+                </div>
+
+                <div class="admin-form-group" style="margin:0;">
+                  <label class="admin-label">SMTP Port</label>
+                  <input type="number" id="smtp-port" class="admin-input" value="465" placeholder="465" required>
+                  <small style="color:var(--admin-text-muted); font-size:0.75rem;">Standard SSL port: 465 (or TLS 587)</small>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.5rem;">
+                <div class="admin-form-group" style="margin:0;">
+                  <label class="admin-label">Hostinger Email / Username</label>
+                  <input type="email" id="smtp-user" class="admin-input" value="hello@oddperfume.com" placeholder="hello@oddperfume.com" required>
+                  <small style="color:var(--admin-text-muted); font-size:0.75rem;">Your full Hostinger webmail address.</small>
+                </div>
+
+                <div class="admin-form-group" style="margin:0;">
+                  <label class="admin-label">Mailbox Password</label>
+                  <div style="display:flex; gap:0.5rem;">
+                    <input type="password" id="smtp-pass" class="admin-input" placeholder="••••••••••••" style="flex:1;">
+                    <button type="button" class="admin-btn admin-btn-sm" id="btn-toggle-smtp-pass" onclick="toggleSmtpPasswordVisibility()" style="white-space:nowrap; padding:0 0.8rem;">Show</button>
+                  </div>
+                  <small style="color:var(--admin-text-muted); font-size:0.75rem;">Your Hostinger webmail password for hello@oddperfume.com.</small>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.5rem;">
+                <div class="admin-form-group" style="margin:0;">
+                  <label class="admin-label">From Email Address</label>
+                  <input type="email" id="smtp-from-email" class="admin-input" value="hello@oddperfume.com" placeholder="hello@oddperfume.com" required>
+                  <small style="color:var(--admin-text-muted); font-size:0.75rem;">Must match your authenticated domain mailbox (@oddperfume.com).</small>
+                </div>
+
+                <div class="admin-form-group" style="margin:0;">
+                  <label class="admin-label">From Display Name</label>
+                  <input type="text" id="smtp-from-name" class="admin-input" value="ODD Perfumes Studio" placeholder="ODD Perfumes Studio" required>
+                  <small style="color:var(--admin-text-muted); font-size:0.75rem;">Brand sender name displayed in recipient inboxes.</small>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap; margin-top:2rem;">
+                <button type="submit" class="admin-btn admin-btn-primary" id="btn-save-smtp">Save SMTP Settings</button>
+                <button type="button" class="admin-btn" id="btn-test-smtp" onclick="handleTestSmtpConnection()">Send Test Email</button>
+                <span id="smtp-saved-msg" style="font-size:0.8rem; color:#10B981; display:none;">SMTP settings saved directly to database!</span>
+              </div>
+
+              <div id="smtp-test-result" style="display:none; margin-top:1.2rem; padding:0.9rem 1.2rem; border-radius:6px; font-size:0.85rem; line-height:1.5;"></div>
+            </form>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
 

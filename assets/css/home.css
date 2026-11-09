@@ -65,7 +65,7 @@
 
 .hero-giant-odd {
   margin-top: 0;
-  font-family: var(--font-brand, 'DM Serif Display', serif);
+  font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif !important;
   font-size: clamp(5rem, 15vw, 10rem);
   color: var(--text-light, #FFFFFF);
   line-height: 0.85;
@@ -73,12 +73,15 @@
 }
 
 .hero-orange-dot {
-  display: inline-block;
-  width: clamp(12px, 2.5vw, 22px);
-  height: clamp(12px, 2.5vw, 22px);
-  background: var(--brand-orange);
-  border-radius: 50%;
-  vertical-align: 0.15em;
+  color: var(--brand-orange);
+  font-family: inherit;
+  display: inline;
+  vertical-align: baseline;
+  line-height: inherit;
+}
+
+.hero-orange-dot:empty::before {
+  content: '.';
 }
 
 .hero-desc-text {
@@ -339,7 +342,7 @@
 }
 
 .slide-title {
-  font-family: var(--font-serif);
+  font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif !important;
   font-size: 1.4rem;
   font-weight: 400;
   margin: 0 0 0.2rem;
@@ -953,20 +956,19 @@
 }
 .hero-giant-odd {
   margin-top: 0;
-  font-family: var(--font-serif);
+  font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif !important;
   font-size: clamp(4rem, 11vw, 8rem);
   color: #fff;
   line-height: 0.88;
   margin-bottom: 1rem;
 }
 .hero-orange-dot {
-  display: inline-block;
-  width: clamp(10px, 2vw, 18px);
-  height: clamp(10px, 2vw, 18px);
-  background: var(--brand-orange);
-  border-radius: 50%;
-  vertical-align: 0.15em;
-  margin-left: 2px;
+  color: var(--brand-orange);
+  font-family: inherit;
+  display: inline;
+  vertical-align: baseline;
+  line-height: inherit;
+  margin-left: 0;
 }
 .hero-desc-text {
   font-size: clamp(0.85rem, 1.6vw, 1rem);
@@ -1112,7 +1114,7 @@
   background: rgba(26, 26, 26, 0.85);
 }
 .hero-pick-badge {
-  font-family: var(--font-mono);
+  font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif !important;
   font-size: 0.65rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;

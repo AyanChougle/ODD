@@ -1,6 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
-
-/* Cormorant Garamond (Local + Web Fallback) */
+/* Cormorant Garamond (Local Typography) */
 @font-face {
     font-family: 'Cormorant Garamond';
     src: local('Cormorant Garamond'), local('Cormorant-Regular'), url('../fonts/Cormorant-Regular.ttf') format('truetype');
@@ -9,23 +7,143 @@
     font-display: swap;
 }
 
-/* Product-specific luxury fonts — strictly from assets/fonts/ */
+/* ==========================================================================
+   Doren Perfume - Luxury Typography (Burntilldead)
+   Registered for both normal (400) and bold (700) weights with local() aliases
+   ========================================================================== */
+@font-face {
+    font-family: 'Doren Perfume Serif';
+    src: local('Doren Perfume Serif'), local('Doren Perfume'), local('DorenPerfume-Serif'), local('Doren'),
+         url('../fonts/doren-perfume-serif.otf') format('opentype'),
+         url('../fonts/doren-perfume-serif.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Doren Perfume Serif';
+    src: local('Doren Perfume Serif'), local('Doren Perfume'), local('DorenPerfume-Serif'), local('Doren'),
+         url('../fonts/doren-perfume-serif.otf') format('opentype'),
+         url('../fonts/doren-perfume-serif.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Doren Perfume';
+    src: local('Doren Perfume Serif'), local('Doren Perfume'), local('DorenPerfume-Serif'), local('Doren'),
+         url('../fonts/doren-perfume-serif.otf') format('opentype'),
+         url('../fonts/doren-perfume-serif.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Doren Perfume';
+    src: local('Doren Perfume Serif'), local('Doren Perfume'), local('DorenPerfume-Serif'), local('Doren'),
+         url('../fonts/doren-perfume-serif.otf') format('opentype'),
+         url('../fonts/doren-perfume-serif.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Doren';
+    src: local('Doren Perfume Serif'), local('Doren Perfume'), local('DorenPerfume-Serif'), local('Doren'),
+         url('../fonts/doren-perfume-serif.otf') format('opentype'),
+         url('../fonts/doren-perfume-serif.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Doren';
+    src: local('Doren Perfume Serif'), local('Doren Perfume'), local('DorenPerfume-Serif'), local('Doren'),
+         url('../fonts/doren-perfume-serif.otf') format('opentype'),
+         url('../fonts/doren-perfume-serif.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Doren Perfume Script';
+    src: local('Doren Perfume Script'), local('DorenPerfume-Script'),
+         url('../fonts/doren-perfume-script.otf') format('opentype'),
+         url('../fonts/doren-perfume-script.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Doren Perfume Script';
+    src: local('Doren Perfume Script'), local('DorenPerfume-Script'),
+         url('../fonts/doren-perfume-script.otf') format('opentype'),
+         url('../fonts/doren-perfume-script.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Backward compatibility aliases: map legacy product font aliases directly to Doren Perfume */
 @font-face {
     font-family: 'Phantom Font';
-    src: url('../fonts/PlayfairDisplay-Regular.ttf') format('truetype');
-    font-weight: 400;
+    src: local('Doren Perfume Serif'), local('Doren Perfume'), local('Doren'),
+         url('../fonts/doren-perfume-serif.otf') format('opentype'),
+         url('../fonts/doren-perfume-serif.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Phantom Font';
+    src: local('Doren Perfume Serif'), local('Doren Perfume'), local('Doren'),
+         url('../fonts/doren-perfume-serif.otf') format('opentype'),
+         url('../fonts/doren-perfume-serif.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
     font-display: swap;
 }
 @font-face {
     font-family: 'Lucid Font';
-    src: url('../fonts/Cormorant-Regular.ttf') format('truetype');
-    font-weight: 400;
+    src: local('Doren Perfume Serif'), local('Doren Perfume'), local('Doren'),
+         url('../fonts/doren-perfume-serif.otf') format('opentype'),
+         url('../fonts/doren-perfume-serif.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Lucid Font';
+    src: local('Doren Perfume Serif'), local('Doren Perfume'), local('Doren'),
+         url('../fonts/doren-perfume-serif.otf') format('opentype'),
+         url('../fonts/doren-perfume-serif.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
     font-display: swap;
 }
 @font-face {
     font-family: 'First Move Font';
-    src: url('../fonts/Prata-Regular.ttf') format('truetype');
-    font-weight: 400;
+    src: local('Doren Perfume Serif'), local('Doren Perfume'), local('Doren'),
+         url('../fonts/doren-perfume-serif.otf') format('opentype'),
+         url('../fonts/doren-perfume-serif.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'First Move Font';
+    src: local('Doren Perfume Serif'), local('Doren Perfume'), local('Doren'),
+         url('../fonts/doren-perfume-serif.otf') format('opentype'),
+         url('../fonts/doren-perfume-serif.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
     font-display: swap;
 }
 /* 
@@ -122,7 +240,9 @@ svg {
     --border-dark: #2A2A2A;
 
     /* Fonts */
-    --font-brand: 'DM Serif Display', serif;
+    --font-brand: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;
+    --font-name: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;
+    --font-script: 'Doren Perfume Script', cursive;
     --font-serif: 'Cormorant Garamond', 'Cormorant', Georgia, serif;
     --font-sans: 'DM Sans', sans-serif;
     --font-mono: 'IBM Plex Mono', monospace;
@@ -523,7 +643,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .brand-logo-cr7 {
-    font-family: var(--font-brand, 'DM Serif Display', serif);
+    font-family: var(--font-brand, 'Doren Perfume Serif', 'Doren Perfume', serif);
     font-size: 2.8rem;
     font-weight: 700;
     line-height: 1;
@@ -531,10 +651,11 @@ h1, h2, h3, h4, h5, h6 {
     text-decoration: none;
     letter-spacing: -0.03em;
     display: inline-block;
+    margin-top: 0.5rem;
 }
 
 .brand-logo-cr7 .logo-dot {
-    color: var(--brand-orange);
+    color: var(--brand-orange); 
 }
 
 .top-nav-btn {
@@ -1378,19 +1499,22 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .massive-odd-display-text {
-    font-family: var(--font-brand, 'DM Serif Display', serif);
+    font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif !important;
     font-size: clamp(5rem, 15vw, 12rem);
     color: white;
     line-height: 0.9;
 }
 
 .massive-odd-dot-orange {
-    display: inline-block;
-    width: clamp(12px, 3vw, 24px);
-    height: clamp(12px, 3vw, 24px);
-    background-color: var(--brand-orange);
-    border-radius: 50%;
+    color: var(--brand-orange);
+    font-family: inherit;
+    display: inline;
     vertical-align: baseline;
+    line-height: inherit;
+}
+
+.massive-odd-dot-orange:empty::before {
+    content: '.';
 }
 
 .footer-legal-bar {
@@ -1911,8 +2035,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   outline: 2px solid var(--brand-orange); outline-offset: 3px;
 }
 .btn:disabled, button:disabled, [aria-disabled="true"] { opacity: .52; cursor: not-allowed !important; transform: none !important; box-shadow: none !important; }
-.product-detail-title, .section-title, .product-name, .qv-title, .slide-title {
+.section-title {
   font-family: var(--font-serif) !important; font-weight: 400; letter-spacing: -.035em; text-rendering: optimizeLegibility;
+}
+.product-detail-title, .product-name, .qv-title, .slide-title, .compare-title, .product-card-title {
+  font-family: var(--font-name, 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif) !important; font-weight: 400; letter-spacing: 0.02em; text-rendering: optimizeLegibility;
 }
 .product-detail-title { line-height: 1.06; }
 .product-tagline-italic { line-height: 1.65; }
@@ -2336,21 +2463,41 @@ h1, h2, h3, h4, h5, h6, .section-title, .acc-section-title, .cart-header h3, .pa
   font-weight: 500 !important;
 }
 
-/* Brand Name explicitly retains DM Serif Display */
+/* ==========================================================================
+   Brand Logo & Fragrance Product Names - Doren Perfume Typography Enforcement
+   ========================================================================== */
 .brand-logo-cr7,
+a.brand-logo-cr7,
+span.brand-logo-cr7,
 .hero-giant-odd,
+h1.hero-giant-odd,
 .massive-odd-display-text,
-.admin-sidebar-logo h2 {
-  font-family: var(--font-brand, 'DM Serif Display', Georgia, serif) !important;
+.admin-brand-logo,
+a.admin-brand-logo,
+.admin-sidebar-logo h2,
+.footer-brand,
+.site-logo {
+  font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', Georgia, serif !important;
 }
 
-/* Product Names retain their distinct product font identity */
 .slide-title,
+h3.slide-title,
 .product-card-title,
+h3.product-card-title,
+.product-name,
+h3.product-name,
+.product-detail-title,
+h1.product-detail-title,
+.compare-title,
+h3.compare-title,
 .qv-title,
+h3.qv-title,
 .cart-item-details h4,
-.barcode-sticker-title {
-  font-family: var(--font-brand, 'DM Serif Display', Georgia, serif) !important;
+.barcode-sticker-title,
+.cart-drawer-item-title,
+.cart-item-name,
+.perfume-title {
+  font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', Georgia, serif !important;
 }
 
 

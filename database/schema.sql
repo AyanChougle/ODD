@@ -4,6 +4,7 @@
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS audit_logs;
+DROP TABLE IF EXISTS inquiries;
 DROP TABLE IF EXISTS settings;
 DROP TABLE IF EXISTS scans;
 DROP TABLE IF EXISTS barcodes;
@@ -227,4 +228,18 @@ CREATE TABLE audit_logs (
   ip_address VARCHAR(64) DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_audit_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 15. Customer & Studio Inquiries
+CREATE TABLE inquiries (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(128) NOT NULL,
+  email VARCHAR(128) NOT NULL,
+  subject VARCHAR(128) NOT NULL,
+  message TEXT NOT NULL,
+  status ENUM('new', 'read', 'replied') DEFAULT 'new',
+  ip_address VARCHAR(64) DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_inquiries_created (created_at),
+  INDEX idx_inquiries_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

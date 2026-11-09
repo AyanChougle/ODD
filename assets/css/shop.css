@@ -117,7 +117,7 @@
 }
 
 .product-name {
-  font-family: var(--font-serif);
+  font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif !important;
   font-size: 1.8rem;
   font-weight: 400;
   margin: 0 0 0.3rem;

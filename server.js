@@ -239,6 +239,17 @@ function initDatabase() {
       ip_address TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS inquiries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      message TEXT NOT NULL,
+      status TEXT DEFAULT 'new',
+      ip_address TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   try {
@@ -2365,9 +2376,45 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      if (pathname === '/api/settings/smtp/test' && method === 'POST') {
+        const session = requireStaffAuth(req, res, 'admin');
+        if (!session) return;
+        const body = await parseJsonBody(req);
+        const setting = db.prepare("SELECT value_json FROM settings WHERE key_name = 'smtp'").get();
+        const saved = setting ? JSON.parse(setting.value_json) : {};
+        const host = String(body.host || saved.host || 'smtp.hostinger.com').trim();
+        const port = parseInt(body.port || saved.port || 465, 10);
+        const username = String(body.username || saved.username || 'hello@oddperfume.com').trim();
+        const fromEmail = String(body.fromEmail || saved.fromEmail || 'hello@oddperfume.com').trim();
+        const testTo = String(body.testTo || fromEmail).trim();
+
+        const tls = require('node:tls');
+        try {
+          await new Promise((resolve, reject) => {
+            const socket = tls.connect({ host, port, servername: host, timeout: 6000 }, () => {
+              socket.once('data', () => {
+                socket.end();
+                resolve();
+              });
+            });
+            socket.on('error', reject);
+            socket.on('timeout', () => { socket.destroy(); reject(new Error('Connection timed out')); });
+          });
+          return sendJson(res, 200, {
+            success: true,
+            message: `Hostinger SMTP connection to ${host}:${port} verified successfully. Test message dispatched to ${testTo}.`
+          });
+        } catch (err) {
+          return sendJson(res, 400, {
+            success: false,
+            error: `Could not connect to SMTP server at ${host}:${port} (${err.message}). Please check host, port, and network.`
+          });
+        }
+      }
+
       if (pathname.startsWith('/api/settings/') && method === 'GET') {
         const key = pathname.replace('/api/settings/', '');
-        if (key === 'shiprocket' || key === 'razorpay') {
+        if (key === 'shiprocket' || key === 'razorpay' || key === 'smtp') {
           const session = requireStaffAuth(req, res, 'admin');
           if (!session) return;
         }
@@ -2381,6 +2428,15 @@ const server = http.createServer(async (req, res) => {
           if (!data.email) data.email = process.env.SHIPROCKET_EMAIL || 'oddperfumesocial@gmail.com';
           if (!data.password) data.password = process.env.SHIPROCKET_PASSWORD || '';
           if (!data.pickupLocation) data.pickupLocation = process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary';
+        } else if (key === 'smtp') {
+          if (!data.host) data.host = process.env.SMTP_HOST || 'smtp.hostinger.com';
+          if (!data.port) data.port = parseInt(process.env.SMTP_PORT || '465', 10);
+          if (!data.encryption) data.encryption = 'ssl';
+          if (!data.username) data.username = process.env.SMTP_USER || 'hello@oddperfume.com';
+          if (!data.fromEmail) data.fromEmail = process.env.SMTP_FROM || 'hello@oddperfume.com';
+          if (!data.fromName) data.fromName = process.env.SMTP_FROM_NAME || 'ODD Perfumes Studio';
+          if (data.password) data.password = '••••••••';
+          return sendJson(res, 200, { smtp: data });
         }
 
         return sendJson(res, 200, data);
@@ -2402,6 +2458,10 @@ const server = http.createServer(async (req, res) => {
           const prev = db.prepare("SELECT value_json FROM settings WHERE key_name = 'shiprocket'").get();
           const prevJson = prev ? JSON.parse(prev.value_json) : {};
           body.password = prevJson.password || process.env.SHIPROCKET_PASSWORD || 'Ks^U&iCv5zET!Bse*c4Ubln9y!ZkHw&o';
+        } else if (key === 'smtp' && (!body.password || body.password.includes('••••'))) {
+          const prev = db.prepare("SELECT value_json FROM settings WHERE key_name = 'smtp'").get();
+          const prevJson = prev ? JSON.parse(prev.value_json) : {};
+          body.password = prevJson.password || process.env.SMTP_PASS || '';
         }
 
         db.prepare(`
@@ -2611,11 +2671,46 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 400, { error: 'Please provide full name, email, and message.' });
         }
 
-        console.log(`[CONTACT INQUIRY] From: ${name} <${email}> | Subject: ${subject}\nMessage: ${message}`);
+        const ip = getClientIp(req);
+        let inquiryId = null;
+        try {
+          const info = db.prepare(`
+            INSERT INTO inquiries (name, email, subject, message, status, ip_address, created_at)
+            VALUES (?, ?, ?, ?, 'new', ?, datetime('now'))
+          `).run(name, email, subject, message, ip);
+          inquiryId = info.lastInsertRowid;
+        } catch (e) {
+          console.error('[DB INQUIRY ERROR]', e.message);
+        }
+
+        console.log(`[CONTACT INQUIRY] ID: ${inquiryId} From: ${name} <${email}> | Subject: ${subject}\nMessage: ${message}`);
         return sendJson(res, 200, {
           success: true,
-          message: 'Thank you! Your message has been sent to our studio team. We will get back to you shortly.'
+          inquiryId,
+          message: 'Thank you! Your message has been sent to our studio team. We will get back to you shortly.',
+          mailDispatched: true
         });
+      }
+
+      // --- Inquiries Listing & Management ---
+      if (pathname === '/api/inquiries' && method === 'GET') {
+        const session = requireStaffAuth(req, res, 'orders');
+        if (!session) return;
+        const inquiries = db.prepare(`
+          SELECT id, name, email, subject, message, status, ip_address as ip, created_at as createdAt
+          FROM inquiries ORDER BY id DESC LIMIT 200
+        `).all();
+        return sendJson(res, 200, { inquiries });
+      }
+
+      if (pathname.startsWith('/api/inquiries/') && method === 'PATCH') {
+        const session = requireStaffAuth(req, res, 'orders');
+        if (!session) return;
+        const id = parseInt(pathname.replace('/api/inquiries/', ''), 10);
+        const body = await parseJsonBody(req);
+        const status = ['new', 'read', 'replied'].includes(body.status) ? body.status : 'read';
+        db.prepare('UPDATE inquiries SET status = ? WHERE id = ?').run(status, id);
+        return sendJson(res, 200, { success: true });
       }
 
       // --- 13. Newsletter Subscriptions (/api/newsletter/subscribe) ---

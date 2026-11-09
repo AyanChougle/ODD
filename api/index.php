@@ -7,6 +7,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/mailer.php';
 
 // Security Headers
 header('Content-Type: application/json; charset=utf-8');
@@ -23,6 +24,29 @@ $route = preg_replace('#^.*?/api/?#', '', $uri);
 $route = trim($route, '/');
 
 // Helpers
+
+function ensureInquiriesTable(PDO $pdo): void {
+    static $ensured = false;
+    if ($ensured) return;
+    try {
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS inquiries (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(128) NOT NULL,
+                email VARCHAR(128) NOT NULL,
+                subject VARCHAR(128) NOT NULL,
+                message TEXT NOT NULL,
+                status ENUM("new", "read", "replied") DEFAULT "new",
+                ip_address VARCHAR(64) DEFAULT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_inquiries_created (created_at),
+                INDEX idx_inquiries_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ');
+        $ensured = true;
+    } catch (Throwable $e) {}
+}
+
 function sendJson(int $status, array $data): void {
     http_response_code($status);
     echo json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -1419,7 +1443,12 @@ try {
         $headers .= "From: ODD Perfumes <orders@oddperfume.com>\r\n";
         $headers .= "Reply-To: hello@oddperfume.com\r\n";
 
-        return @mail($to, $subject, $html, $headers);
+        $smtpConfig = function_exists('getEffectiveSmtpConfig') ? getEffectiveSmtpConfig() : [];
+        if (function_exists('sendSmtpEmail')) {
+            $res = sendSmtpEmail($to, $subject, $html, strip_tags($html), $smtpConfig);
+            return !empty($res['success']);
+        }
+        return @mail($to, $subject, $html, $headers, "-f hello@oddperfume.com");
     }
 
     function sendDispatchNotificationEmail(array $order, string $awb, string $courier, string $trackingUrl, string $labelUrl): bool {
@@ -2362,19 +2391,171 @@ try {
             sendJson(400, ['error' => 'Please provide your full name, a valid email address, and message.']);
         }
 
-        $headers = [
-            'From: ODD Perfume Studio <hello@oddperfume.com>',
-            "Reply-To: {$name} <{$email}>",
-            'X-Mailer: PHP/' . phpversion(),
-            'Content-Type: text/plain; charset=UTF-8'
+        ensureInquiriesTable($pdo);
+        $clientIp = $_SERVER['REMOTE_ADDR'] ?? '';
+
+        // 1. Persist inquiry into database for guaranteed zero data loss
+        $inquiryId = null;
+        try {
+            $stmt = $pdo->prepare('
+                INSERT INTO inquiries (name, email, subject, message, status, ip_address, created_at)
+                VALUES (?, ?, ?, ?, "new", ?, NOW())
+            ');
+            $stmt->execute([$name, $email, $subject, $message, $clientIp]);
+            $inquiryId = (int)$pdo->lastInsertId();
+        } catch (Throwable $e) {
+            error_log('Inquiry database save error: ' . $e->getMessage());
+        }
+
+        // 2. Local file persistence backup
+        $inqDir = __DIR__ . '/../storage/inquiries';
+        if (!is_dir($inqDir)) @mkdir($inqDir, 0755, true);
+        $inqBackup = [
+            'id' => $inquiryId,
+            'name' => $name,
+            'email' => $email,
+            'subject' => $subject,
+            'message' => $message,
+            'ip' => $clientIp,
+            'received_at' => date('Y-m-d H:i:s')
         ];
-        $bodyText = "New contact message from oddperfume.com:\n\nName: {$name}\nEmail: {$email}\nSubject: {$subject}\n\nMessage:\n{$message}\n\nTime: " . date('Y-m-d H:i:s');
-        @mail('hello@oddperfume.com', "ODD Contact: {$subject}", $bodyText, implode("\r\n", $headers));
+        @file_put_contents($inqDir . '/' . time() . '_' . ($inquiryId ?: 'msg') . '.json', json_encode($inqBackup, JSON_PRETTY_PRINT));
+
+        // 3. Dispatch Email via Hostinger Authenticated SMTP (with native fallback)
+        $smtpConfig = getEffectiveSmtpConfig($pdo);
+        $targetMailbox = $smtpConfig['fromEmail'] ?: 'hello@oddperfume.com';
+
+        $emailHtml = "
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset='UTF-8'></head>
+        <body style='font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; color:#111; background:#f4f4f5; margin:0; padding:20px;'>
+          <div style='max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; border:1px solid #e5e7eb;'>
+            <div style='background:#111827; padding:20px 24px; text-align:center;'>
+              <h1 style='color:#ffffff; margin:0; font-size:22px; letter-spacing:0.05em;'>ODD<span style='color:#E86B32;'>.</span></h1>
+              <p style='color:#9ca3af; margin:4px 0 0; font-size:11px; text-transform:uppercase; letter-spacing:0.1em;'>Studio Customer Care &middot; New Inquiry</p>
+            </div>
+            <div style='padding:24px 30px;'>
+              <h2 style='font-size:16px; margin-top:0; color:#111827;'>New Customer Message from " . htmlspecialchars($name) . "</h2>
+              
+              <div style='background:#f9fafb; border:1px solid #f3f4f6; border-radius:6px; padding:14px; margin:16px 0; font-size:13px;'>
+                <div style='margin-bottom:6px;'><strong>Sender:</strong> " . htmlspecialchars($name) . "</div>
+                <div style='margin-bottom:6px;'><strong>Email:</strong> <a href='mailto:" . htmlspecialchars($email) . "' style='color:#E86B32; text-decoration:none; font-weight:600;'>" . htmlspecialchars($email) . "</a></div>
+                <div style='margin-bottom:6px;'><strong>Subject:</strong> " . htmlspecialchars($subject) . "</div>
+                <div><strong>Received:</strong> " . date('Y-m-d H:i:s') . " IST</div>
+              </div>
+
+              <h3 style='font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin:20px 0 8px;'>Message Content</h3>
+              <div style='background:#ffffff; border-left:3px solid #E86B32; padding:12px 16px; font-size:14px; line-height:1.6; color:#374151; white-space:pre-wrap;'>" . htmlspecialchars($message) . "</div>
+
+              <div style='margin-top:24px; text-align:center;'>
+                <a href='mailto:" . htmlspecialchars($email) . "?subject=Re:%20" . rawurlencode($subject) . "' style='background:#E86B32; color:#ffffff; padding:10px 22px; text-decoration:none; font-weight:600; border-radius:6px; font-size:13px; display:inline-block;'>Reply to " . htmlspecialchars($name) . "</a>
+              </div>
+            </div>
+            <div style='background:#f9fafb; border-top:1px solid #e5e7eb; padding:14px; text-align:center; font-size:11px; color:#9ca3af;'>
+              Recorded in ODD Perfumes Studio Database &middot; hello@oddperfume.com
+            </div>
+          </div>
+        </body>
+        </html>";
+
+        $plainText = "New contact message from oddperfume.com:\n\nName: {$name}\nEmail: {$email}\nSubject: {$subject}\nTime: " . date('Y-m-d H:i:s') . "\n\nMessage:\n{$message}";
+
+        $mailResult = sendSmtpEmail(
+            $targetMailbox,
+            "ODD Contact: {$subject} - {$name}",
+            $emailHtml,
+            $plainText,
+            $smtpConfig,
+            ['email' => $email, 'name' => $name]
+        );
 
         sendJson(200, [
             'success' => true,
-            'message' => 'Thank you! Your message has been sent to our studio team. We will get back to you shortly.'
+            'inquiryId' => $inquiryId,
+            'message' => 'Thank you! Your message has been sent to our studio team. We will get back to you shortly.',
+            'mailDispatched' => !empty($mailResult['success'])
         ]);
+    }
+
+    // --- 11B. Admin Inquiries API ---
+    if ($route === 'inquiries' && $method === 'GET') {
+        requireStaffAuth('orders');
+        ensureInquiriesTable($pdo);
+        $inquiries = $pdo->query('
+            SELECT id, name, email, subject, message, status, ip_address as ip, created_at as createdAt
+            FROM inquiries ORDER BY created_at DESC LIMIT 200
+        ')->fetchAll();
+        sendJson(200, ['inquiries' => $inquiries]);
+    }
+
+    if (strpos($route, 'inquiries/') === 0 && $method === 'PATCH') {
+        requireStaffAuth('orders');
+        ensureInquiriesTable($pdo);
+        $id = (int)substr($route, strlen('inquiries/'));
+        $body = getJsonBody();
+        $status = in_array($body['status'] ?? '', ['new', 'read', 'replied'], true) ? $body['status'] : 'read';
+        $pdo->prepare('UPDATE inquiries SET status = ? WHERE id = ?')->execute([$status, $id]);
+        sendJson(200, ['success' => true]);
+    }
+
+    // --- 11C. SMTP Email Settings & Live Test API ---
+    if ($route === 'settings/smtp' && $method === 'GET') {
+        requireStaffAuth('admin');
+        $smtp = getEffectiveSmtpConfig($pdo);
+        if (!empty($smtp['password'])) {
+            $smtp['password'] = '••••••••';
+        }
+        sendJson(200, ['smtp' => $smtp]);
+    }
+
+    if ($route === 'settings/smtp' && ($method === 'POST' || $method === 'PUT')) {
+        requireStaffAuth('admin');
+        $body = getJsonBody();
+
+        if (empty($body['password']) || str_contains($body['password'], '••••')) {
+            $prev = getEffectiveSmtpConfig($pdo);
+            $body['password'] = $prev['password'];
+        }
+
+        $pdo->prepare('
+            INSERT INTO settings (key_name, value_json, updated_at) VALUES ("smtp", ?, NOW())
+            ON DUPLICATE KEY UPDATE value_json = VALUES(value_json), updated_at = NOW()
+        ')->execute([json_encode($body)]);
+
+        sendJson(200, ['success' => true, 'message' => 'Hostinger SMTP settings saved successfully.']);
+    }
+
+    if ($route === 'settings/smtp/test' && $method === 'POST') {
+        requireStaffAuth('admin');
+        $body = getJsonBody();
+        $smtp = getEffectiveSmtpConfig($pdo);
+        if (!empty($body['password']) && !str_contains($body['password'], '••••')) {
+            $smtp['password'] = trim($body['password']);
+        }
+        if (!empty($body['host'])) $smtp['host'] = trim($body['host']);
+        if (!empty($body['port'])) $smtp['port'] = (int)$body['port'];
+        if (!empty($body['username'])) $smtp['username'] = trim($body['username']);
+        if (!empty($body['fromEmail'])) $smtp['fromEmail'] = trim($body['fromEmail']);
+
+        $testTo = !empty($body['testTo']) ? trim($body['testTo']) : $smtp['fromEmail'];
+        $testResult = sendSmtpEmail(
+            $testTo,
+            "ODD Perfumes SMTP Verification Test — " . date('H:i:s'),
+            "<div style='font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; padding:24px; border:1px solid #10B981; border-radius:8px; background:#ECFDF5;'>" .
+            "<h2 style='color:#065F46; margin:0 0 10px; font-size:18px;'>SMTP Connected & Verified!</h2>" .
+            "<p style='color:#047857; margin:0 0 8px; font-size:14px;'>Your Hostinger mailbox (<strong>" . htmlspecialchars($smtp['username']) . "</strong>) successfully authenticated via <strong>" . htmlspecialchars($smtp['host']) . ":" . $smtp['port'] . "</strong>.</p>" .
+            "<p style='color:#047857; margin:0; font-size:13px;'>Customer contact inquiries and automated order confirmation emails will now deliver cleanly with verified SPF, DKIM, and DMARC credentials.</p>" .
+            "</div>",
+            "ODD Perfumes SMTP Verification Test: Connection to {$smtp['host']}:{$smtp['port']} succeeded. Email sending is operational.",
+            $smtp
+        );
+
+        if (!empty($testResult['success'])) {
+            sendJson(200, ['success' => true, 'message' => "Test email successfully delivered to {$testTo} via Hostinger SMTP!", 'details' => $testResult]);
+        } else {
+            sendJson(400, ['error' => $testResult['error'] ?? 'SMTP delivery failed. Please verify Hostinger email credentials.', 'details' => $testResult]);
+        }
     }
 
     // --- 12. Newsletter Subscriptions ---

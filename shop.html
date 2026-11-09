@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shop The Three — ODD Perfume</title>
   <meta name="description" content="Phantom, Lucid and First Move. Strong enough that two sprays last most of the day, priced so you don’t have to save them for special occasions. Direct from Mumbai.">
-  <link rel="stylesheet" href="assets/css/global.css?v=5.0">
+  <link rel="preload" as="image" href="assets/images/Phantom Single bottle.webp" type="image/webp" fetchpriority="high">
+  <link rel="preload" as="font" href="assets/fonts/doren-perfume-serif.otf" type="font/otf" crossorigin>
+  <link rel="preload" as="font" href="assets/fonts/DMSans-Regular.ttf" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="assets/css/global.css?v=6.1">
   <link rel="stylesheet" href="assets/css/shop.css">
 </head>
 <body>
@@ -102,7 +105,7 @@
           <div class="product-card">
             <div class="product-door-container phantom-door">
               
-              <img src="assets/images/Phantom Single bottle.png" alt="ODD Phantom" class="door-product-img">
+              <img src="assets/images/Phantom Single bottle.webp" alt="ODD Phantom" class="door-product-img" width="400" height="400" fetchpriority="high">
             </div>
             <div class="product-details">
               <h3 class="product-name">Phantom</h3>
@@ -125,7 +128,7 @@
           <div class="product-card">
             <div class="product-door-container lucid-door">
               
-              <img src="assets/images/Lucid single bottle.png" alt="ODD Lucid" class="door-product-img">
+              <img src="assets/images/Lucid single bottle.webp" alt="ODD Lucid" class="door-product-img" width="400" height="400" loading="lazy">
             </div>
             <div class="product-details">
               <h3 class="product-name">Lucid</h3>
@@ -148,7 +151,7 @@
           <div class="product-card">
             <div class="product-door-container move-door">
               
-              <img src="assets/images/First Move single bottle.png" alt="ODD First Move" class="door-product-img">
+              <img src="assets/images/First Move single bottle.webp" alt="ODD First Move" class="door-product-img" width="400" height="400" loading="lazy">
             </div>
             <div class="product-details">
               <h3 class="product-name">First Move</h3>
@@ -263,7 +266,7 @@
       <!-- Massive Statement: It's good to be ODD. -->
       <div class="footer-massive-odd-container">
         <span class="massive-odd-lead-text">It's good to be</span>
-        <div class="massive-odd-display-text">ODD<span class="massive-odd-dot-orange"></span></div>
+        <div class="massive-odd-display-text">ODD<span class="massive-odd-dot-orange">.</span></div>
       </div>
 
       <!-- Legal Bar -->
@@ -286,7 +289,7 @@
     <div class="quick-view-card">
       <button class="quick-view-close-btn" onclick="closeQuickView()">&times;</button>
       <div class="quick-view-visual">
-        <img src="assets/images/Phantom.jpeg" id="qv-img" alt="ODD Perfume" class="quick-view-bottle-img">
+        <img src="assets/images/Phantom.webp" id="qv-img" alt="ODD Perfume" class="quick-view-bottle-img" width="800" height="800" loading="lazy">
       </div>
       <div class="quick-view-details">
         <span class="qv-brand">ODD PARFUMS</span>

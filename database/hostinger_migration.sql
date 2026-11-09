@@ -68,6 +68,22 @@ CREATE TABLE IF NOT EXISTS `customer_addresses` (
   `city` VARCHAR(128) NOT NULL,
   `pincode` VARCHAR(16) NOT NULL,
   `is_default` TINYINT(1) NOT NULL DEFAULT 0,
+  INDEX `idx_addresses_customer` (`customer_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 5B. Customer & Studio Inquiries
+CREATE TABLE IF NOT EXISTS `inquiries` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(128) NOT NULL,
+  `email` VARCHAR(128) NOT NULL,
+  `subject` VARCHAR(128) NOT NULL,
+  `message` TEXT NOT NULL,
+  `status` ENUM('new', 'read', 'replied') DEFAULT 'new',
+  `ip_address` VARCHAR(64) DEFAULT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_inquiries_created` (`created_at`),
+  INDEX `idx_inquiries_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -152,7 +168,8 @@ INSERT INTO `settings` (`key_name`, `value_json`) VALUES
 ('shipping', '{\"enabled\":true,\"standardRate\":50,\"freeThreshold\":1000,\"expressRate\":120,\"timeline\":\"3–5 Business Days Across India\"}'),
 ('banner', '{\"active\":true,\"text\":\"WE\'RE LIVE. Take 20% OFF your first order with code LAUNCH20\",\"code\":\"LAUNCH20\"}'),
 ('razorpay', '{\"enabled\":true,\"env\":\"live\",\"keyId\":\"rzp_live_Ti8AffHarb3tai\",\"keySecret\":\"X4Ws6I0iovvSrTYh18i1nNjl\",\"brandName\":\"ODD Perfume\",\"themeColor\":\"#E86B32\",\"simulate\":false}'),
-('shiprocket', '{\"email\":\"oddperfumesocial@gmail.com\",\"password\":\"Ks^U&iCv5zET!Bse*c4Ubln9y!ZkHw&o\",\"pickupLocation\":\"Primary\",\"carrier\":\"automatic\",\"autoDispatch\":false,\"origin\":{\"name\":\"ODD Perfume Fulfillment\",\"phone\":\"+919876543210\",\"street\":\"Plot 42, Perfume Studio, Industrial Area\",\"city\":\"Mumbai\",\"state\":\"MH\",\"postalCode\":\"400001\",\"country\":\"IN\"}}')
+('shiprocket', '{\"email\":\"oddperfumesocial@gmail.com\",\"password\":\"Ks^U&iCv5zET!Bse*c4Ubln9y!ZkHw&o\",\"pickupLocation\":\"Primary\",\"carrier\":\"automatic\",\"autoDispatch\":false,\"origin\":{\"name\":\"ODD Perfume Fulfillment\",\"phone\":\"+919876543210\",\"street\":\"Plot 42, Perfume Studio, Industrial Area\",\"city\":\"Mumbai\",\"state\":\"MH\",\"postalCode\":\"400001\",\"country\":\"IN\"}}'),
+('smtp', '{\"host\":\"smtp.hostinger.com\",\"port\":465,\"encryption\":\"ssl\",\"username\":\"hello@oddperfume.com\",\"password\":\"\",\"fromEmail\":\"hello@oddperfume.com\",\"fromName\":\"ODD Perfumes Studio\"}')
 ON DUPLICATE KEY UPDATE `value_json`=VALUES(`value_json`);
 
 SET FOREIGN_KEY_CHECKS = 1;

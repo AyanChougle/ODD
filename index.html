@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ODD Perfume — It's good to be ODD.</title>
   <meta name="description" content="Phantom, Lucid and First Move. Strong enough that two sprays last most of the day, priced so you don’t have to save them for special occasions. Direct from Mumbai.">
-  <link rel="stylesheet" href="assets/css/global.css?v=5.0">
-  <link rel="stylesheet" href="assets/css/home.css">
+  <link rel="preload" as="image" href="assets/images/First Move single bottle.webp" type="image/webp" fetchpriority="high">
+  <link rel="preload" as="font" href="assets/fonts/doren-perfume-serif.otf" type="font/otf" crossorigin>
+  <link rel="preload" as="font" href="assets/fonts/DMSans-Regular.ttf" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="assets/css/global.css?v=6.1">
+  <link rel="stylesheet" href="assets/css/home.css?v=6.1">
 
 <style>
 .compare-title {
@@ -118,7 +121,7 @@
   <main>
             <!-- Hero Section (media_1791442348981.png) -->
         <section class="hero-section">
-      <video autoplay loop muted playsinline poster="assets/images/BGphoto.png" class="hero-bg-video-element" id="hero-bg-video">
+      <video autoplay loop muted playsinline preload="none" poster="assets/images/BGphoto.webp" class="hero-bg-video-element" id="hero-bg-video">
         <source src="assets/video/BGvideo.mp4" type="video/mp4">
       </video>
       <div class="hero-overlay-gradient"></div>
@@ -130,7 +133,7 @@
             <span class="orange-dot-lead"></span> NORMAL DULLS SENSE.
           </div>
           <div class="hero-italic-lead">It's good to be</div>
-          <h1 class="hero-giant-odd">ODD<span class="hero-orange-dot"></span></h1>
+          <h1 class="hero-giant-odd">ODD<span class="hero-orange-dot">.</span></h1>
           <p class="hero-desc-text">Phantom, Lucid and First Move. Strong enough that two sprays last most of the day, priced so you don't have to save them for special occasions.</p>
 
           <div class="hero-pill-buttons">
@@ -146,7 +149,7 @@
               <span class="orange-dot-sm"></span> PICK OF THE DAY
             </div>
             <div class="hero-pick-body">
-              <img src="assets/images/First Move single bottle.png" alt="First Move" class="hero-pick-img">
+              <img src="assets/images/First Move single bottle.webp" alt="First Move" class="hero-pick-img" width="320" height="320" fetchpriority="high">
               <div class="hero-pick-info">
                 <span class="hero-pick-category">Eau De Parfum &middot; 100ml</span>
                 <h4 class="hero-pick-name">First Move</h4>
@@ -238,10 +241,10 @@
           <!-- Slide 0: Phantom -->
           <div class="carousel-slide active" onclick="selectShowcaseSlide(0)">
             <div class="slide-image-box phantom-slide-box">
-              <img src="assets/images/Phantom Single bottle.png" alt="ODD Phantom Single Bottle" class="carousel-bottle-img" width="400" height="400">
+              <img src="assets/images/Phantom Single bottle.webp" alt="ODD Phantom Single Bottle" class="carousel-bottle-img" width="400" height="400">
             </div>
             <div class="slide-notes">Oud &middot; Saffron &middot; Amberwood</div>
-            <h3 class="slide-title" style="font-family: 'Phantom Font', serif;">PHANTOM</h3>
+            <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">PHANTOM</h3>
             <p class="slide-tagline">"Unseen. Unforgotten. Dominant."</p>
             <div class="slide-actions">
               <button class="btn btn-sm btn-primary btn-water-float" onclick="addToCart('phantom')">Add To Bag</button>
@@ -252,10 +255,10 @@
           <!-- Slide 1: Lucid -->
           <div class="carousel-slide next" onclick="selectShowcaseSlide(1)">
             <div class="slide-image-box lucid-slide-box">
-              <img src="assets/images/Lucid single bottle.png" alt="ODD Lucid Single Bottle" class="carousel-bottle-img" width="400" height="400">
+              <img src="assets/images/Lucid single bottle.webp" alt="ODD Lucid Single Bottle" class="carousel-bottle-img" width="400" height="400" loading="lazy">
             </div>
             <div class="slide-notes">Bergamot &middot; Patchouli &middot; Blackcurrant</div>
-            <h3 class="slide-title" style="font-family: 'Lucid Font', serif;">LUCID</h3>
+            <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">LUCID</h3>
             <p class="slide-tagline">"Clear Mind. Sharp Presence."</p>
             <div class="slide-actions">
               <button class="btn btn-sm btn-primary btn-water-float" onclick="addToCart('lucid')">Add To Bag</button>
@@ -266,12 +269,12 @@
           <!-- Slide 2: First Move -->
           <div class="carousel-slide prev" onclick="selectShowcaseSlide(2)">
             <div class="slide-image-box move-slide-box">
-              <img src="assets/images/First Move single bottle.png" alt="ODD First Move Single Bottle" class="carousel-bottle-img" width="400" height="400">
+              <img src="assets/images/First Move single bottle.webp" alt="ODD First Move Single Bottle" class="carousel-bottle-img" width="400" height="400" loading="lazy">
             </div>
         
 
             <div class="slide-notes">Citrus &middot; Black Tea &middot; Smoky Musk</div>
-            <h3 class="slide-title" style="font-family: 'First Move Font', serif;">FIRST MOVE</h3>
+            <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">FIRST MOVE</h3>
             <p class="slide-tagline">"Start First. Stay Ahead."</p>
             <div class="slide-actions">
               <button class="btn btn-sm btn-primary btn-water-float" onclick="addToCart('first-move')">Add To Bag</button>
@@ -343,8 +346,8 @@
           <!-- PHANTOM CARD -->
           <div class="compare-card" style="background: #1a1008; border: 1px solid rgba(232,107,50,0.2); border-radius: 16px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem;">
             <div style="text-align: center; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
-              <img src="assets/images/Phantom Single bottle.png" alt="Phantom" style="height: 120px; object-fit: contain; margin: 0 auto 1rem; display: block;">
-              <h3 class="compare-title" style="font-family: 'Phantom Font', serif;">Phantom</h3>
+              <img src="assets/images/Phantom Single bottle.webp" alt="Phantom" width="120" height="120" loading="lazy" style="height: 120px; width: 120px; object-fit: contain; margin: 0 auto 1rem; display: block;">
+              <h3 class="compare-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">Phantom</h3>
               
             </div>
             <div class="compare-metrics">
@@ -366,8 +369,8 @@
           <div class="compare-card compare-card-featured" style="background: #0a1a12; border: 1px solid rgba(232,107,50,0.5); border-radius: 16px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; position: relative; transform: translateY(-12px);">
             <div style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--brand-orange); color: white; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.3rem 1rem; border-radius: 99px;">Best Seller</div>
             <div style="text-align: center; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
-              <img src="assets/images/Lucid single bottle.png" alt="Lucid" style="height: 120px; object-fit: contain; margin: 0 auto 1rem; display: block;">
-              <h3 class="compare-title" style="font-family: 'Lucid Font', serif;">Lucid</h3>
+              <img src="assets/images/Lucid single bottle.webp" alt="Lucid" width="120" height="120" loading="lazy" style="height: 120px; width: 120px; object-fit: contain; margin: 0 auto 1rem; display: block;">
+              <h3 class="compare-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">Lucid</h3>
               
             </div>
             <div class="compare-metrics">
@@ -388,8 +391,8 @@
           <!-- FIRST MOVE CARD -->
           <div class="compare-card" style="background: #140d10; border: 1px solid rgba(232,107,50,0.2); border-radius: 16px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem;">
             <div style="text-align: center; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
-              <img src="assets/images/First Move single bottle.png" alt="First Move" style="height: 120px; object-fit: contain; margin: 0 auto 1rem; display: block;">
-              <h3 class="compare-title" style="font-family: 'First Move Font', serif;">First Move</h3>
+              <img src="assets/images/First Move single bottle.webp" alt="First Move" width="120" height="120" loading="lazy" style="height: 120px; width: 120px; object-fit: contain; margin: 0 auto 1rem; display: block;">
+              <h3 class="compare-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">First Move</h3>
               
             </div>
             <div class="compare-metrics">
@@ -421,7 +424,7 @@
         <div class="story-landing-grid">
           <div class="story-landing-visual">
             <div class="story-img-frame">
-              <img src="assets/images/BGphoto1.png" alt="ODD Perfume Story" width="800" height="800" >
+              <img src="assets/images/BGphoto1.webp" alt="ODD Perfume Story" width="800" height="450" loading="lazy">
               <div class="story-badge-loc">Mumbai, INDIA</div>
             </div>
           </div>
@@ -534,7 +537,7 @@
       <!-- Massive Statement: It's good to be ODD. -->
       <div class="footer-massive-odd-container">
         <span class="massive-odd-lead-text">It's good to be</span>
-        <div class="massive-odd-display-text">ODD<span class="massive-odd-dot-orange"></span></div>
+        <div class="massive-odd-display-text">ODD<span class="massive-odd-dot-orange">.</span></div>
       </div>
 
       <!-- Legal Bar -->
@@ -557,7 +560,7 @@
     <div class="quick-view-card">
       <button class="quick-view-close-btn" onclick="closeQuickView()">&times;</button>
       <div class="quick-view-visual">
-        <img src="assets/images/Phantom.jpeg" id="qv-img" alt="ODD Perfume" class="quick-view-bottle-img" width="800" height="800" >
+        <img src="assets/images/Phantom.webp" id="qv-img" alt="ODD Perfume" class="quick-view-bottle-img" width="800" height="800" loading="lazy">
       </div>
       <div class="quick-view-details">
         <span class="qv-brand">ODD PARFUMS</span>

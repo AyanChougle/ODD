@@ -415,13 +415,15 @@ function initTabNavigation() {
   const access = {
     payments: isAdmin || role === 'finance',
     orders: isAdmin || role === 'finance' || role === 'orders',
+    inquiries: isAdmin || role === 'orders',
     inventory: isAdmin || role === 'warehouse',
     scanner: isAdmin || role === 'warehouse',
     barcodes: isAdmin || role === 'warehouse',
     shipping: isAdmin,
     'access-links': isAdmin,
     'launch-offer': isAdmin || role === 'marketing',
-    razorpay: isAdmin
+    razorpay: isAdmin,
+    smtp: isAdmin
   };
 
   window.switchAdminTab = function(targetTab) {
@@ -2672,6 +2674,290 @@ function initOrdersViewToggle() {
 /* ==========================================================================
    App Initialization
    ========================================================================== */
+
+/* ==========================================================================
+   Tab 10: Customer & Studio Inquiries
+   ========================================================================== */
+let allInquiries = [];
+let currentInquiryFilter = 'all';
+
+async function loadInquiries() {
+  const loading = document.getElementById('inquiries-loading');
+  const empty = document.getElementById('inquiries-empty');
+  const list = document.getElementById('inquiries-list');
+
+  if (loading) loading.style.display = 'block';
+  if (empty) empty.style.display = 'none';
+  if (list) list.style.display = 'none';
+
+  try {
+    const res = await adminApi('/api/inquiries');
+    allInquiries = Array.isArray(res?.inquiries) ? res.inquiries : [];
+    updateInquiryCounters();
+    renderInquiries();
+  } catch (err) {
+    console.error('Failed to load inquiries:', err);
+    if (loading) loading.textContent = 'Failed to load inquiries: ' + err.message;
+  }
+}
+
+function updateInquiryCounters() {
+  const countAll = allInquiries.length;
+  const countNew = allInquiries.filter(i => (i.status || 'new') === 'new').length;
+
+  const elAll = document.getElementById('inq-count-all');
+  const elNew = document.getElementById('inq-count-new');
+  if (elAll) elAll.textContent = countAll;
+  if (elNew) elNew.textContent = countNew;
+
+  const navBadge = document.getElementById('nav-inquiries-badge');
+  if (navBadge) {
+    if (countNew > 0) {
+      navBadge.textContent = countNew;
+      navBadge.style.display = 'inline-block';
+    } else {
+      navBadge.style.display = 'none';
+    }
+  }
+}
+
+function filterInquiries(status) {
+  currentInquiryFilter = status;
+  ['all', 'new', 'read', 'replied'].forEach(s => {
+    const btn = document.getElementById('btn-inq-filter-' + s);
+    if (btn) btn.classList.toggle('active', s === status);
+  });
+  renderInquiries();
+}
+
+function renderInquiries() {
+  const loading = document.getElementById('inquiries-loading');
+  const empty = document.getElementById('inquiries-empty');
+  const list = document.getElementById('inquiries-list');
+
+  if (loading) loading.style.display = 'none';
+
+  const filtered = currentInquiryFilter === 'all'
+    ? allInquiries
+    : allInquiries.filter(i => (i.status || 'new') === currentInquiryFilter);
+
+  if (filtered.length === 0) {
+    if (empty) empty.style.display = 'block';
+    if (list) list.style.display = 'none';
+    return;
+  }
+
+  if (empty) empty.style.display = 'none';
+  if (list) {
+    list.style.display = 'flex';
+    list.innerHTML = filtered.map(inq => {
+      const status = inq.status || 'new';
+      const statusBadge = status === 'new'
+        ? '<span style="background:rgba(232,107,50,0.15); color:var(--brand-orange); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">NEW</span>'
+        : status === 'replied'
+        ? '<span style="background:rgba(16,185,129,0.15); color:#10B981; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">REPLIED</span>'
+        : '<span style="background:rgba(156,163,175,0.15); color:#9CA3AF; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">READ</span>';
+
+      const dateStr = inq.createdAt ? new Date(inq.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Recent';
+
+      return `
+        <div style="background:var(--admin-card-bg); border:1px solid var(--admin-border); border-radius:8px; padding:1.2rem; transition:border-color 0.2s;" onmouseenter="this.style.borderColor='var(--brand-orange)'" onmouseleave="this.style.borderColor='var(--admin-border)'">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; margin-bottom:0.8rem;">
+            <div>
+              <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.25rem;">
+                <strong style="color:var(--admin-text); font-size:1rem;">${escapeHtml(inq.name)}</strong>
+                ${statusBadge}
+              </div>
+              <div style="font-size:0.8rem; color:var(--admin-text-muted);">
+                <a href="mailto:${encodeURIComponent(inq.email)}" style="color:var(--brand-orange); text-decoration:none; font-weight:600;">${escapeHtml(inq.email)}</a>
+                ${inq.ip ? `<span style="margin-left:0.5rem; opacity:0.6;">· IP: ${escapeHtml(inq.ip)}</span>` : ''}
+              </div>
+            </div>
+            <div style="font-size:0.75rem; color:var(--admin-text-muted); text-align:right;">
+              ${dateStr}
+            </div>
+          </div>
+
+          <div style="margin-bottom:0.8rem;">
+            <div style="font-size:0.85rem; font-weight:600; color:var(--admin-text); margin-bottom:0.3rem;">
+              Subject: ${escapeHtml(inq.subject || 'Studio Inquiry')}
+            </div>
+            <div style="font-size:0.85rem; line-height:1.6; color:var(--admin-text); background:rgba(0,0,0,0.2); padding:0.8rem 1rem; border-radius:6px; border-left:3px solid var(--brand-orange); white-space:pre-wrap;">${escapeHtml(inq.message)}</div>
+          </div>
+
+          <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid var(--admin-border);">
+            <a href="mailto:${encodeURIComponent(inq.email)}?subject=Re:%20${encodeURIComponent(inq.subject || 'Studio Inquiry')}" class="admin-btn admin-btn-sm" style="text-decoration:none; background:var(--brand-orange); color:#fff; font-weight:600;" onclick="updateInquiryStatus(${inq.id}, 'replied')">
+              Reply via Email
+            </a>
+            ${status !== 'read' && status !== 'replied' ? `
+              <button type="button" class="admin-btn admin-btn-sm" onclick="updateInquiryStatus(${inq.id}, 'read')">
+                Mark as Read
+              </button>
+            ` : ''}
+            ${status !== 'replied' ? `
+              <button type="button" class="admin-btn admin-btn-sm" onclick="updateInquiryStatus(${inq.id}, 'replied')">
+                Mark as Replied
+              </button>
+            ` : `
+              <button type="button" class="admin-btn admin-btn-sm" onclick="updateInquiryStatus(${inq.id}, 'read')">
+                Mark Unreplied
+              </button>
+            `}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+async function updateInquiryStatus(id, newStatus) {
+  try {
+    await adminApi('/api/inquiries/' + id, {
+      method: 'PATCH',
+      body: { status: newStatus }
+    });
+    const found = allInquiries.find(i => i.id === id);
+    if (found) found.status = newStatus;
+    updateInquiryCounters();
+    renderInquiries();
+    showAdminToast('Inquiry status updated to ' + newStatus);
+  } catch (err) {
+    showAdminToast('Failed to update inquiry status: ' + err.message, true);
+  }
+}
+
+window.filterInquiries = filterInquiries;
+window.loadInquiries = loadInquiries;
+window.updateInquiryStatus = updateInquiryStatus;
+
+
+/* ==========================================================================
+   Tab 11: Hostinger Email & SMTP Configuration
+   ========================================================================== */
+async function loadSmtpSettings() {
+  try {
+    const res = await adminApi('/api/settings/smtp');
+    const smtp = res?.smtp || {};
+
+    const hostInput = document.getElementById('smtp-host');
+    const portInput = document.getElementById('smtp-port');
+    const userInput = document.getElementById('smtp-user');
+    const passInput = document.getElementById('smtp-pass');
+    const fromEmailInput = document.getElementById('smtp-from-email');
+    const fromNameInput = document.getElementById('smtp-from-name');
+
+    if (hostInput) hostInput.value = smtp.host || 'smtp.hostinger.com';
+    if (portInput) portInput.value = smtp.port || 465;
+    if (userInput) userInput.value = smtp.username || 'hello@oddperfume.com';
+    if (fromEmailInput) fromEmailInput.value = smtp.fromEmail || 'hello@oddperfume.com';
+    if (fromNameInput) fromNameInput.value = smtp.fromName || 'ODD Perfumes Studio';
+
+    if (passInput) {
+      if (smtp.password && smtp.password.includes('••')) {
+        passInput.placeholder = '••••••••••••';
+      } else if (smtp.password) {
+        passInput.value = smtp.password;
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load SMTP settings:', err);
+  }
+}
+
+async function handleSaveSmtpSettings(event) {
+  if (event) event.preventDefault();
+  const rawPass = document.getElementById('smtp-pass')?.value?.trim() || '';
+  const payload = {
+    host: document.getElementById('smtp-host')?.value?.trim() || 'smtp.hostinger.com',
+    port: parseInt(document.getElementById('smtp-port')?.value || '465', 10),
+    encryption: 'ssl',
+    username: document.getElementById('smtp-user')?.value?.trim() || 'hello@oddperfume.com',
+    fromEmail: document.getElementById('smtp-from-email')?.value?.trim() || 'hello@oddperfume.com',
+    fromName: document.getElementById('smtp-from-name')?.value?.trim() || 'ODD Perfumes Studio',
+  };
+
+  if (rawPass && !rawPass.includes('••')) {
+    payload.password = rawPass;
+  }
+
+  try {
+    await adminApi('/api/settings/smtp', { method: 'POST', body: payload });
+    const msg = document.getElementById('smtp-saved-msg');
+    if (msg) {
+      msg.textContent = 'Hostinger SMTP settings saved directly to database!';
+      msg.style.display = 'inline';
+      setTimeout(() => { msg.style.display = 'none'; }, 3500);
+    }
+    showAdminToast('Hostinger SMTP configuration saved directly to database.');
+  } catch (err) {
+    showAdminToast(err.message || 'Failed to save SMTP settings', true);
+  }
+}
+
+function toggleSmtpPasswordVisibility() {
+  const passInput = document.getElementById('smtp-pass');
+  const btn = document.getElementById('btn-toggle-smtp-pass');
+  if (!passInput) return;
+  if (passInput.type === 'password') {
+    passInput.type = 'text';
+    if (btn) btn.textContent = 'Hide';
+  } else {
+    passInput.type = 'password';
+    if (btn) btn.textContent = 'Show';
+  }
+}
+
+async function handleTestSmtpConnection() {
+  const resultDiv = document.getElementById('smtp-test-result');
+  const btn = document.getElementById('btn-test-smtp');
+  const host = document.getElementById('smtp-host')?.value?.trim() || 'smtp.hostinger.com';
+  const port = parseInt(document.getElementById('smtp-port')?.value || '465', 10);
+  const username = document.getElementById('smtp-user')?.value?.trim() || 'hello@oddperfume.com';
+  const password = document.getElementById('smtp-pass')?.value?.trim() || '';
+  const fromEmail = document.getElementById('smtp-from-email')?.value?.trim() || 'hello@oddperfume.com';
+
+  if (resultDiv) {
+    resultDiv.style.display = 'block';
+    resultDiv.style.background = '#1E232D';
+    resultDiv.style.color = '#F3F4F6';
+    resultDiv.style.border = '1px solid var(--admin-border)';
+    resultDiv.innerHTML = 'Connecting to Hostinger SMTP server (' + host + ':' + port + ')...';
+  }
+
+  if (btn) btn.disabled = true;
+
+  try {
+    const payload = { host, port, username, fromEmail, testTo: fromEmail };
+    if (password && !password.includes('••')) {
+      payload.password = password;
+    }
+
+    const res = await adminApi('/api/settings/smtp/test', { method: 'POST', body: payload });
+    if (resultDiv) {
+      resultDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+      resultDiv.style.border = '1px solid #10B981';
+      resultDiv.style.color = '#10B981';
+      resultDiv.innerHTML = '<strong>SMTP Handshake Succeeded!</strong><br>' + (res.message || 'Test email dispatched to ' + fromEmail);
+    }
+    showAdminToast('Test email successfully sent to ' + fromEmail);
+  } catch (err) {
+    if (resultDiv) {
+      resultDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+      resultDiv.style.border = '1px solid #EF4444';
+      resultDiv.style.color = '#F87171';
+      resultDiv.innerHTML = '<strong>SMTP Error:</strong> ' + (err.message || 'Connection failed.');
+    }
+    showAdminToast('SMTP Test Failed: ' + err.message, true);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+window.loadSmtpSettings = loadSmtpSettings;
+window.handleSaveSmtpSettings = handleSaveSmtpSettings;
+window.toggleSmtpPasswordVisibility = toggleSmtpPasswordVisibility;
+window.handleTestSmtpConnection = handleTestSmtpConnection;
+
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     initOrdersViewToggle();
