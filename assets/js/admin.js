@@ -1426,24 +1426,6 @@ async function onCameraCodeDetected(decodedText) {
   }
 }
 
-function quickScanSimulate(code) {
-  const input = document.getElementById('barcode-scan-input');
-  if (input) {
-    input.value = code;
-    const form = document.getElementById('barcode-scan-form');
-    if (form) {
-      form.dispatchEvent(new Event('submit', { cancelable: true }));
-    }
-  }
-}
-
-function quickScanLatestOrder() {
-  const orders = Array.isArray(ordersData) && ordersData.length ? ordersData : getOfflineOrders();
-  if (!orders.length) return showAdminToast('No orders found to test dispatch scan.', true);
-  const targetOrder = orders.find(o => o.status !== 'Dispatched' && o.status !== 'Delivered') || orders[0];
-  quickScanSimulate(targetOrder.id);
-}
-
 async function clearScanLog() {
   try {
     await adminApi('/api/scans', { method: 'DELETE' });
@@ -2298,7 +2280,6 @@ async function loadRazorpaySettings() {
     const secretInput = document.getElementById('rzp-key-secret');
     const brandInput = document.getElementById('rzp-brand-name');
     const colorInput = document.getElementById('rzp-theme-color');
-    const simCheck = document.getElementById('rzp-simulate-check');
     const badge = document.getElementById('rzp-active-badge');
 
     if (enCheck) enCheck.checked = cfg.enabled !== false;
@@ -2331,7 +2312,6 @@ async function saveRazorpaySettings(event) {
     keyId: document.getElementById('rzp-key-id')?.value?.trim() || '',
     brandName: document.getElementById('rzp-brand-name')?.value?.trim() || 'ODD Perfume',
     themeColor: document.getElementById('rzp-theme-color')?.value?.trim() || '#E86B32',
-    simulate: false
   };
   if (rawSecret && !rawSecret.includes('••••')) {
     cfg.keySecret = rawSecret;
@@ -2643,8 +2623,6 @@ window.backToBarcodeSelection = backToBarcodeSelection;
 window.printBarcodeSheet = printBarcodeSheet;
 window.setAllCopies = setAllCopies;
 window.setStartSerial = setStartSerial;
-window.quickScanSimulate = quickScanSimulate;
-window.quickScanLatestOrder = quickScanLatestOrder;
 window.clearScanLog = clearScanLog;
 
 

@@ -1570,7 +1570,8 @@ const server = http.createServer(async (req, res) => {
 
         const sRow = db.prepare("SELECT value_json FROM settings WHERE key_name = 'shiprocket'").get();
         const srCfg = sRow ? JSON.parse(sRow.value_json || '{}') : {};
-        const pickupLocation = String(srCfg.pickupLocation || process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary').trim() || 'Primary';
+        let pickupLocation = String(srCfg.pickupLocation || process.env.SHIPROCKET_PICKUP_LOCATION || 'warehouse').trim() || 'warehouse';
+        if (pickupLocation.toLowerCase() === 'primary') pickupLocation = 'warehouse';
 
         const token = await getShiprocketToken();
         if (!token) {
@@ -1653,6 +1654,17 @@ const server = http.createServer(async (req, res) => {
         const pad = n => String(n).padStart(2, '0');
         const orderDate = `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())} ${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
 
+        let rawPhone = String(order.customer_phone || '').replace(/[^0-9]/g, '');
+        if (rawPhone.length > 10 && rawPhone.startsWith('91')) {
+          rawPhone = rawPhone.substring(2);
+        }
+        const phone10 = rawPhone.length >= 10 ? rawPhone.slice(-10) : (rawPhone || '9876543210').padStart(10, '9');
+
+        let cleanStreet = destAddress.replace(/,\s*[^,]+-\s*\d{6}\s*$/, '').replace(/-\s*\d{6}\s*$/, '').trim();
+        if (cleanStreet.length < 5) cleanStreet = destAddress;
+        if (cleanStreet.length < 5) cleanStreet = 'Address: ' + destAddress;
+        cleanStreet = cleanStreet.substring(0, 100);
+
         const srOrderPayload = JSON.stringify({
           order_id: orderId,
           order_date: orderDate,
@@ -1661,15 +1673,27 @@ const server = http.createServer(async (req, res) => {
           comment: 'ODD Luxury Perfume Order',
           billing_customer_name: firstName,
           billing_last_name: lastName,
-          billing_address: destAddress.substring(0, 100),
+          billing_address: cleanStreet,
           billing_address_2: '',
           billing_city: destCity,
           billing_pincode: pincode,
           billing_state: destState,
           billing_country: 'India',
           billing_email: order.customer_email || 'orders@oddperfume.com',
-          billing_phone: String(order.customer_phone || '9876543210').replace(/[^0-9]/g, ''),
+          billing_phone: phone10,
+
           shipping_is_billing: true,
+          shipping_customer_name: firstName,
+          shipping_last_name: lastName,
+          shipping_address: cleanStreet,
+          shipping_address_2: '',
+          shipping_city: destCity,
+          shipping_pincode: pincode,
+          shipping_state: destState,
+          shipping_country: 'India',
+          shipping_email: order.customer_email || 'orders@oddperfume.com',
+          shipping_phone: phone10,
+
           order_items: orderItems,
           payment_method: isCod ? 'COD' : 'Prepaid',
           shipping_charges: Number(order.shipping_fee) || 0,
@@ -2508,19 +2532,71 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 200, { orders });
       }
 
-      if (pathname === '/api/customer/address' && method === 'POST') {
+      if ((pathname === '/api/customer/addresses' || pathname === '/api/customer/address') && method === 'GET') {
+        const session = getCustomerSession(req);
+        if (!session) return sendJson(res, 401, { error: 'Please sign in to view saved addresses.' });
+
+        const addresses = db.prepare('SELECT id, label, name, phone, address_line as street, city, pincode as pin, is_default as isDefault FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC').all(session.user_id);
+        return sendJson(res, 200, { addresses });
+      }
+
+      if ((pathname === '/api/customer/addresses' || pathname === '/api/customer/address') && method === 'POST') {
         const session = getCustomerSession(req);
         if (!session) return sendJson(res, 401, { error: 'Unauthorized.' });
 
         const body = await parseJsonBody(req);
-        const { label, name, phone, address, city, pincode } = body;
+        const name = String(body.name || '').trim();
+        const street = String(body.street || body.address || '').trim();
+        const city = String(body.city || '').trim();
+        const pin = String(body.pin || body.pincode || '').trim();
+        const phone = String(body.phone || '').trim();
+        const label = String(body.label || 'Home').trim();
+        const isDefault = body.isDefault ? 1 : 0;
+
+        if (!name || !street || !city || !pin) {
+          return sendJson(res, 400, { error: 'Please provide complete name, street, city, and pincode.' });
+        }
+
+        if (isDefault) {
+          db.prepare('UPDATE customer_addresses SET is_default = 0 WHERE customer_id = ?').run(session.user_id);
+        }
 
         db.prepare(`
           INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default)
-          VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-        `).run(session.user_id, label || 'Home', name, phone, address, city, pincode);
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(session.user_id, label || 'Home', name, phone, street, city, pin, isDefault);
 
-        return sendJson(res, 201, { success: true });
+        return sendJson(res, 201, { success: true, message: 'Delivery address saved to your account!' });
+      }
+
+      if ((pathname === '/api/customer/addresses' || pathname === '/api/customer/address') && method === 'DELETE') {
+        const session = getCustomerSession(req);
+        if (!session) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+        const body = await parseJsonBody(req);
+        const addrId = Number(body.id || 0);
+        if (!addrId) return sendJson(res, 400, { error: 'Address ID required.' });
+
+        db.prepare('DELETE FROM customer_addresses WHERE id = ? AND customer_id = ?').run(addrId, session.user_id);
+        return sendJson(res, 200, { success: true, message: 'Address removed.' });
+      }
+
+      if (pathname === '/api/customer/profile' && (method === 'PUT' || method === 'POST')) {
+        const session = getCustomerSession(req);
+        if (!session) return sendJson(res, 401, { error: 'Unauthorized.' });
+
+        const body = await parseJsonBody(req);
+        const name = String(body.name || '').trim();
+        const phone = String(body.phone || '').trim();
+        const newPass = String(body.password || '');
+
+        if (newPass) {
+          const newHash = hashPassword(newPass);
+          db.prepare('UPDATE customers SET name = ?, phone = ?, password_hash = ?, updated_at = datetime("now") WHERE id = ?').run(name, phone, newHash, session.user_id);
+        } else {
+          db.prepare('UPDATE customers SET name = ?, phone = ?, updated_at = datetime("now") WHERE id = ?').run(name, phone, session.user_id);
+        }
+        return sendJson(res, 200, { success: true, message: 'Account profile updated successfully.' });
       }
 
       // --- 12. Contact & Inquiries (/api/contact) ---

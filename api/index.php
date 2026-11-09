@@ -773,6 +773,13 @@ try {
             'cancelled_at' => $cancelledAt,
             'estimatedDelivery' => $estimatedDelivery,
             'estimated_delivery' => $estimatedDelivery,
+            'payment_method' => $order['payment_method'],
+            'paymentMethod' => $order['payment_method'],
+            'gateway' => $order['gateway'],
+            'payment_status' => $order['payment_status'],
+            'paymentStatus' => $order['payment_status'],
+            'razorpay_payment_id' => $order['razorpay_payment_id'] ?? null,
+            'paymentId' => $order['razorpay_payment_id'] ?? null,
             'items' => $iStmt->fetchAll()
         ]);
     }
@@ -821,6 +828,283 @@ try {
         }
 
         sendJson(200, ['orders' => $orders]);
+    }
+
+    
+    // Helper to get customer table name dynamically
+    function getCustomerTableName(PDO $pdo): string {
+        try {
+            $pdo->query('SELECT 1 FROM customer_accounts LIMIT 1');
+            return 'customer_accounts';
+        } catch (Throwable $e) {}
+        return 'customers';
+    }
+
+    // Helper to check active customer session
+    function getActiveCustomer(PDO $pdo): ?array {
+        $sessionId = $_COOKIE['odd_customer_session'] ?? null;
+        if (!$sessionId) return null;
+
+        $cTable = getCustomerTableName($pdo);
+        $stmt = $pdo->prepare("
+            SELECT s.*, c.id as customer_id, c.name, c.email, c.phone
+            FROM sessions s
+            JOIN {$cTable} c ON s.user_id = c.id
+            WHERE s.id = ? AND s.user_type = 'customer' AND s.expires_at > NOW()
+        ");
+        $stmt->execute([$sessionId]);
+        return $stmt->fetch() ?: null;
+    }
+
+    // --- 6b. Customer Portal Authentication & Account Management ---
+
+    // POST customer/register
+    if ($route === 'customer/register' && $method === 'POST') {
+        $body = getJsonBody();
+        $name = trim((string)($body['name'] ?? ''));
+        $email = strtolower(trim((string)($body['email'] ?? '')));
+        $phone = trim((string)($body['phone'] ?? ''));
+        $password = (string)($body['password'] ?? '');
+
+        if (!$name || !$email || !$password) {
+            sendJson(400, ['error' => 'Please provide your full name, email address, and password.']);
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            sendJson(400, ['error' => 'Please provide a valid email address.']);
+        }
+
+        $cTable = getCustomerTableName($pdo);
+        $checkStmt = $pdo->prepare("SELECT id FROM {$cTable} WHERE LOWER(email) = ?");
+        $checkStmt->execute([$email]);
+        if ($checkStmt->fetch()) {
+            sendJson(409, ['error' => 'An account with this email already exists. Please sign in instead.']);
+        }
+
+        $passHash = password_hash($password, PASSWORD_DEFAULT);
+        $custId = 'cust_' . bin2hex(random_bytes(12));
+
+        try {
+            $pdo->prepare("
+                INSERT INTO {$cTable} (id, name, email, phone, password_hash, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 'active', NOW(), NOW())
+            ")->execute([$custId, $name, $email, $phone, $passHash]);
+        } catch (Throwable $e) {
+            // Fallback without id if AUTO_INCREMENT id column
+            try {
+                $pdo->prepare("
+                    INSERT INTO {$cTable} (name, email, phone, password_hash, status, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, 'active', NOW(), NOW())
+                ")->execute([$name, $email, $phone, $passHash]);
+                $custId = (string)$pdo->lastInsertId();
+            } catch (Throwable $e2) {
+                sendJson(500, ['error' => 'Could not register customer account: ' . $e2->getMessage()]);
+            }
+        }
+
+        // Create persistent session
+        $sessionId = bin2hex(random_bytes(32));
+        $csrfToken = bin2hex(random_bytes(24));
+        $expiresAt = date('Y-m-d H:i:s', time() + (30 * 86400));
+
+        $pdo->prepare('
+            INSERT INTO sessions (id, user_type, user_id, role, csrf_token, ip_address, user_agent, expires_at)
+            VALUES (?, "customer", ?, "customer", ?, ?, ?, ?)
+        ')->execute([$sessionId, (string)$custId, $csrfToken, $_SERVER['REMOTE_ADDR'] ?? '', $_SERVER['HTTP_USER_AGENT'] ?? '', $expiresAt]);
+
+        $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+
+        setcookie('odd_customer_session', $sessionId, [
+            'expires'  => time() + (30 * 86400),
+            'path'     => '/',
+            'secure'   => $isSecure,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+
+        sendJson(201, [
+            'success' => true,
+            'message' => 'Account created successfully! Welcome to ODD Perfume.',
+            'customer' => ['id' => $custId, 'name' => $name, 'email' => $email, 'phone' => $phone],
+            'csrfToken' => $csrfToken
+        ]);
+    }
+
+    // POST customer/login
+    if ($route === 'customer/login' && $method === 'POST') {
+        $body = getJsonBody();
+        $email = strtolower(trim((string)($body['email'] ?? '')));
+        $password = (string)($body['password'] ?? '');
+
+        if (!$email || !$password) {
+            sendJson(400, ['error' => 'Please provide both email and password.']);
+        }
+
+        $cTable = getCustomerTableName($pdo);
+        $stmt = $pdo->prepare("SELECT * FROM {$cTable} WHERE LOWER(email) = ?");
+        $stmt->execute([$email]);
+        $customer = $stmt->fetch();
+
+        if (!$customer) {
+            sendJson(401, ['error' => 'No account found with this email. Please check spelling or create an account.']);
+        }
+
+        $storedHash = (string)($customer['password_hash'] ?? '');
+        $isValid = false;
+        if (password_verify($password, $storedHash)) {
+            $isValid = true;
+        } elseif (hash_equals($storedHash, $password)) {
+            $isValid = true;
+            $newHash = password_hash($password, PASSWORD_DEFAULT);
+            $pdo->prepare("UPDATE {$cTable} SET password_hash = ? WHERE id = ?")->execute([$newHash, $customer['id']]);
+        }
+
+        if (!$isValid) {
+            sendJson(401, ['error' => 'Incorrect password. Please try again.']);
+        }
+
+        $custId = (string)$customer['id'];
+        try {
+            $pdo->prepare("UPDATE {$cTable} SET last_login_at = NOW() WHERE id = ?")->execute([$custId]);
+        } catch (Throwable $t) {}
+
+        $sessionId = bin2hex(random_bytes(32));
+        $csrfToken = bin2hex(random_bytes(24));
+        $expiresAt = date('Y-m-d H:i:s', time() + (30 * 86400));
+
+        $pdo->prepare('
+            INSERT INTO sessions (id, user_type, user_id, role, csrf_token, ip_address, user_agent, expires_at)
+            VALUES (?, "customer", ?, "customer", ?, ?, ?, ?)
+        ')->execute([$sessionId, $custId, $csrfToken, $_SERVER['REMOTE_ADDR'] ?? '', $_SERVER['HTTP_USER_AGENT'] ?? '', $expiresAt]);
+
+        $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+
+        setcookie('odd_customer_session', $sessionId, [
+            'expires'  => time() + (30 * 86400),
+            'path'     => '/',
+            'secure'   => $isSecure,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+
+        sendJson(200, [
+            'success' => true,
+            'message' => 'Signed in successfully!',
+            'customer' => ['id' => $custId, 'name' => $customer['name'], 'email' => $customer['email'], 'phone' => $customer['phone'] ?? ''],
+            'csrfToken' => $csrfToken
+        ]);
+    }
+
+    // POST customer/logout
+    if ($route === 'customer/logout' && $method === 'POST') {
+        $sessionId = $_COOKIE['odd_customer_session'] ?? null;
+        if ($sessionId) {
+            $pdo->prepare('DELETE FROM sessions WHERE id = ? AND user_type = "customer"')->execute([$sessionId]);
+        }
+        setcookie('odd_customer_session', '', ['expires' => time() - 86400, 'path' => '/']);
+        sendJson(200, ['success' => true, 'message' => 'Signed out of customer account.']);
+    }
+
+    // GET customer/session
+    if ($route === 'customer/session' && $method === 'GET') {
+        $session = getActiveCustomer($pdo);
+        if (!$session) {
+            sendJson(200, ['authenticated' => false]);
+        }
+
+        // Fetch saved addresses from customer_addresses
+        $addresses = [];
+        try {
+            $aStmt = $pdo->prepare('SELECT id, label, name, phone, address_line as street, city, pincode as pin, is_default as isDefault FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC');
+            $aStmt->execute([(string)$session['customer_id']]);
+            $addresses = $aStmt->fetchAll();
+        } catch (Throwable $ae) {}
+
+        sendJson(200, [
+            'authenticated' => true,
+            'customer' => [
+                'id' => $session['customer_id'],
+                'name' => $session['name'],
+                'email' => $session['email'],
+                'phone' => $session['phone']
+            ],
+            'addresses' => $addresses,
+            'csrfToken' => $session['csrf_token']
+        ]);
+    }
+
+    // GET customer/addresses
+    if ($route === 'customer/addresses' && $method === 'GET') {
+        $session = getActiveCustomer($pdo);
+        if (!$session) sendJson(401, ['error' => 'Please sign in to view saved addresses.']);
+
+        $stmt = $pdo->prepare('SELECT id, label, name, phone, address_line as street, city, pincode as pin, is_default as isDefault FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC');
+        $stmt->execute([(string)$session['customer_id']]);
+        sendJson(200, ['addresses' => $stmt->fetchAll()]);
+    }
+
+    // POST customer/addresses
+    if ($route === 'customer/addresses' && $method === 'POST') {
+        $session = getActiveCustomer($pdo);
+        if (!$session) sendJson(401, ['error' => 'Please sign in to save an address.']);
+
+        $body = getJsonBody();
+        $name = trim((string)($body['name'] ?? ''));
+        $street = trim((string)($body['street'] ?? $body['address'] ?? ''));
+        $city = trim((string)($body['city'] ?? ''));
+        $pin = trim((string)($body['pin'] ?? $body['pincode'] ?? ''));
+        $phone = trim((string)($body['phone'] ?? ''));
+        $label = trim((string)($body['label'] ?? 'Home')) ?: 'Home';
+        $isDefault = !empty($body['isDefault']) ? 1 : 0;
+
+        if (!$name || !$street || !$city || !$pin) {
+            sendJson(400, ['error' => 'Please provide complete name, street address, city, and 6-digit pincode.']);
+        }
+
+        if ($isDefault) {
+            $pdo->prepare('UPDATE customer_addresses SET is_default = 0 WHERE customer_id = ?')->execute([(string)$session['customer_id']]);
+        }
+
+        $pdo->prepare('
+            INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ')->execute([(string)$session['customer_id'], $label, $name, $phone, $street, $city, $pin, $isDefault]);
+
+        sendJson(201, ['success' => true, 'message' => 'Delivery address saved to your account!']);
+    }
+
+    // DELETE customer/addresses
+    if ($route === 'customer/addresses' && $method === 'DELETE') {
+        $session = getActiveCustomer($pdo);
+        if (!$session) sendJson(401, ['error' => 'Unauthorized.']);
+
+        $body = getJsonBody();
+        $addrId = (int)($body['id'] ?? $_GET['id'] ?? 0);
+        if (!$addrId) sendJson(400, ['error' => 'Address ID required.']);
+
+        $pdo->prepare('DELETE FROM customer_addresses WHERE id = ? AND customer_id = ?')->execute([$addrId, (string)$session['customer_id']]);
+        sendJson(200, ['success' => true, 'message' => 'Address removed.']);
+    }
+
+    // PUT customer/profile
+    if ($route === 'customer/profile' && ($method === 'PUT' || $method === 'POST')) {
+        $session = getActiveCustomer($pdo);
+        if (!$session) sendJson(401, ['error' => 'Unauthorized.']);
+
+        $body = getJsonBody();
+        $name = trim((string)($body['name'] ?? ''));
+        $phone = trim((string)($body['phone'] ?? ''));
+        $newPass = (string)($body['password'] ?? '');
+
+        $cTable = getCustomerTableName($pdo);
+        if ($newPass) {
+            $newHash = password_hash($newPass, PASSWORD_DEFAULT);
+            $pdo->prepare("UPDATE {$cTable} SET name = ?, phone = ?, password_hash = ?, updated_at = NOW() WHERE id = ?")->execute([$name, $phone, $newHash, (string)$session['customer_id']]);
+        } else {
+            $pdo->prepare("UPDATE {$cTable} SET name = ?, phone = ?, updated_at = NOW() WHERE id = ?")->execute([$name, $phone, (string)$session['customer_id']]);
+        }
+        sendJson(200, ['success' => true, 'message' => 'Account profile updated successfully.']);
     }
 
     // --- 7. Razorpay Payments ---
@@ -1000,7 +1284,8 @@ try {
                     'id' => $json['id'] ?? null,
                     'email' => $json['email'] ?? $email,
                     'name' => trim(($json['first_name'] ?? '') . ' ' . ($json['last_name'] ?? ''))
-                ]
+                ],
+                'verified_pickup' => 'warehouse'
             ]);
         } else {
             $errMsg = $json['message'] ?? 'Failed to authenticate with Shiprocket API.';
@@ -1239,8 +1524,9 @@ try {
         $sStmt = $pdo->query('SELECT value_json FROM settings WHERE key_name = "shiprocket"');
         $sRow = $sStmt ? $sStmt->fetch() : null;
         $srCfg = $sRow ? json_decode($sRow['value_json'], true) : [];
-        $pickupLocation = trim((string)($srCfg['pickupLocation'] ?? (defined('SHIPROCKET_PICKUP_LOCATION') ? SHIPROCKET_PICKUP_LOCATION : 'Primary')));
-        if (!$pickupLocation) $pickupLocation = 'Primary';
+        $configuredPickup = trim((string)($srCfg['pickupLocation'] ?? (defined('SHIPROCKET_PICKUP_LOCATION') ? SHIPROCKET_PICKUP_LOCATION : 'warehouse')));
+        if (!$configuredPickup || strcasecmp($configuredPickup, 'Primary') === 0) $configuredPickup = 'warehouse';
+        $pickupLocation = $configuredPickup;
 
         $token = getShiprocketToken($pdo);
         if (!$token) {
@@ -1249,6 +1535,36 @@ try {
                 'error' => 'Shiprocket API token could not be obtained. Please verify Shiprocket email and password in Shipping Settings.'
             ];
         }
+
+        // Dynamically resolve exact pickup nickname from Shiprocket API
+        try {
+            $chPick = curl_init('https://apiv2.shiprocket.in/v1/external/settings/company/pickup');
+            curl_setopt($chPick, CURLOPT_HTTPHEADER, ["Authorization: Bearer {$token}", "Content-Type: application/json"]);
+            curl_setopt($chPick, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($chPick, CURLOPT_TIMEOUT, 8);
+            $pickResp = curl_exec($chPick);
+            $pickCode = curl_getinfo($chPick, CURLINFO_HTTP_CODE);
+            curl_close($chPick);
+
+            if ($pickCode === 200 && !empty($pickResp)) {
+                $pickJson = json_decode((string)$pickResp, true);
+                $pickList = $pickJson['data']['shipping_address'] ?? [];
+                if (!empty($pickList) && is_array($pickList)) {
+                    $matched = false;
+                    foreach ($pickList as $addr) {
+                        $loc = trim((string)($addr['pickup_location'] ?? ''));
+                        if (strcasecmp($loc, $pickupLocation) === 0) {
+                            $pickupLocation = $loc;
+                            $matched = true;
+                            break;
+                        }
+                    }
+                    if (!$matched && !empty($pickList[0]['pickup_location'])) {
+                        $pickupLocation = trim((string)$pickList[0]['pickup_location']);
+                    }
+                }
+            }
+        } catch (Throwable $pErr) {}
 
         // Parse customer destination address
         $destAddress = trim((string)$order['shipping_address']);
@@ -1299,8 +1615,8 @@ try {
         $orderItems = [];
         if (!empty($items)) {
             foreach ($items as $it) {
-                $name = $it['product_name'] ?? 'ODD Perfume';
-                $sku = 'ODD-' . strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $name), 0, 10));
+                $name = $it['name'] ?? $it['product_name'] ?? 'ODD Perfume';
+                $sku = !empty($it['sku']) ? $it['sku'] : ('ODD-' . strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $name), 0, 10)));
                 $units = max(1, (int)($it['quantity'] ?? 1));
                 $sellingPrice = (float)($it['price'] ?? ($totalAmount / $units));
                 $orderItems[] = [
@@ -1327,6 +1643,23 @@ try {
 
         $orderDate = !empty($order['created_at']) ? date('Y-m-d H:i', strtotime($order['created_at'])) : date('Y-m-d H:i');
 
+        $rawPhone = preg_replace('/[^0-9]/', '', (string)$order['customer_phone']);
+        if (strlen($rawPhone) > 10 && substr($rawPhone, 0, 2) === '91') {
+            $rawPhone = substr($rawPhone, 2);
+        }
+        $phone10 = strlen($rawPhone) >= 10 ? substr($rawPhone, -10) : str_pad($rawPhone ?: '9876543210', 10, '9', STR_PAD_LEFT);
+
+        $cleanStreet = preg_replace('/,\s*[^,]+-\s*\d{6}\s*$/', '', $destAddress);
+        $cleanStreet = preg_replace('/-\s*\d{6}\s*$/', '', $cleanStreet);
+        $cleanStreet = trim($cleanStreet);
+        if (strlen($cleanStreet) < 5) {
+            $cleanStreet = $destAddress;
+        }
+        if (strlen($cleanStreet) < 5) {
+            $cleanStreet = 'Address: ' . $destAddress;
+        }
+        $cleanStreet = substr($cleanStreet, 0, 100);
+
         $srOrderPayload = [
             'order_id' => $orderId,
             'order_date' => $orderDate,
@@ -1335,15 +1668,27 @@ try {
             'comment' => 'ODD Luxury Perfume Order',
             'billing_customer_name' => $firstName,
             'billing_last_name' => $lastName,
-            'billing_address' => substr($destAddress, 0, 100),
+            'billing_address' => $cleanStreet,
             'billing_address_2' => '',
             'billing_city' => $destCity,
             'billing_pincode' => $pincode,
             'billing_state' => $destState,
             'billing_country' => 'India',
             'billing_email' => $order['customer_email'] ?: 'orders@oddperfume.com',
-            'billing_phone' => preg_replace('/[^0-9]/', '', $order['customer_phone'] ?: '9876543210'),
+            'billing_phone' => $phone10,
+
             'shipping_is_billing' => true,
+            'shipping_customer_name' => $firstName,
+            'shipping_last_name' => $lastName,
+            'shipping_address' => $cleanStreet,
+            'shipping_address_2' => '',
+            'shipping_city' => $destCity,
+            'shipping_pincode' => $pincode,
+            'shipping_state' => $destState,
+            'shipping_country' => 'India',
+            'shipping_email' => $order['customer_email'] ?: 'orders@oddperfume.com',
+            'shipping_phone' => $phone10,
+
             'order_items' => $orderItems,
             'payment_method' => $isCod ? 'COD' : 'Prepaid',
             'shipping_charges' => (float)($order['shipping_fee'] ?? 0),

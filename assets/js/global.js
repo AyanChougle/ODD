@@ -463,7 +463,7 @@ function updateCartUI() {
         </div>
         <div class="cart-item-details">
           <h4>${prod.name}</h4>
-          <div class="cart-item-price">₹${price.toLocaleString('en-IN')} <span style="font-size:0.75rem; text-decoration:line-through; color:var(--text-muted);">₹${prod.originalPrice.toLocaleString('en-IN')}</span></div>
+          <div class="cart-item-price">₹${price.toLocaleString('en-IN')}${(prod.originalPrice && Number(prod.originalPrice) > price) ? ` <span style="font-size:0.75rem; text-decoration:line-through; color:var(--text-muted); margin-left:0.35rem;">₹${Number(prod.originalPrice).toLocaleString('en-IN')}</span>` : ''}</div>
           <div class="qty-controls">
             <button type="button" aria-label="Remove one ${prod.name}" onclick="updateCartQty('${item.id}', -1)">−</button>
             <span>${item.qty}</span>

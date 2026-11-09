@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ODD Admin & Inventory Management Portal</title>
-  <link rel="stylesheet" href="assets/css/global.css?v=3.2">
+  <link rel="stylesheet" href="assets/css/global.css?v=5.0">
   <link rel="stylesheet" href="assets/css/admin.css?v=4.0">
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="assets/js/html5-qrcode.min.js"></script>
@@ -854,10 +854,9 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.2rem;">
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Pickup Location Name</label>
-                <input type="text" id="shiprocket-pickup-location" class="admin-input" placeholder="Primary"
-                  value="Primary" required>
-                <small style="color:var(--admin-text-muted); font-size:0.75rem;">Registered Pickup Location nickname in
-                  your Shiprocket account.</small>
+                <input type="text" id="shiprocket-pickup-location" class="admin-input" placeholder="warehouse"
+                  value="warehouse" required>
+                <small style="color:var(--admin-text-muted); font-size:0.75rem;">Registered Pickup Location nickname in your Shiprocket account (e.g. <code>warehouse</code>). Must match exactly and status must be Active.</small>
               </div>
 
               <div class="admin-form-group" style="margin:0;">

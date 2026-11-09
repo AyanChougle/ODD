@@ -1242,7 +1242,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .footer-nav-columns {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 2rem;
     padding: 3rem 0;
 }
@@ -1277,19 +1277,64 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .footer-contact-link {
+    display: block;
     color: #CCCCCC;
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    margin-bottom: 0.5rem;
+    transition: color var(--transition-fast, 0.2s ease);
 }
 
 .footer-contact-link:hover {
     color: var(--brand-orange);
+    text-decoration: underline;
 }
 
 .footer-contact-hours {
-    color: #666666;
+    display: block;
+    color: #888888;
     font-size: 0.8rem;
-    margin-top: 0.3rem;
+    margin-top: 0.4rem;
+    line-height: 1.4;
+}
+
+.footer-social-icons-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.65rem !important;
+    margin-top: 0.75rem !important;
+}
+
+.footer-social-icon-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 50% !important;
+    border: 1px solid #2e323d !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: #CCCCCC !important;
+    transition: all var(--transition-fast, 0.2s ease) !important;
+    text-decoration: none !important;
+}
+
+.footer-social-icon-btn svg {
+    display: block !important;
+    color: #CCCCCC !important;
+}
+
+.footer-social-icon-btn:hover {
+    border-color: var(--brand-orange, #E86B32) !important;
+    color: var(--brand-orange, #E86B32) !important;
+    background: rgba(232, 107, 50, 0.15) !important;
+    transform: translateY(-2px) !important;
+}
+
+.footer-social-icon-btn:hover svg {
+    color: var(--brand-orange, #E86B32) !important;
 }
 
 .payment-pills-row {

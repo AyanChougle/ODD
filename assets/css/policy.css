@@ -253,3 +253,205 @@
 .cart-page-stock-warning { color:#a74632; font-size:.76rem; line-height:1.5; }
 #cart-page-checkout.is-disabled { opacity:.5; cursor:not-allowed; }
 @media(max-width:640px) { .cart-page-line { grid-template-columns:82px minmax(0,1fr); gap:.8rem; } .cart-page-product-image { align-self:start; } .cart-page-line-total { grid-column:2; align-self:auto; margin-top:-.25rem; } .cart-page-product-copy>a { font-size:1.15rem; } }
+
+/* --- Comprehensive Luxury Policy Documents --- */
+.policy-container {
+  max-width: 860px;
+  margin: 3.5rem auto 5rem;
+  padding: 0 1.5rem;
+  color: #222222;
+  font-family: var(--font-sans, 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  line-height: 1.85;
+}
+
+.policy-block {
+  margin-bottom: 2.75rem;
+  padding-bottom: 2.25rem;
+  border-bottom: 1px solid #ECE7E1;
+}
+
+.policy-block:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.policy-block h2 {
+  font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif);
+  font-size: 1.55rem;
+  font-weight: 500;
+  color: #121318;
+  margin: 0 0 1rem;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+}
+
+.policy-block h3 {
+  font-family: var(--font-sans, 'DM Sans', sans-serif);
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: #121318;
+  margin: 1.5rem 0 0.6rem;
+  letter-spacing: -0.01em;
+}
+
+.policy-block p {
+  color: #4A4A4A;
+  font-size: 0.95rem;
+  line-height: 1.85;
+  margin: 0 0 1rem;
+}
+
+.policy-block strong {
+  color: #121318;
+  font-weight: 600;
+}
+
+.policy-block ul, .policy-block ol {
+  margin: 0 0 1.25rem 1.4rem;
+  padding-left: 0.25rem;
+  color: #4A4A4A;
+  font-size: 0.95rem;
+  line-height: 1.85;
+}
+
+.policy-block li {
+  margin-bottom: 0.6rem;
+}
+
+.policy-block li strong {
+  color: #121318;
+}
+
+.policy-callout {
+  background: #FAF6F0;
+  border-left: 3px solid #E86B32;
+  border-radius: 0 8px 8px 0;
+  padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0;
+  font-size: 0.92rem;
+  color: #1A1A1A;
+  line-height: 1.75;
+}
+
+.policy-callout strong {
+  color: #E86B32;
+  font-weight: 700;
+}
+
+.policy-table-wrapper {
+  overflow-x: auto;
+  margin: 1.75rem 0;
+  border: 1px solid #E5E1DA;
+  border-radius: 8px;
+  background: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.policy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+.policy-table th {
+  background: #F5F2EB;
+  padding: 0.85rem 1.15rem;
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  border-bottom: 1px solid #E5E1DA;
+  color: #121318;
+}
+
+.policy-table td {
+  padding: 0.9rem 1.15rem;
+  border-bottom: 1px solid #EFECE6;
+  color: #4A4A4A;
+  line-height: 1.6;
+}
+
+.policy-table tr:last-child td {
+  border-bottom: none;
+}
+
+.policy-table tr:nth-child(even) td {
+  background: #FAF9F6; /* Luxury soft tint - clean neutral, no red */
+}
+
+.policy-table tr:hover td {
+  background: #F3EFE7;
+}
+
+.policy-contact-card {
+  background: #FFFFFF;
+  border: 1px solid #E5E1DA;
+  border-radius: 10px;
+  padding: 2rem;
+  margin-top: 2rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+}
+
+.policy-contact-card h3 {
+  margin-top: 0;
+  font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif);
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #121318;
+  margin-bottom: 0.75rem;
+}
+
+.policy-contact-card p {
+  margin: 0;
+  line-height: 1.8;
+  color: #4A4A4A;
+  font-size: 0.93rem;
+}
+
+.policy-contact-card strong {
+  color: #121318;
+}
+
+.policy-contact-card a {
+  color: #E86B32;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Footer Social Icons Luxury Support (fallback if global.css cached) */
+.footer-social-icons-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.65rem !important;
+  margin-top: 0.75rem !important;
+}
+
+.footer-social-icon-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  border: 1px solid #2e323d !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #CCCCCC !important;
+  text-decoration: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.footer-social-icon-btn:hover {
+  border-color: #E86B32 !important;
+  color: #E86B32 !important;
+  background: rgba(232, 107, 50, 0.15) !important;
+  transform: translateY(-2px) !important;
+}
+
+.footer-social-icon-btn svg {
+  display: block !important;
+  color: #CCCCCC !important;
+}

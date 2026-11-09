@@ -110,9 +110,52 @@ function initCustomerCheckoutSession() {
       }
       if (emailInput && !emailInput.value) emailInput.value = session.email;
       if (phoneInput && !phoneInput.value && session.phone) phoneInput.value = session.phone;
+
+      // Auto-populate delivery address if available
+      (async () => {
+        try {
+          const aRes = await fetch('/api/customer/addresses', { credentials: 'include' });
+          if (aRes.ok) {
+            const aData = await aRes.json();
+            const list = Array.isArray(aData.addresses) ? aData.addresses : [];
+            const defAddr = list.find(a => a.isDefault) || list[0];
+            if (defAddr) {
+              const addrInput = document.getElementById('chk-address');
+              const cityInput = document.getElementById('chk-city');
+              const pinInput = document.getElementById('chk-pincode');
+              if (addrInput && !addrInput.value) addrInput.value = defAddr.street || defAddr.address || '';
+              if (cityInput && !cityInput.value) cityInput.value = defAddr.city || '';
+              if (pinInput && !pinInput.value) pinInput.value = defAddr.pin || defAddr.pincode || '';
+            }
+          }
+        } catch (e) {}
+      })();
     }
   } catch (e) {}
 }
+
+function signOutCustomerCheckout() {
+  try {
+    localStorage.removeItem('odd_customer_session');
+  } catch (e) {}
+  const banner = document.getElementById('checkout-account-banner');
+  if (banner) banner.style.display = 'none';
+
+  const fNameInput = document.getElementById('chk-fname');
+  const lNameInput = document.getElementById('chk-lname');
+  const emailInput = document.getElementById('chk-email');
+  const phoneInput = document.getElementById('chk-phone');
+
+  if (fNameInput) fNameInput.value = '';
+  if (lNameInput) lNameInput.value = '';
+  if (emailInput) emailInput.value = '';
+  if (phoneInput) phoneInput.value = '';
+
+  if (typeof showToast === 'function') {
+    showToast('Signed out of customer account. You can now checkout as a guest.');
+  }
+}
+window.signOutCustomerCheckout = signOutCustomerCheckout;
 
 function getActiveCouponDetails() {
   const code = (localStorage.getItem('odd_coupon') || localStorage.getItem('odd_coupon_code') || '').trim().toUpperCase();
@@ -341,8 +384,11 @@ function removeCheckoutCoupon() {
   if (typeof showToast === 'function') showToast('Coupon removed.');
 }
 
+let _orderInProgress = false;
 async function processPageOrder(e) {
   if (e) e.preventDefault();
+  if (_orderInProgress) return;
+  _orderInProgress = true;
 
   let cart = [];
   try {
@@ -376,6 +422,7 @@ async function processPageOrder(e) {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Confirm & Place Order';
       }
+      _orderInProgress = false;
       return;
     }
   }
@@ -439,7 +486,8 @@ async function processPageOrder(e) {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Confirm & Place Order';
     }
-    return;
+    _orderInProgress = false;
+      return;
   }
 
   // Check coupon usage limit against email before finalizing
@@ -454,7 +502,8 @@ async function processPageOrder(e) {
           submitBtn.disabled = false;
           submitBtn.textContent = 'Confirm & Place Order';
         }
-        return;
+        _orderInProgress = false;
+      return;
       }
     } catch (e) {}
   }
@@ -527,7 +576,8 @@ async function processPageOrder(e) {
           submitBtn.disabled = false;
           submitBtn.textContent = 'Confirm & Place Order';
         }
-        return;
+        _orderInProgress = false;
+      return;
       }
 
       const options = {
@@ -535,9 +585,6 @@ async function processPageOrder(e) {
         amount: amountPaisa,
         currency: 'INR',
         name: 'ODD Perfume',
-        description: 'Fragrance Order ' + orderId,
-        image: 'assets/images/Phantom Single bottle.png',
-        ...(rzpServerOrderId ? { order_id: rzpServerOrderId } : {}),
         description: 'Fragrance Order ' + orderId,
         image: 'assets/images/Phantom Single bottle.png',
         ...(rzpServerOrderId ? { order_id: rzpServerOrderId } : {}),
@@ -561,7 +608,8 @@ async function processPageOrder(e) {
                   submitBtn.disabled = false;
                   submitBtn.textContent = 'Confirm & Place Order';
                 }
-                return;
+                _orderInProgress = false;
+      return;
               }
             } catch (vErr) {
               console.warn('Signature verification check note:', vErr);
@@ -697,6 +745,7 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
         submitBtn.disabled = false;
         submitBtn.textContent = 'Confirm & Place Order';
       }
+      _orderInProgress = false;
       return;
     }
 
@@ -713,7 +762,8 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
       submitBtn.disabled = false;
       submitBtn.textContent = 'Confirm & Place Order';
     }
-    return;
+    _orderInProgress = false;
+      return;
   }
 
   // 3. Deduct Inventory from odd_admin_inventory (storefront local sync)
@@ -793,6 +843,7 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
 
   // 7. Success UI Feedback & Redirect
   alert(`Order Confirmed! Order ID: ${assignedOrderId}\nPayment: ${paymentMethod}\nShipping: ₹${finalShipping}\nTotal Payable: ₹${serverTotal.toLocaleString('en-IN')}\nThank you for shopping with ODD Perfume.`);
+  _orderInProgress = false;
   window.location.href = 'order-tracking.html?orderId=' + encodeURIComponent(assignedOrderId);
 }
 
@@ -800,8 +851,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initCustomerCheckoutSession();
   renderCheckoutSummary();
 
-  const checkoutForm = document.getElementById('checkout-form');
-  if (checkoutForm) {
-    checkoutForm.addEventListener('submit', processPageOrder);
+  // Form submission handled by inline onsubmit in checkout.html (no duplicate listener)
+});
+
+
+// Keep checkout summary synchronized whenever cart changes in drawer or other tabs
+document.addEventListener('odd:cart-updated', () => {
+  if (typeof renderCheckoutSummary === 'function') {
+    renderCheckoutSummary();
   }
 });

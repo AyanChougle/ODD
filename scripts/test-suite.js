@@ -343,6 +343,58 @@ async function runTests() {
     assert(emptyCustOrders.status === 200, 'GET /api/customer/orders for unknown user returns HTTP 200');
     assert(Array.isArray(emptyCustOrders.data.orders) && emptyCustOrders.data.orders.length === 0, 'Returns clean empty orders array when no database records match');
 
+    // 13. Testing Customer Authentication & Delivery Addresses API
+    console.log('\n[13] Testing Customer Accounts & Database Addresses API:');
+    const custEmail = `cust_${Date.now()}@oddperfume.com`;
+    const regRes = await request('/api/customer/register', {
+      method: 'POST',
+      body: {
+        name: 'Ayan Perfumer',
+        email: custEmail,
+        phone: '9930458591',
+        password: 'SecureCustomerPass123!'
+      }
+    });
+    assert(regRes.status === 201, 'POST /api/customer/register creates account with HTTP 201');
+    assert(regRes.data.authenticated === true || regRes.data.success === true, 'Registration returns authenticated customer payload');
+    
+    const custSetCookie = regRes.headers['set-cookie'];
+    assert(custSetCookie && custSetCookie[0].includes('odd_customer_session'), 'Registration issues persistent odd_customer_session cookie');
+    const custCookie = custSetCookie ? custSetCookie[0].split(';')[0] : '';
+
+    const addAddrRes = await request('/api/customer/addresses', {
+      method: 'POST',
+      headers: { Cookie: custCookie },
+      body: {
+        name: 'Ayan Perfumer',
+        street: '76A, Edu Manzil, Shop No 1, Near Paradise Cinemas',
+        city: 'Mumbai',
+        pin: '400016',
+        phone: '9930458591'
+      }
+    });
+    assert(addAddrRes.status === 201, 'POST /api/customer/addresses persists address with HTTP 201');
+
+    const getAddrsRes = await request('/api/customer/addresses', {
+      headers: { Cookie: custCookie }
+    });
+    assert(getAddrsRes.status === 200, 'GET /api/customer/addresses returns HTTP 200');
+    assert(Array.isArray(getAddrsRes.data.addresses) && getAddrsRes.data.addresses.length >= 1, 'Returns saved addresses list from database');
+    assert(getAddrsRes.data.addresses[0].city === 'Mumbai', 'Saved address maintains exact data attributes');
+
+    const custSessRes = await request('/api/customer/session', {
+      headers: { Cookie: custCookie }
+    });
+    assert(custSessRes.status === 200, 'GET /api/customer/session succeeds with HTTP 200');
+    assert(custSessRes.data.authenticated === true, 'Session is verified as authenticated customer');
+    assert(custSessRes.data.customer.email === custEmail, 'Session belongs to registered customer');
+
+    const custLogoutRes = await request('/api/customer/logout', {
+      method: 'POST',
+      headers: { Cookie: custCookie }
+    });
+    assert(custLogoutRes.status === 200, 'POST /api/customer/logout clears session with HTTP 200');
+
   } catch (err) {
     console.error('Test execution error:', err);
     failed++;
