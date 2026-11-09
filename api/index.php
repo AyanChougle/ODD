@@ -6,15 +6,15 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/mailer.php';
-
-// Security Headers
+// Immediately set JSON header for all API responses
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header('Cache-Control: no-store, no-cache, must-revalidate');
+
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/mailer.php';
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
@@ -47,10 +47,221 @@ function ensureInquiriesTable(PDO $pdo): void {
     } catch (Throwable $e) {}
 }
 
-function sendJson(int $status, array $data): void {
+function sendJson(int $status, $data): void {
+    if (!is_array($data)) {
+        $data = is_null($data) ? [] : ['data' => $data];
+    }
     http_response_code($status);
     echo json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+function ensureDatabaseSchema(PDO $pdo): void {
+    static $ensured = false;
+    if ($ensured) return;
+    $ensured = true;
+
+    try {
+        // 1. Staff table
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS staff (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(128) NOT NULL,
+                email VARCHAR(191) NOT NULL UNIQUE,
+                password_hash VARCHAR(255) NOT NULL,
+                role ENUM("admin", "warehouse", "orders", "finance", "marketing") NOT NULL DEFAULT "warehouse",
+                active TINYINT(1) NOT NULL DEFAULT 1,
+                last_login DATETIME NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_staff_email (email)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ');
+
+        // 1B. Staff accounts compatibility table
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS staff_accounts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(128) NOT NULL,
+                email VARCHAR(191) NOT NULL UNIQUE,
+                password_hash VARCHAR(255) NOT NULL,
+                role ENUM("admin", "warehouse", "orders", "finance", "marketing") NOT NULL DEFAULT "warehouse",
+                status ENUM("active", "inactive") NOT NULL DEFAULT "active",
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_staff_acc_email (email)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ');
+
+        // 2. Ensure default admin and team accounts exist
+        $adminHash = '$2b$10$hrFesidrsQMYhJIueWeDC.b/Tr876Hn0ixWxpHOFe6J3MMdS6CSXa'; // ODDAdmin2026!Secure
+        $pdo->exec("
+            INSERT INTO staff (name, email, password_hash, role, active)
+            VALUES ('Store Administrator', 'admin@oddperfume.com', '{$adminHash}', 'admin', 1)
+            ON DUPLICATE KEY UPDATE role = 'admin', active = 1;
+        ");
+        $pdo->exec("
+            INSERT INTO staff_accounts (name, email, password_hash, role, status)
+            VALUES ('Store Administrator', 'admin@oddperfume.com', '{$adminHash}', 'admin', 'active')
+            ON DUPLICATE KEY UPDATE role = 'admin', status = 'active';
+        ");
+
+        // Nitin admin accounts (with and without s)
+        $pdo->exec("
+            INSERT INTO staff (name, email, password_hash, role, active)
+            VALUES ('Nitin', 'nitin@oddperfumes.com', '{$adminHash}', 'admin', 1)
+            ON DUPLICATE KEY UPDATE role = 'admin', active = 1;
+        ");
+        $pdo->exec("
+            INSERT INTO staff_accounts (name, email, password_hash, role, status)
+            VALUES ('Nitin', 'nitin@oddperfumes.com', '{$adminHash}', 'admin', 'active')
+            ON DUPLICATE KEY UPDATE role = 'admin', status = 'active';
+        ");
+        $pdo->exec("
+            INSERT INTO staff (name, email, password_hash, role, active)
+            VALUES ('Nitin', 'nitin@oddperfume.com', '{$adminHash}', 'admin', 1)
+            ON DUPLICATE KEY UPDATE role = 'admin', active = 1;
+        ");
+        $pdo->exec("
+            INSERT INTO staff_accounts (name, email, password_hash, role, status)
+            VALUES ('Nitin', 'nitin@oddperfume.com', '{$adminHash}', 'admin', 'active')
+            ON DUPLICATE KEY UPDATE role = 'admin', status = 'active';
+        ");
+
+        // 3. Sessions table
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS sessions (
+                id VARCHAR(128) PRIMARY KEY,
+                user_type ENUM("staff", "customer") NOT NULL,
+                user_id VARCHAR(64) NOT NULL,
+                role VARCHAR(64) NOT NULL,
+                csrf_token VARCHAR(128) NOT NULL,
+                ip_address VARCHAR(64) DEFAULT NULL,
+                user_agent VARCHAR(255) DEFAULT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME NOT NULL,
+                INDEX idx_sessions_expires (expires_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ');
+
+        // 4. Products table
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS products (
+                id VARCHAR(64) PRIMARY KEY,
+                sku VARCHAR(64) NOT NULL UNIQUE,
+                name VARCHAR(128) NOT NULL,
+                price INT NOT NULL DEFAULT 1599,
+                original_price INT NULL DEFAULT NULL,
+                stock INT NOT NULL DEFAULT 0,
+                active TINYINT(1) NOT NULL DEFAULT 1,
+                tagline VARCHAR(255),
+                notes VARCHAR(255),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ');
+
+        // Seed 3 products if products table is empty
+        $cnt = (int)$pdo->query('SELECT COUNT(*) FROM products')->fetchColumn();
+        if ($cnt === 0) {
+            $pdo->exec("
+                INSERT INTO products (id, sku, name, price, original_price, stock, active, tagline, notes) VALUES
+                ('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, NULL, 240, 1, 'Unseen. Unforgotten. Dominant.', 'Oud · Amber · Smoky Woods'),
+                ('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, NULL, 180, 1, 'Clear Mind. Sharp Presence.', 'Citrus · Black Tea · Clean Woods'),
+                ('first-move', 'ODD-FM-002', 'ODD First Move', 1599, NULL, 0, 1, 'Start First. Stay Ahead.', 'Pineapple · Woods · Smoky Musk');
+            ");
+        }
+
+        // 5. Orders table
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS orders (
+                id VARCHAR(64) PRIMARY KEY,
+                tracking_token VARCHAR(96) NOT NULL UNIQUE,
+                customer_name VARCHAR(191) NOT NULL,
+                customer_email VARCHAR(191) NOT NULL,
+                customer_phone VARCHAR(32) NOT NULL,
+                shipping_address TEXT NOT NULL,
+                subtotal INT NOT NULL,
+                discount_amount INT NOT NULL DEFAULT 0,
+                coupon_code VARCHAR(64) DEFAULT NULL,
+                shipping_fee INT NOT NULL DEFAULT 0,
+                total_amount INT NOT NULL,
+                payment_method VARCHAR(64) NOT NULL,
+                payment_status ENUM("Pending", "Paid", "Failed", "Refunded") NOT NULL DEFAULT "Pending",
+                status ENUM("Confirmed", "Processing", "Packed", "Dispatched", "Delivered", "Cancelled") NOT NULL DEFAULT "Confirmed",
+                gateway VARCHAR(64) NOT NULL,
+                razorpay_order_id VARCHAR(128) DEFAULT NULL,
+                razorpay_payment_id VARCHAR(128) DEFAULT NULL,
+                stock_deducted TINYINT(1) NOT NULL DEFAULT 1,
+                courier_name VARCHAR(64) DEFAULT NULL,
+                tracking_number VARCHAR(64) DEFAULT NULL,
+                tracking_url TEXT DEFAULT NULL,
+                label_url TEXT DEFAULT NULL,
+                dispatched_at DATETIME NULL,
+                delivered_at DATETIME NULL,
+                cancelled_at DATETIME NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_orders_email (customer_email),
+                INDEX idx_orders_phone (customer_phone),
+                INDEX idx_orders_status (status),
+                INDEX idx_orders_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ');
+
+        // 6. Settings table
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS settings (
+                key_name VARCHAR(64) PRIMARY KEY,
+                value_json TEXT NOT NULL,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ');
+
+        // 7. Coupons table
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS coupons (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                code VARCHAR(64) NOT NULL UNIQUE,
+                discount_percent INT NOT NULL,
+                min_spend INT NOT NULL DEFAULT 0,
+                max_discount INT NOT NULL DEFAULT 0,
+                max_uses INT NOT NULL DEFAULT 0,
+                used_count INT NOT NULL DEFAULT 0,
+                per_user_limit INT NOT NULL DEFAULT 1,
+                start_date DATETIME NULL,
+                expiry_date DATETIME NULL,
+                active TINYINT(1) NOT NULL DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_coupons_code (code)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ');
+
+        $couponCnt = (int)$pdo->query('SELECT COUNT(*) FROM coupons')->fetchColumn();
+        if ($couponCnt === 0) {
+            $pdo->exec("
+                INSERT INTO coupons (code, discount_percent, min_spend, max_discount, max_uses, used_count, per_user_limit, active)
+                VALUES ('LAUNCH20', 20, 0, 500, 500, 0, 1, 1);
+            ");
+        }
+
+        // 8. Order items table
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS order_items (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                order_id VARCHAR(64) NOT NULL,
+                product_id VARCHAR(64) NOT NULL,
+                sku VARCHAR(64) NOT NULL,
+                name VARCHAR(128) NOT NULL,
+                price INT NOT NULL,
+                quantity INT NOT NULL,
+                line_total INT NOT NULL,
+                INDEX idx_items_order (order_id),
+                INDEX idx_items_sku (sku)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ');
+    } catch (Throwable $e) {
+        error_log("Database schema initialization notice: " . $e->getMessage());
+    }
 }
 
 function getRazorpayConfig(PDO $pdo): array {
@@ -96,16 +307,38 @@ function getStaffSession(): ?array {
     }
     if (!$sessionId) return null;
 
-    $pdo = getDb();
-    $stmt = $pdo->prepare('
-        SELECT s.*, st.name, st.email, st.role, st.active
-        FROM sessions s
-        JOIN staff st ON s.user_id = st.id
-        WHERE s.id = ? AND s.user_type = "staff" AND s.expires_at > NOW()
-    ');
-    $stmt->execute([$sessionId]);
-    $session = $stmt->fetch();
-    return ($session && $session['active']) ? $session : null;
+    try {
+        $pdo = getDb();
+        // 1. Fetch valid session record
+        $stmt = $pdo->prepare('SELECT * FROM sessions WHERE id = ? AND user_type = "staff" AND expires_at > NOW()');
+        $stmt->execute([$sessionId]);
+        $session = $stmt->fetch();
+        if (!$session) return null;
+
+        $userId = $session['user_id'];
+
+        // 2. Look up in staff table
+        try {
+            $stStmt = $pdo->prepare('SELECT id, name, email, role, active FROM staff WHERE id = ?');
+            $stStmt->execute([$userId]);
+            $st = $stStmt->fetch();
+            if ($st && !empty($st['active'])) {
+                return array_merge($session, $st);
+            }
+        } catch (Throwable $e1) {}
+
+        // 3. Fallback: Look up in staff_accounts table
+        try {
+            $saStmt = $pdo->prepare('SELECT id, name, email, role, (status = "active") as active FROM staff_accounts WHERE id = ?');
+            $saStmt->execute([$userId]);
+            $sa = $saStmt->fetch();
+            if ($sa && !empty($sa['active'])) {
+                return array_merge($session, $sa);
+            }
+        } catch (Throwable $e2) {}
+    } catch (Throwable $e) {}
+
+    return null;
 }
 
 function getCustomerSession(): ?array {
@@ -151,9 +384,9 @@ function requireStaffAuth(?string $perm = null): array {
     return $session;
 }
 
-$pdo = getDb();
-
 try {
+    $pdo = getDb();
+    ensureDatabaseSchema($pdo);
     // --- 1. Staff Authentication ---
     if ($route === 'auth/login' && $method === 'POST') {
         $body = getJsonBody();
@@ -2329,7 +2562,15 @@ try {
         $stmt = $pdo->prepare('SELECT value_json FROM settings WHERE key_name = ?');
         $stmt->execute([$key]);
         $row = $stmt->fetch();
-        $data = $row ? json_decode($row['value_json'], true) : [];
+        $data = $row && !empty($row['value_json']) ? json_decode($row['value_json'], true) : [];
+        if (!is_array($data)) {
+            $data = [];
+        }
+        if ($key === 'banner' && empty($data)) {
+            $data = ['active' => true, 'text' => "WE'RE LIVE. Take 20% OFF your first order with code LAUNCH20", 'code' => 'LAUNCH20'];
+        } elseif ($key === 'shipping' && empty($data)) {
+            $data = ['enabled' => true, 'standardRate' => 80, 'freeThreshold' => 1500, 'expressRate' => 180, 'timeline' => '3–5 Business Days Across India'];
+        }
 
         if ($key === 'razorpay') {
             if (empty($data['keyId'])) {
@@ -2425,39 +2666,43 @@ try {
         $smtpConfig = getEffectiveSmtpConfig($pdo);
         $targetMailbox = $smtpConfig['fromEmail'] ?: 'hello@oddperfume.com';
 
-        $emailHtml = "
-        <!DOCTYPE html>
-        <html>
-        <head><meta charset='UTF-8'></head>
-        <body style='font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; color:#111; background:#f4f4f5; margin:0; padding:20px;'>
-          <div style='max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; border:1px solid #e5e7eb;'>
-            <div style='background:#111827; padding:20px 24px; text-align:center;'>
-              <h1 style='color:#ffffff; margin:0; font-size:22px; letter-spacing:0.05em;'>ODD<span style='color:#E86B32;'>.</span></h1>
-              <p style='color:#9ca3af; margin:4px 0 0; font-size:11px; text-transform:uppercase; letter-spacing:0.1em;'>Studio Customer Care &middot; New Inquiry</p>
-            </div>
-            <div style='padding:24px 30px;'>
-              <h2 style='font-size:16px; margin-top:0; color:#111827;'>New Customer Message from " . htmlspecialchars($name) . "</h2>
-              
-              <div style='background:#f9fafb; border:1px solid #f3f4f6; border-radius:6px; padding:14px; margin:16px 0; font-size:13px;'>
-                <div style='margin-bottom:6px;'><strong>Sender:</strong> " . htmlspecialchars($name) . "</div>
-                <div style='margin-bottom:6px;'><strong>Email:</strong> <a href='mailto:" . htmlspecialchars($email) . "' style='color:#E86B32; text-decoration:none; font-weight:600;'>" . htmlspecialchars($email) . "</a></div>
-                <div style='margin-bottom:6px;'><strong>Subject:</strong> " . htmlspecialchars($subject) . "</div>
-                <div><strong>Received:</strong> " . date('Y-m-d H:i:s') . " IST</div>
-              </div>
-
-              <h3 style='font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin:20px 0 8px;'>Message Content</h3>
-              <div style='background:#ffffff; border-left:3px solid #E86B32; padding:12px 16px; font-size:14px; line-height:1.6; color:#374151; white-space:pre-wrap;'>" . htmlspecialchars($message) . "</div>
-
-              <div style='margin-top:24px; text-align:center;'>
-                <a href='mailto:" . htmlspecialchars($email) . "?subject=Re:%20" . rawurlencode($subject) . "' style='background:#E86B32; color:#ffffff; padding:10px 22px; text-decoration:none; font-weight:600; border-radius:6px; font-size:13px; display:inline-block;'>Reply to " . htmlspecialchars($name) . "</a>
-              </div>
-            </div>
-            <div style='background:#f9fafb; border-top:1px solid #e5e7eb; padding:14px; text-align:center; font-size:11px; color:#9ca3af;'>
-              Recorded in ODD Perfumes Studio Database &middot; hello@oddperfume.com
-            </div>
-          </div>
-        </body>
-        </html>";
+        $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+        $safeEmail = htmlspecialchars($email, ENT_QUOTES, 'UTF-8');
+        $safeSubject = htmlspecialchars($subject, ENT_QUOTES, 'UTF-8');
+        $safeMsg = nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
+        $replyUrl = 'mailto:' . rawurlencode($email) . '?subject=' . rawurlencode('Re: ' . $subject);
+        $nowIst = date('Y-m-d H:i:s');
+        $emailHtml = <<<HTML
+<!DOCTYPE html>
+<html>
+<head><meta charset='UTF-8'></head>
+<body style='font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; color:#111; background:#f4f4f5; margin:0; padding:20px;'>
+  <div style='max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; border:1px solid #e5e7eb;'>
+    <div style='background:#111827; padding:20px 24px; text-align:center;'>
+      <h1 style='color:#ffffff; margin:0; font-size:22px; letter-spacing:0.05em;'>ODD<span style='color:#E86B32;'>.</span></h1>
+      <p style='color:#9ca3af; margin:4px 0 0; font-size:11px; text-transform:uppercase; letter-spacing:0.1em;'>Studio Customer Care &middot; New Inquiry</p>
+    </div>
+    <div style='padding:24px 30px;'>
+      <h2 style='font-size:16px; margin-top:0; color:#111827;'>New Customer Message from {$safeName}</h2>
+      <div style='background:#f9fafb; border:1px solid #f3f4f6; border-radius:6px; padding:14px; margin:16px 0; font-size:13px;'>
+        <div style='margin-bottom:6px;'><strong>Sender:</strong> {$safeName}</div>
+        <div style='margin-bottom:6px;'><strong>Email:</strong> <a href='mailto:{$safeEmail}' style='color:#E86B32; text-decoration:none; font-weight:600;'>{$safeEmail}</a></div>
+        <div style='margin-bottom:6px;'><strong>Subject:</strong> {$safeSubject}</div>
+        <div><strong>Received:</strong> {$nowIst} IST</div>
+      </div>
+      <h3 style='font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin:20px 0 8px;'>Message Content</h3>
+      <div style='background:#ffffff; border-left:3px solid #E86B32; padding:12px 16px; font-size:14px; line-height:1.6; color:#374151;'>{$safeMsg}</div>
+      <div style='margin-top:24px; text-align:center;'>
+        <a href='{$replyUrl}' style='background:#E86B32; color:#ffffff; padding:10px 22px; text-decoration:none; font-weight:600; border-radius:6px; font-size:13px; display:inline-block;'>Reply to {$safeName}</a>
+      </div>
+    </div>
+    <div style='background:#f9fafb; border-top:1px solid #e5e7eb; padding:14px; text-align:center; font-size:11px; color:#9ca3af;'>
+      Recorded in ODD Perfumes Studio Database &middot; hello@oddperfume.com
+    </div>
+  </div>
+</body>
+</html>
+HTML;
 
         $plainText = "New contact message from oddperfume.com:\n\nName: {$name}\nEmail: {$email}\nSubject: {$subject}\nTime: " . date('Y-m-d H:i:s') . "\n\nMessage:\n{$message}";
 
@@ -2542,7 +2787,7 @@ try {
         $testResult = sendSmtpEmail(
             $testTo,
             "ODD Perfumes SMTP Verification Test — " . date('H:i:s'),
-            "<div style='font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; padding:24px; border:1px solid #10B981; border-radius:8px; background:#ECFDF5;'>" .
+            "<div style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif; padding:24px; border:1px solid #10B981; border-radius:8px; background:#ECFDF5;'>" .
             "<h2 style='color:#065F46; margin:0 0 10px; font-size:18px;'>SMTP Connected & Verified!</h2>" .
             "<p style='color:#047857; margin:0 0 8px; font-size:14px;'>Your Hostinger mailbox (<strong>" . htmlspecialchars($smtp['username']) . "</strong>) successfully authenticated via <strong>" . htmlspecialchars($smtp['host']) . ":" . $smtp['port'] . "</strong>.</p>" .
             "<p style='color:#047857; margin:0; font-size:13px;'>Customer contact inquiries and automated order confirmation emails will now deliver cleanly with verified SPF, DKIM, and DMARC credentials.</p>" .

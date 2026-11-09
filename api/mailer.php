@@ -71,6 +71,55 @@ function getEffectiveSmtpConfig(?PDO $pdo = null): array {
 /**
  * Send an email via Hostinger authenticated SMTP, with graceful fallback to PHP mail()
  */
+/**
+ * Send email via Hostinger Agentic Mail REST API (HTTPS curl)
+ * Guaranteed deliverability on shared hosting without raw socket/port restrictions
+ */
+function sendViaHostingerMailApi(
+    string $to,
+    string $subject,
+    string $htmlBody,
+    string $textBody,
+    string $apiToken,
+    string $mailboxId
+): ?array {
+    if (!$apiToken || !$mailboxId) return null;
+
+    $url = "https://api.mail.hostinger.com/api/v1/mailboxes/{$mailboxId}/send";
+    $payload = [
+        'to' => [$to],
+        'subject' => $subject,
+        'html' => $htmlBody,
+        'text' => $textBody ?: strip_tags($htmlBody)
+    ];
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Authorization: Bearer {$apiToken}",
+        "Content-Type: application/json",
+        "Accept: application/json"
+    ]);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 200 || $httpCode === 201 || $httpCode === 204) {
+        logMailOperation('info', "Email delivered via Hostinger Mail API to {$to} [HTTP {$httpCode}]");
+        return [
+            'success' => true,
+            'transport' => 'hostinger_mail_api',
+            'message' => "Email delivered via Hostinger Agentic Mail API [HTTP {$httpCode}]"
+        ];
+    }
+
+    logMailOperation('warning', "Hostinger Mail API returned HTTP {$httpCode}: {$response}");
+    return null;
+}
+
 function sendSmtpEmail(
     string $to,
     string $subject,
@@ -90,6 +139,16 @@ function sendSmtpEmail(
     $pass = $smtpConfig['password'] ?? '';
     $fromEmail = $smtpConfig['fromEmail'] ?? 'hello@oddperfume.com';
     $fromName = $smtpConfig['fromName'] ?? 'ODD Perfume Studio';
+
+    // 1. Primary Modern Transport: Hostinger Agentic Mail API (Zero Port 465/587 Blocking, Full DKIM/SPF)
+    $apiToken = defined('HOSTINGER_MAIL_API_TOKEN') ? HOSTINGER_MAIL_API_TOKEN : '';
+    $mailboxId = defined('HOSTINGER_MAILBOX_ID') ? HOSTINGER_MAILBOX_ID : '';
+    if (!empty($apiToken) && !empty($mailboxId)) {
+        $apiResult = sendViaHostingerMailApi($to, $subject, $htmlBody, $textBody, $apiToken, $mailboxId);
+        if ($apiResult && !empty($apiResult['success'])) {
+            return $apiResult;
+        }
+    }
 
     // If no SMTP password provided, use hardened PHP mail() with -f envelope sender
     if (empty($pass)) {

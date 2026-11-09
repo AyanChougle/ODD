@@ -84,8 +84,6 @@ CREATE TABLE IF NOT EXISTS `inquiries` (
   INDEX `idx_inquiries_created` (`created_at`),
   INDEX `idx_inquiries_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. Audit Logs
 CREATE TABLE IF NOT EXISTS `audit_logs` (
@@ -126,16 +124,32 @@ CREATE TABLE IF NOT EXISTS `staff` (
   INDEX `idx_staff_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 8B. Compatibility staff_accounts view/table
+CREATE TABLE IF NOT EXISTS `staff_accounts` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(128) NOT NULL,
+  `email` VARCHAR(191) NOT NULL UNIQUE,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `role` ENUM('admin', 'warehouse', 'orders', 'finance', 'marketing') NOT NULL DEFAULT 'warehouse',
+  `status` ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_staff_acc_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 9. Seed Active Administrator Account
--- Email: admin@oddperfume.com
+-- Email: admin@oddperfume.com / nitin@oddperfumes.com
 -- Password: ODDAdmin2026!Secure
 INSERT INTO `staff` (`name`, `email`, `password_hash`, `role`, `active`) VALUES
-('Store Administrator', 'admin@oddperfume.com', '$2b$10$hrFesidrsQMYhJIueWeDC.b/Tr876Hn0ixWxpHOFe6J3MMdS6CSXa', 'admin', 1)
+('Store Administrator', 'admin@oddperfume.com', '$2b$10$hrFesidrsQMYhJIueWeDC.b/Tr876Hn0ixWxpHOFe6J3MMdS6CSXa', 'admin', 1),
+('Nitin', 'nitin@oddperfumes.com', '$2b$10$hrFesidrsQMYhJIueWeDC.b/Tr876Hn0ixWxpHOFe6J3MMdS6CSXa', 'admin', 1),
+('Nitin', 'nitin@oddperfume.com', '$2b$10$hrFesidrsQMYhJIueWeDC.b/Tr876Hn0ixWxpHOFe6J3MMdS6CSXa', 'admin', 1)
 ON DUPLICATE KEY UPDATE `password_hash`=VALUES(`password_hash`), `role`='admin', `active`=1;
 
 -- Also seed into staff_accounts if present
 INSERT INTO `staff_accounts` (`name`, `email`, `password_hash`, `role`, `status`) VALUES
-('Store Administrator', 'admin@oddperfume.com', '$2b$10$hrFesidrsQMYhJIueWeDC.b/Tr876Hn0ixWxpHOFe6J3MMdS6CSXa', 'admin', 'active')
+('Store Administrator', 'admin@oddperfume.com', '$2b$10$hrFesidrsQMYhJIueWeDC.b/Tr876Hn0ixWxpHOFe6J3MMdS6CSXa', 'admin', 'active'),
+('Nitin', 'nitin@oddperfumes.com', '$2b$10$hrFesidrsQMYhJIueWeDC.b/Tr876Hn0ixWxpHOFe6J3MMdS6CSXa', 'admin', 'active'),
+('Nitin', 'nitin@oddperfume.com', '$2b$10$hrFesidrsQMYhJIueWeDC.b/Tr876Hn0ixWxpHOFe6J3MMdS6CSXa', 'admin', 'active')
 ON DUPLICATE KEY UPDATE `password_hash`=VALUES(`password_hash`), `role`='admin', `status`='active';
 
 -- 10. Seed Authentic Products (Strict Zero-Stock Rule for First Move)

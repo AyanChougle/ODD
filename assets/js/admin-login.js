@@ -64,6 +64,9 @@ if (form) {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok || !data.authenticated) {
+        if (response.status >= 500) {
+          throw new Error(data.error ? `${data.error}${data.details ? ': ' + data.details : ''}` : `Server error (${response.status}). Please check database and server configuration.`);
+        }
         throw new Error(data.error || 'Invalid credentials or inactive account.');
       }
 

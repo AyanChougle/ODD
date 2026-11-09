@@ -102,16 +102,6 @@ function resolveProductSku(identifier) {
   return null;
 }
 
-function formatWpDate(value) {
-  if (!value) return '';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value).toUpperCase();
-  const day = String(d.getDate()).padStart(2, '0');
-  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-  const mon = months[d.getMonth()];
-  const yr = d.getFullYear();
-  return `${day} ${mon} ${yr}`;
-}
 
 function playScanBeep(type = 'success') {
   try {
@@ -221,14 +211,6 @@ function normalizeOrder(o) {
   };
 }
 
-function getOfflineOrders() {
-  try {
-    const raw = JSON.parse(localStorage.getItem('odd_orders') || '[]');
-    return Array.isArray(raw) ? raw.map(normalizeOrder).filter(Boolean) : [];
-  } catch (e) {
-    return [];
-  }
-}
 
 function saveOfflineOrders(orders) {
   try {
@@ -237,59 +219,12 @@ function saveOfflineOrders(orders) {
   } catch (e) {}
 }
 
-function getOfflineCoupons() {
-  try {
-    const coupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || localStorage.getItem('odd_coupons') || '[]');
-    return Array.isArray(coupons) ? coupons : [];
-  } catch (e) {
-    return [];
-  }
-}
 
-function saveOfflineCoupons(coupons) {
-  try {
-    localStorage.setItem('odd_admin_coupons', JSON.stringify(coupons || []));
-    localStorage.setItem('odd_coupons', JSON.stringify(coupons || []));
-  } catch (e) {}
-}
 
-function getOfflineStaff() {
-  try {
-    const staff = JSON.parse(localStorage.getItem('odd_admin_staff') || '[]');
-    return Array.isArray(staff) ? staff : [];
-  } catch (e) {
-    return [];
-  }
-}
 
-function saveOfflineStaff(staff) {
-  try {
-    localStorage.setItem('odd_admin_staff', JSON.stringify(staff || []));
-  } catch (e) {}
-}
 
-function getOfflineBanner() {
-  try {
-    const banner = JSON.parse(localStorage.getItem('odd_admin_banner') || 'null');
-    return banner || { active: false, text: '', code: '' };
-  } catch (e) {
-    return { active: false, text: '', code: '' };
-  }
-}
 
-function saveOfflineBanner(banner) {
-  try {
-    localStorage.setItem('odd_admin_banner', JSON.stringify(banner || {}));
-  } catch (e) {}
-}
 
-function getOfflineScans() {
-  try {
-    return JSON.parse(localStorage.getItem('odd_scans') || '[]');
-  } catch (e) {
-    return [];
-  }
-}
 
 function saveOfflineScans(scans) {
   try {

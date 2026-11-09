@@ -6,7 +6,13 @@
   "scripts": {
     "start": "node server.js",
     "create-admin": "node scripts/create-admin.js",
-    "test": "node scripts/test-suite.js"
+    "test": "node scripts/test-suite.js",
+    "check-syntax": "node scripts/check-syntax.js",
+    "audit-links": "node scripts/audit-links.js",
+    "audit-security": "node scripts/audit-security-and-flows.js"
+  },
+  "devDependencies": {
+    "php-parser": "^3.1.5"
   },
   "keywords": [
     "odd-perfume",

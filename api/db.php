@@ -23,13 +23,14 @@ function getDb(): PDO {
         ];
         try {
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
-        } catch (PDOException $e) {
+        } catch (Throwable $e) {
             error_log('Database connection error: ' . $e->getMessage());
             http_response_code(503);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
-                'error' => 'Database connection failed. Please ensure MySQL database is configured.'
-            ]);
+                'error' => 'Database connection failed. Please verify MySQL configuration in Hostinger.',
+                'details' => $e->getMessage()
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             exit;
         }
     }
