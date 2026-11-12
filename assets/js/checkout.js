@@ -7,13 +7,15 @@
 const SKU_TO_ID = {
   'ODD-PH-001': 'phantom',
   'ODD-LC-003': 'lucid',
-  'ODD-FM-002': 'first-move'
+  'ODD-FM-002': 'first-move',
+  'ODD-HM-004': 'hamper'
 };
 
 const ID_TO_SKU = {
   'phantom': 'ODD-PH-001',
   'lucid': 'ODD-LC-003',
-  'first-move': 'ODD-FM-002'
+  'first-move': 'ODD-FM-002',
+  'hamper': 'ODD-HM-004'
 };
 
 function checkoutMoney(value) {
@@ -33,11 +35,20 @@ function getLiveInventory() {
   }
 }
 
-// Synchronize live product stock and prices directly from backend
+// Synchronize live product stock, prices, and shipping config directly from backend
 async function syncLiveProductsAndInventory() {
   try {
-    const res = await fetch('/api/products');
-    if (res.ok) {
+    const [res, shipRes] = await Promise.all([
+      fetch('/api/products').catch(() => null),
+      fetch('/api/settings/shipping').catch(() => null)
+    ]);
+    if (shipRes && shipRes.ok) {
+      const sData = await shipRes.json().catch(() => null);
+      if (sData && typeof sData === 'object') {
+        localStorage.setItem('odd_admin_shipping', JSON.stringify(sData));
+      }
+    }
+    if (res && res.ok) {
       const data = await res.json();
       const list = Array.isArray(data.products) ? data.products : (Array.isArray(data) ? data : []);
       const inv = getLiveInventory();
@@ -161,20 +172,50 @@ function getActiveCouponDetails() {
   const code = (localStorage.getItem('odd_coupon') || localStorage.getItem('odd_coupon_code') || '').trim().toUpperCase();
   if (!code) return null;
 
-  // 1. Check if discount percent was stored directly
-  const savedDiscount = Number(localStorage.getItem('odd_coupon_discount'));
-  if (savedDiscount > 0) {
-    return { code, discount: savedDiscount };
-  }
-
-  // 2. Check odd_admin_coupons from localStorage
+  let record = null;
   try {
+    const activeList = (typeof ACTIVE_COUPONS !== 'undefined' && Array.isArray(ACTIVE_COUPONS)) ? ACTIVE_COUPONS : [];
+    const pubCoupons = JSON.parse(localStorage.getItem('odd_coupons') || '[]');
     const adminCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || '[]');
-    const match = adminCoupons.find(c => String(c.code).toUpperCase() === code && c.active !== false);
-    if (match) return { code: match.code, discount: Number(match.discount || match.discount_percent || 0) };
+    record = activeList.find(c => String(c.code).toUpperCase() === code && c.active !== false)
+      || pubCoupons.find(c => String(c.code).toUpperCase() === code && c.active !== false)
+      || adminCoupons.find(c => String(c.code).toUpperCase() === code && c.active !== false)
+      || null;
   } catch (e) {}
 
-  return null;
+  let meta = null;
+  try {
+    meta = JSON.parse(localStorage.getItem('odd_coupon_meta') || 'null');
+    if (meta && String(meta.code || '').toUpperCase() !== code) meta = null;
+  } catch (e) {
+    meta = null;
+  }
+
+  const savedDiscount = Number(localStorage.getItem('odd_coupon_discount') || 0);
+  const discount = Number(record?.discount ?? record?.discountPercent ?? record?.discount_percent ?? meta?.discount ?? savedDiscount ?? 0);
+  if (discount <= 0) return null;
+
+  return {
+    code,
+    discount,
+    maxDiscount: Math.max(0, Number(record?.maxDiscount ?? record?.max_discount ?? meta?.maxDiscount ?? 0)),
+    minSpend: Math.max(0, Number(record?.minSpend ?? record?.min_spend ?? meta?.minSpend ?? 0))
+  };
+}
+
+function computeCheckoutCouponDiscount(coupon, subtotal) {
+  if (!coupon || !(coupon.discount > 0)) return { discountAmount: 0, minSpendShortfall: 0 };
+  const safeSubtotal = Math.max(0, Number(subtotal) || 0);
+  const minSpend = Math.max(0, Number(coupon.minSpend || 0));
+  if (minSpend > 0 && safeSubtotal < minSpend) {
+    return { discountAmount: 0, minSpendShortfall: minSpend - safeSubtotal };
+  }
+  let discountAmount = Math.round(safeSubtotal * (coupon.discount / 100));
+  const maxDiscount = Math.max(0, Number(coupon.maxDiscount || 0));
+  if (maxDiscount > 0 && discountAmount > maxDiscount) {
+    discountAmount = maxDiscount;
+  }
+  return { discountAmount, minSpendShortfall: 0 };
 }
 
 function renderCheckoutSummary() {
@@ -240,10 +281,7 @@ function renderCheckoutSummary() {
 
   // Coupon calculations
   const coupon = getActiveCouponDetails();
-  let discountAmount = 0;
-  if (coupon && coupon.discount > 0) {
-    discountAmount = Math.round(subtotal * (coupon.discount / 100));
-  }
+  const { discountAmount, minSpendShortfall } = computeCheckoutCouponDiscount(coupon, subtotal);
 
   const shippingFee = getShippingFee(subtotal);
   const finalTotal = Math.max(0, subtotal - discountAmount + shippingFee);
@@ -263,6 +301,10 @@ function renderCheckoutSummary() {
     if (discEl) discEl.innerText = '- ' + checkoutMoney(discountAmount);
     if (badge) badge.style.display = 'flex';
     if (badgeText) badgeText.innerText = `${coupon.code} (${coupon.discount}% OFF)`;
+  } else if (coupon && minSpendShortfall > 0) {
+    if (discRow) discRow.style.display = 'none';
+    if (badge) badge.style.display = 'flex';
+    if (badgeText) badgeText.innerText = `${coupon.code} (Add ${checkoutMoney(minSpendShortfall)} for ${coupon.discount}% OFF)`;
   } else {
     if (discRow) discRow.style.display = 'none';
     if (badge) badge.style.display = 'none';
@@ -303,6 +345,7 @@ async function applyCheckoutCoupon() {
   const code = input.value.trim().toUpperCase();
   if (!code) {
     if (typeof showToast === 'function') showToast('Please enter a coupon code.');
+    input.focus();
     return;
   }
 
@@ -337,13 +380,28 @@ async function applyCheckoutCoupon() {
     });
     const data = await res.json();
     if (res.ok && data.valid) {
-      localStorage.setItem('odd_coupon', data.code);
-      localStorage.setItem('odd_coupon_code', data.code);
-      localStorage.setItem('odd_coupon_discount', String(data.discountPercent));
+      const normalized = String(data.code || code).trim().toUpperCase();
+      const matched = (typeof ACTIVE_COUPONS !== 'undefined' && Array.isArray(ACTIVE_COUPONS))
+        ? ACTIVE_COUPONS.find(c => String(c.code).toUpperCase() === normalized)
+        : null;
+      const couponPayload = {
+        code: normalized,
+        discount: Number(data.discountPercent),
+        maxDiscount: Number(matched?.maxDiscount ?? matched?.max_discount ?? 0),
+        minSpend: Number(matched?.minSpend ?? matched?.min_spend ?? 0)
+      };
+      if (typeof saveAppliedCouponState === 'function') {
+        saveAppliedCouponState(couponPayload);
+      } else {
+        localStorage.setItem('odd_coupon', normalized);
+        localStorage.setItem('odd_coupon_code', normalized);
+        localStorage.setItem('odd_coupon_discount', String(couponPayload.discount));
+        localStorage.setItem('odd_coupon_meta', JSON.stringify(couponPayload));
+      }
       input.value = '';
       renderCheckoutSummary();
       if (typeof updateCartUI === 'function') updateCartUI();
-      if (typeof showToast === 'function') showToast(`Coupon ${data.code} applied: ${data.discountPercent}% discount!`);
+      if (typeof showToast === 'function') showToast(`Coupon ${normalized} applied: ${couponPayload.discount}% discount!`);
       return;
     } else {
       const err = data.error || 'Invalid or expired promo code.';
@@ -353,17 +411,28 @@ async function applyCheckoutCoupon() {
     }
   } catch (err) {
     // Local storage fallback for offline mode
-    let discount = 0;
+    let foundCoupon = null;
     try {
-      const adminCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || '[]');
-      const match = adminCoupons.find(c => String(c.code).toUpperCase() === code && c.active !== false);
-      if (match) discount = Number(match.discount || match.discount_percent || 0);
+      const adminCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || localStorage.getItem('odd_coupons') || '[]');
+      foundCoupon = adminCoupons.find(c => String(c.code).toUpperCase() === code && c.active !== false) || null;
     } catch (e) {}
 
+    const discount = foundCoupon ? Number(foundCoupon.discount || foundCoupon.discount_percent || 0) : 0;
     if (discount > 0) {
-      localStorage.setItem('odd_coupon', code);
-      localStorage.setItem('odd_coupon_code', code);
-      localStorage.setItem('odd_coupon_discount', String(discount));
+      const couponPayload = {
+        code,
+        discount,
+        maxDiscount: Number(foundCoupon?.maxDiscount ?? foundCoupon?.max_discount ?? 0),
+        minSpend: Number(foundCoupon?.minSpend ?? foundCoupon?.min_spend ?? 0)
+      };
+      if (typeof saveAppliedCouponState === 'function') {
+        saveAppliedCouponState(couponPayload);
+      } else {
+        localStorage.setItem('odd_coupon', code);
+        localStorage.setItem('odd_coupon_code', code);
+        localStorage.setItem('odd_coupon_discount', String(discount));
+        localStorage.setItem('odd_coupon_meta', JSON.stringify(couponPayload));
+      }
       input.value = '';
       renderCheckoutSummary();
       if (typeof updateCartUI === 'function') updateCartUI();
@@ -376,9 +445,14 @@ async function applyCheckoutCoupon() {
 }
 
 function removeCheckoutCoupon() {
-  localStorage.removeItem('odd_coupon');
-  localStorage.removeItem('odd_coupon_code');
-  localStorage.removeItem('odd_coupon_discount');
+  if (typeof saveAppliedCouponState === 'function') {
+    saveAppliedCouponState(null);
+  } else {
+    localStorage.removeItem('odd_coupon');
+    localStorage.removeItem('odd_coupon_code');
+    localStorage.removeItem('odd_coupon_discount');
+    localStorage.removeItem('odd_coupon_meta');
+  }
   renderCheckoutSummary();
   if (typeof updateCartUI === 'function') updateCartUI();
   if (typeof showToast === 'function') showToast('Coupon removed.');
@@ -529,7 +603,7 @@ async function processPageOrder(e) {
     subtotal += price * item.qty;
   });
 
-  const discountAmount = (coupon && coupon.discount > 0) ? Math.round(subtotal * (coupon.discount / 100)) : 0;
+  const { discountAmount } = computeCheckoutCouponDiscount(coupon, subtotal);
   const shippingFee = getShippingFee(subtotal);
   const finalTotal = Math.max(0, subtotal - discountAmount + shippingFee);
 
@@ -705,7 +779,7 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
     subtotal += price * item.qty;
   });
 
-  const discountAmount = (coupon && coupon.discount > 0) ? Math.round(subtotal * (coupon.discount / 100)) : 0;
+  const { discountAmount } = computeCheckoutCouponDiscount(coupon, subtotal);
   const finalShipping = (shippingFee != null) ? Number(shippingFee) : getShippingFee(subtotal);
   const finalTotal = Math.max(0, subtotal - discountAmount + finalShipping);
 
@@ -836,9 +910,17 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
   existingOrders.unshift(newOrder);
   localStorage.setItem('odd_orders', JSON.stringify(existingOrders));
 
-  // 6. Clear Cart
+  // 6. Clear Cart and Applied Coupon
   localStorage.setItem('odd_cart', '[]');
   if (typeof cartState !== 'undefined') cartState.length = 0;
+  if (typeof saveAppliedCouponState === 'function') {
+    saveAppliedCouponState(null);
+  } else {
+    localStorage.removeItem('odd_coupon');
+    localStorage.removeItem('odd_coupon_code');
+    localStorage.removeItem('odd_coupon_discount');
+    localStorage.removeItem('odd_coupon_meta');
+  }
   if (typeof updateCartUI === 'function') updateCartUI();
 
   // 7. Success UI Feedback & Redirect

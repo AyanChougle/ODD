@@ -383,7 +383,7 @@ window.printCustomerInvoice = function() {
     <div class="header-row">
       <div>
         <div class="brand-title">ODD<span class="brand-dot">.</span></div>
-        <div class="brand-subtitle">Haute Parfumerie &middot; Mumbai, India</div>
+        <div class="brand-subtitle">Haute Parfumerie &middot; India</div>
         <div style="font-size:11px; color:#6b7280; margin-top:4px;">GSTIN: 27AABCO0000A1Z5 &middot; Support: hello@oddperfume.com</div>
       </div>
       <div class="invoice-badge-box">
@@ -420,7 +420,7 @@ window.printCustomerInvoice = function() {
           </div>
           <div style="display:flex; justify-content:space-between;">
             <span style="color:#6b7280;">Fulfillment:</span>
-            <span>Dispatched from Mumbai Hub</span>
+            <span>Dispatched from Fulfillment Hub</span>
           </div>
         </div>
       </div>

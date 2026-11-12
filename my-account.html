@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Customer Account &mdash; ODD Perfume</title>
   <meta name="description" content="Manage your customer account, track fragrance orders, redeem coupons, and update addresses.">
-  <link rel="stylesheet" href="assets/css/global.css?v=6.1">
-  <link rel="stylesheet" href="assets/css/policy.css?v=6.1">
+  <link rel="stylesheet" href="assets/css/global.css?v=6.3">
+  <link rel="stylesheet" href="assets/css/policy.css?v=6.3">
 </head>
 <body>
 
@@ -87,7 +87,7 @@
           </div>
           <div style="margin-bottom:1.1rem;">
             <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.4rem; color:var(--text-main);">Email Address</label>
-            <input type="email" id="signup-email" class="form-control" placeholder="contact@oddperfume.com.com" required autocomplete="email" style="margin-bottom:0;">
+            <input type="email" id="signup-email" class="form-control" placeholder="email@domain.com" required autocomplete="email" style="margin-bottom:0;">
           </div>
           <div style="margin-bottom:1.1rem;">
             <label style="display:block; font-size:0.82rem; font-weight:600; margin-bottom:0.4rem; color:var(--text-main);">Mobile Number (for Order SMS &amp; Tracking)</label>
@@ -261,7 +261,7 @@
           <p class="footer-signup-sub">New scents, the odd offer, and nothing else. About once a month.</p>
         </div>
         <form class="footer-signup-form" onsubmit="handleEmailSignup(event)">
-          <input type="email" placeholder="contact@oddperfume.com.com" class="footer-email-input" required>
+          <input type="email" placeholder="email@domain.com" class="footer-email-input" required>
           <button type="submit" class="footer-email-btn btn-water-float">Join</button>
         </form>
       </div>
@@ -343,7 +343,7 @@
 
       <!-- Legal Bar -->
       <div class="footer-legal-bar">
-        <div class="legal-left">&copy; 2026 ODD Perfume &middot; Mumbai, India</div>
+        <div class="legal-left">&copy; 2026 ODD Perfume &middot; India</div>
         <div class="footer-legal-links">
           <a href="shipping-policy.html">Shipping policy</a>
           <a href="refund-policy.html">Returns &amp; refunds</a>
@@ -351,7 +351,7 @@
           <a href="privacy-policy.html">Privacy policy</a>
           <a href="terms.html">Terms of service</a>
         </div>
-        <div class="legal-right">Based in Mumbai.</div>
+        <div class="legal-right">Pan-India Shipping.</div>
       </div>
     </div>
   </footer>
@@ -406,7 +406,7 @@
       <a href="contact.html">Contact Us</a>
       <div class="drawer-footer">
         <p>hello@oddperfume.com</p>
-        <p>Mon—Sat &middot; 10am—7pm IST &middot; Mumbai</p>
+        <p>Mon—Sat &middot; 10am—7pm IST</p>
       </div>
     </div>
   </div>
@@ -426,11 +426,11 @@
     <div class="cart-footer" id="cart-footer" style="display: none;">
       <div class="coupon-box">
         <input type="text" id="cart-coupon-input" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;">
-        <button class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
+        <button type="button" class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
       </div>
       <div class="coupon-applied-tag" id="coupon-tag-applied" style="display: none;">
         <span>Code <strong id="applied-code-name">LAUNCH20</strong> applied</span>
-        <button onclick="removeCartCoupon()" class="remove-coupon">&times;</button>
+        <button type="button" onclick="removeCartCoupon()" class="remove-coupon" aria-label="Remove coupon">&times;</button>
       </div>
       <div class="cart-totals">
         <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹ 0</span></div>
@@ -454,7 +454,7 @@
     </div>
   </div>
 
-  <script src="assets/js/global.js?v=6.1"></script>
+  <script src="assets/js/global.js?v=6.3"></script>
 
   <script>
   'use strict';

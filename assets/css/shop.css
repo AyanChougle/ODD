@@ -27,16 +27,26 @@
 
 .shop-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2.5rem;
-  margin-top: 3.5rem;
-  margin-bottom: 6rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.35rem;
+  margin-top: 2.75rem;
+  margin-bottom: 5rem;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
+  .shop-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+    max-width: 780px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 680px) {
   .shop-grid {
     grid-template-columns: 1fr;
-    max-width: 440px;
+    max-width: 380px;
     margin-left: auto;
     margin-right: auto;
   }
@@ -50,11 +60,11 @@
     font-size: 2.4rem;
   }
   .shop-grid {
-    gap: 2rem;
+    gap: 1.35rem;
     padding: 0 0.5rem;
   }
 }
-/* --- Shop Page Product Card Styles (Overrides) --- */
+/* --- Shop Page Product Card Styles (Compact Minimal Cards) --- */
 .product-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -76,41 +86,52 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 3rem 2rem;
-  min-height: 320px;
+  padding: 1.45rem 1.25rem;
+  min-height: 215px;
 }
 
 .phantom-door { background: linear-gradient(180deg, #F9F4EE 0%, #FFFFFF 100%); }
 .lucid-door { background: linear-gradient(180deg, #EAF3EF 0%, #FFFFFF 100%); }
 .move-door { background: linear-gradient(180deg, #F5EEF0 0%, #FFFFFF 100%); }
+.hamper-door { background: linear-gradient(180deg, #F6EFE6 0%, #FFFFFF 100%); }
+.hamper-door .door-product-img {
+  max-height: 178px;
+}
+.hamper-door .badge-tag {
+  background: #1C1815;
+  color: #FFFFFF;
+}
 
 .badge-tag {
   position: absolute;
-  top: 1rem;
-  left: 1rem;
+  top: 0.85rem;
+  right: 0.85rem;
+  left: auto;
+  z-index: 6;
   font-family: var(--font-mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.15em;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  padding: 0.3rem 0.6rem;
-  border-radius: var(--radius-sm);
-  background: rgba(0,0,0,0.05);
+  padding: 0.28rem 0.62rem;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.06);
   color: var(--text-muted);
 }
 
 .door-product-img {
-  max-height: 240px;
+  max-height: 170px;
   width: auto;
   object-fit: contain;
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .product-card:hover .door-product-img {
-  transform: scale(1.08);
+  transform: scale(1.06);
 }
 
 .product-details {
-  padding: 1.5rem;
+  padding: 1rem 1.15rem 1.2rem;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -118,10 +139,31 @@
 
 .product-name {
   font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif !important;
-  font-size: 1.8rem;
+  font-size: 1.35rem;
   font-weight: 400;
-  margin: 0 0 0.3rem;
+  margin: 0 0 0.45rem;
   color: var(--text-main);
+  line-height: 1.2;
+}
+
+.product-card .product-detail-price {
+  margin: 0 0 0.9rem !important;
+  font-size: 1.18rem !important;
+}
+
+.product-card .card-actions {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.product-card .card-actions .btn {
+  padding: 0.68rem 0.6rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .product-tagline {

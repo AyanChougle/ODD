@@ -1771,6 +1771,13 @@ body.admin-body {
 
 /* Small Phones under 520px */
 @media (max-width: 520px) {
+  .admin-card,
+  .admin-form-group,
+  .admin-input {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .kpi-grid,
   .admin-kpi-grid {
     grid-template-columns: 1fr;
@@ -1783,6 +1790,30 @@ body.admin-body {
 
   .barcode-label-grid {
     grid-template-columns: 1fr !important;
+  }
+
+  #tab-barcodes div[style*="grid-template-columns"],
+  #tab-smtp form div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  #tab-barcodes [style*="grid-column"] {
+    grid-column: auto !important;
+  }
+
+  #tab-inquiries .admin-card-header > div,
+  #tab-inquiries .btn-group {
+    flex-wrap: wrap !important;
+    max-width: 100% !important;
+  }
+
+  #tab-inquiries .btn-group button {
+    flex: 1 1 auto;
+  }
+
+  #shiprocket-webhook-url {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .scanner-box-container {

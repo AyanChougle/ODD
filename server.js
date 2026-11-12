@@ -269,9 +269,10 @@ function initDatabase() {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     // CRITICAL: First Move strictly starts with 0 units as documented
-    insertProd.run('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, 1599, 0, 1, 'Unseen. Unforgotten. Dominant.', 'Oud · Amber · Smoky Woods');
+    insertProd.run('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, 1599, 0, 1, 'Unseen. Unforgotten. Undeniable.', 'Oud · Amber · Smoky Woods');
     insertProd.run('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, 1599, 0, 1, 'Clear Mind. Sharp Presence.', 'Citrus · Black Tea · Clean Woods');
     insertProd.run('first-move', 'ODD-FM-002', 'ODD First Move', 1599, 1599, 0, 1, 'Start First. Stay Ahead.', 'Pineapple · Woods · Smoky Musk');
+    insertProd.run('hamper', 'ODD-HM-004', 'The Trio Gift Hamper', 4797, 4797, 50, 1, 'The Complete Trio. Ready to Gift.', 'Phantom · Lucid · First Move (3 × 100ml)');
 
     const insertMov = db.prepare(`
       INSERT INTO inventory_movements (sku, product_id, delta, stock_after, reason, staff_name)
@@ -280,6 +281,20 @@ function initDatabase() {
     insertMov.run('ODD-PH-001', 'phantom', 240, 240, 'Initial Mumbai stock receipt', 'System');
     insertMov.run('ODD-LC-003', 'lucid', 180, 180, 'Initial Mumbai stock receipt', 'System');
     insertMov.run('ODD-FM-002', 'first-move', 0, 0, 'Documented zero stock baseline', 'System');
+    insertMov.run('ODD-HM-004', 'hamper', 50, 50, 'Initial Trio Gift Hamper stock receipt', 'System');
+  }
+
+  // Idempotent migration: ensure The Trio Gift Hamper exists on pre-seeded databases
+  const hasHamper = db.prepare('SELECT 1 FROM products WHERE id = ?').get('hamper');
+  if (!hasHamper) {
+    db.prepare(`
+      INSERT OR IGNORE INTO products (id, sku, name, price, original_price, stock, active, tagline, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run('hamper', 'ODD-HM-004', 'The Trio Gift Hamper', 4797, 4797, 50, 1, 'The Complete Trio. Ready to Gift.', 'Phantom · Lucid · First Move (3 × 100ml)');
+    db.prepare(`
+      INSERT INTO inventory_movements (sku, product_id, delta, stock_after, reason, staff_name)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run('ODD-HM-004', 'hamper', 50, 50, 'Initial Trio Gift Hamper stock receipt', 'System');
   }
 
   // Seed baseline coupons if table is empty
@@ -2003,7 +2018,8 @@ const server = http.createServer(async (req, res) => {
         const SKU_NAMES = {
           'ODD-FM-002': 'ODD FIRST MOVE',
           'ODD-LC-003': 'ODD LUCID',
-          'ODD-PH-001': 'ODD PHANTOM'
+          'ODD-PH-001': 'ODD PHANTOM',
+          'ODD-HM-004': 'ODD TRIO HAMPER'
         };
 
         const generatedLabels = [];
@@ -2023,7 +2039,8 @@ const server = http.createServer(async (req, res) => {
           const SHORT_SKUS = {
             'ODD-FM-002': 'ODD-FM',
             'ODD-LC-003': 'ODD-LC',
-            'ODD-PH-001': 'ODD-PH'
+            'ODD-PH-001': 'ODD-PH',
+            'ODD-HM-004': 'ODD-HM'
           };
 
           for (const item of productsList) {
@@ -2186,6 +2203,8 @@ const server = http.createServer(async (req, res) => {
               matchedProduct = db.prepare("SELECT * FROM products WHERE sku = 'ODD-LC-003'").get();
             } else if (rawCode.includes('PH') || rawCode.includes('PHANTOM')) {
               matchedProduct = db.prepare("SELECT * FROM products WHERE sku = 'ODD-PH-001'").get();
+            } else if (rawCode.includes('HM') || rawCode.includes('HAMPER') || rawCode.includes('TRIO')) {
+              matchedProduct = db.prepare("SELECT * FROM products WHERE sku = 'ODD-HM-004'").get();
             } else {
               matchedProduct = db.prepare('SELECT * FROM products WHERE sku = ?').get(rawCode);
             }
@@ -2748,7 +2767,11 @@ const server = http.createServer(async (req, res) => {
     /* ========================================================================
        STATIC FILE SERVING (HTML, CSS, JS, Assets)
        ======================================================================== */
-    let filePath = pathname === '/' ? path.join(ROOT_DIR, 'index.html') : path.join(ROOT_DIR, pathname);
+    let safePathname = pathname;
+    try {
+      safePathname = decodeURIComponent(pathname);
+    } catch (e) {}
+    let filePath = safePathname === '/' ? path.join(ROOT_DIR, 'index.html') : path.join(ROOT_DIR, safePathname);
 
     // Prevent directory traversal
     const safePath = path.normalize(filePath);

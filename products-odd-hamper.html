@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Trio Gift Hamper | ODD Perfume</title>
+  <link rel="preload" as="image" href="assets/images/Trio Gift Hamper Box.webp" type="image/webp" fetchpriority="high">
+  <link rel="preload" as="font" href="assets/fonts/doren-perfume-serif.otf" type="font/otf" crossorigin>
+  <link rel="preload" as="font" href="assets/fonts/DMSans-Regular.ttf" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="assets/css/global.css?v=6.4">
+  <link rel="stylesheet" href="assets/css/product.css?v=6.4">
+</head>
+<body>
+
+  <!-- Site Header -->
+  <div id="launch-banner" class="launch-banner">
+    <div class="banner-container">
+      <span class="status-bullet"></span>
+      <span class="banner-text"><strong>WE'RE LIVE.</strong> Take 20% OFF your first order with code <code class="coupon-tag" id="banner-code">LAUNCH20</code></span>
+      <button class="banner-btn" onclick="applyCouponFromBanner()">Apply</button>
+      <button class="banner-close" onclick="closeLaunchBanner()">&times;</button>
+    </div>
+  </div>
+
+  <header class="site-header" id="site-header">
+    <div class="header-top-bar">
+      <div class="top-left">
+        <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Open menu" onclick="toggleMobileNav()">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+      <div class="top-center">
+        <a href="index.html" class="brand-logo-cr7">ODD<span class="logo-dot">.</span></a>
+      </div>
+      <div class="top-right">
+        <a href="my-account.html" class="top-nav-btn" aria-label="Account" title="Account">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </a>
+        <button class="top-nav-btn" onclick="openSearchModal()" aria-label="Search" title="Search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </button>
+        <button class="cart-trigger-btn" onclick="toggleCartDrawer()" aria-label="Cart" title="Cart">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+          <span class="cart-badge" id="cart-count">0</span>
+        </button>
+      </div>
+    </div>
+    <div class="header-bottom-bar">
+      <nav class="main-desktop-nav">
+        <a href="index.html" class="main-nav-link">Home</a>
+        <a href="shop.html" class="main-nav-link">Shop The Three</a>
+        <a href="index.html#showcase" class="main-nav-link">Collections</a>
+        <a href="index.html#comparison" class="main-nav-link">Compare</a>
+        <a href="index.html#story" class="main-nav-link">Our Story</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Product Detail -->
+  <main>
+    <section class="product-detail-section">
+      <div class="container product-detail-grid">
+
+        <!-- LEFT: Image -->
+        <div class="product-gallery-box">
+          <img src="assets/images/Trio Gift Hamper Box.webp" alt="ODD The Trio Gift Hamper containing Phantom, Lucid, and First Move 100ml bottles" class="product-lifestyle-img" width="800" height="800" fetchpriority="high">
+        </div>
+
+        <!-- RIGHT: Info -->
+        <div class="product-info-col">
+          <h1 class="product-detail-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">The Trio Gift Hamper</h1>
+          <p class="product-tagline-italic">"The Complete Trio. Ready to Gift."</p>
+
+          <!-- Price -->
+          <div class="product-detail-price" data-product="hamper" style="margin: 1.5rem 0;">
+            <span class="price-current"></span>
+          </div>
+
+          <p class="product-desc-text">All three signature ODD fragrances — Phantom, Lucid, and First Move — in full-size 100 ml bottles, presented inside a rigid matte obsidian and copper keepsake gift box. Crafted with 20-25% pure perfume oil for an 8-10 hour wear time across every hour of the day.</p>
+
+          <!-- Notes / Contents -->
+          <div class="notes-breakdown-box">
+            <div class="notes-label">INSIDE THE GIFT BOX (3 &times; 100 ML)</div>
+            <div class="notes-pills">
+              <span class="note-pill">Phantom 100ml</span>
+              <span class="note-pill">Lucid 100ml</span>
+              <span class="note-pill">First Move 100ml</span>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div class="product-cta-row">
+            <button class="product-add-btn" data-product-btn="hamper" onclick="addToCart('hamper')">
+              Add to Bag
+            </button>
+          </div>
+
+          <div class="product-trust-row">
+            <span style="display:inline-flex;align-items:center;justify-content:center;gap:0.4rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Presentation Gift Box &middot; Express Pan-India Delivery &middot; Formulated in India</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="product-editorial-section" aria-labelledby="product-story-title">
+      <div class="container">
+        <div class="product-editorial-heading"><span class="product-eyebrow">THE COMPLETE WARDROBE</span><h2 id="product-story-title">Three scents, one unmistakable box.</h2><p>Designed for milestones, festive gifting, or building a morning-to-midnight fragrance rotation with full 100 ml bottles of all three ODD compositions.</p></div>
+        <div class="product-facts-grid">
+          <article class="product-fact-card"><span>01 / CONCENTRATION</span><strong>20–25%</strong><p>Pure perfume oil in every full-size bottle inside the box.</p></article>
+          <article class="product-fact-card"><span>02 / WEAR</span><strong>8–10 hours</strong><p>Balanced across morning meetings, dates, and late evenings.</p></article>
+          <article class="product-fact-card"><span>03 / FORMAT</span><strong>3 &times; 100 ml</strong><p>Three full-size Eau de Parfum bottles in a gift hamper.</p></article>
+        </div>
+        <div class="product-detail-lower-grid">
+          <div class="product-detail-note-card"><span class="product-eyebrow">WHAT'S INSIDE</span><h3>Every mood, covered</h3><p>Lucid opens bright with Bergamot and Blackcurrant for daytime clarity, First Move blends Citrus, Black Tea, and Smoky Musk for social evenings, and Phantom anchors the night with Cambodian Oud, Saffron, and Amberwood.</p><div class="product-note-pills"><span>ODD Phantom (100ml)</span><span>ODD Lucid (100ml)</span><span>ODD First Move (100ml)</span><span>Matte Obsidian Box</span></div></div>
+          <div class="product-detail-note-card"><span class="product-eyebrow">MADE FOR GIFTING</span><h3>Ready straight out of delivery.</h3><p>Weddings, anniversaries, birthdays, executive gifting, and personal rotation.</p><div class="product-wear-ratings"><div><span>Morning &amp; Work</span><strong>Lucid</strong></div><div><span>Dates &amp; Socials</span><strong>First Move</strong></div><div><span>Late Nights</span><strong>Phantom</strong></div><div><span>Total Volume</span><strong>300 ml</strong></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="product-reviews-section" aria-label="Customer reviews and feedback">
+      <div class="container">
+        <div id="product-reviews-root" data-product="hamper"></div>
+      </div>
+    </section>
+    <section class="product-related-section"><div class="container"><div class="product-related-heading"><div><span class="product-eyebrow">EXPLORE INDIVIDUALLY</span><h2>Discover each bottle inside.</h2></div><a href="shop.html">View the full collection →</a></div><div class="product-related-grid is-trio">
+      <a class="product-related-card" href="products-odd-phantom.html"><span class="product-related-image"><img src="assets/images/Phantom Single bottle.webp" alt="ODD Phantom" width="400" height="400" loading="lazy"></span><span class="product-related-meta"><strong>Phantom</strong><span>Oud · Saffron · Amberwood</span><b>Discover →</b></span></a>
+      <a class="product-related-card" href="products-odd-lucid.html"><span class="product-related-image"><img src="assets/images/Lucid single bottle.webp" alt="ODD Lucid" width="400" height="400" loading="lazy"></span><span class="product-related-meta"><strong>Lucid</strong><span>Bergamot · Patchouli · Blackcurrant</span><b>Discover →</b></span></a>
+      <a class="product-related-card" href="products-odd-first-move.html"><span class="product-related-image"><img src="assets/images/First Move single bottle.webp" alt="ODD First Move" width="400" height="400" loading="lazy"></span><span class="product-related-meta"><strong>First Move</strong><span>Citrus · Black Tea · Smoky Musk</span><b>Discover →</b></span></a>
+    </div></div></section>
+  </main>
+
+  <div class="mobile-nav-drawer" id="mobile-nav" aria-label="Mobile navigation">
+    <div class="drawer-header"><a href="index.html" class="brand-logo-cr7">ODD<span class="logo-dot">.</span></a><button class="close-drawer" type="button" onclick="toggleMobileNav()" aria-label="Close menu">&times;</button></div>
+    <div class="drawer-content"><a href="index.html">Home</a><a href="shop.html">Shop The Three</a><a href="index.html#showcase">Collections</a><a href="index.html#comparison">Compare</a><a href="story.html">Our Story</a><a href="order-tracking.html">Track Order</a><a href="my-account.html">My Account</a><a href="faq.html">FAQ & Support</a><a href="contact.html">Contact Us</a><div class="drawer-footer"><p>hello@oddperfume.com</p><p>Mon–Sat · 10am–7pm IST</p></div></div>
+  </div>
+
+  <!-- Existing shared footer -->
+  <footer class="site-footer-luxury">
+    <div class="container">
+      <!-- Top Email Signup -->
+      <div class="footer-top-signup">
+        <div class="footer-signup-left">
+          <div class="footer-signup-header">
+            <span class="orange-dot-lg"></span>
+            <h2 class="footer-signup-title">Get our emails.</h2>
+          </div>
+          <p class="footer-signup-sub">New scents, the odd offer, and nothing else. About once a month.</p>
+        </div>
+        <form class="footer-signup-form" onsubmit="handleEmailSignup(event)">
+          <input type="email" placeholder="email@domain.com" class="footer-email-input" required>
+          <button type="submit" class="footer-email-btn btn-water-float">Join</button>
+        </form>
+      </div>
+
+      <!-- 5 Columns Navigation -->
+      <div class="footer-nav-columns">
+        <div class="footer-col">
+          <div class="footer-col-title">Shop</div>
+          <ul class="footer-links-list">
+            <li><a href="shop.html">All perfumes</a></li>
+            <li><a href="story.html">Our story</a></li>
+            <li><a href="find-your-scent.html">Find your scent</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Help</div>
+          <ul class="footer-links-list">
+            <li><a href="order-tracking.html">Track order</a></li>
+            <li><a href="my-account.html">My account</a></li>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="contact.html">Contact</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Policies</div>
+          <ul class="footer-links-list">
+            <li><a href="shipping-policy.html">Shipping &amp; Delivery</a></li>
+            <li><a href="refund-policy.html">Returns &amp; Refunds</a></li>
+            <li><a href="cancellation-policy.html">Cancellation Policy</a></li>
+            <li><a href="privacy-policy.html">Privacy Policy</a></li>
+            <li><a href="terms.html">Terms of Service</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Say Hi</div>
+          <a href="contact.html" class="footer-contact-link">hello@oddperfume.com</a>
+          <p class="footer-contact-hours">Mon&mdash;Sat &middot; 10am&mdash;7pm IST</p>
+          <div class="footer-social-icons-row" style="display:flex; align-items:center; gap:0.65rem; margin-top:0.75rem;">
+            <a href="https://wa.me/919930458591" target="_blank" rel="noopener noreferrer" class="footer-social-icon-btn" aria-label="WhatsApp" title="Chat on WhatsApp (+91 99304 58591)" style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; border:1px solid #2e323d; background:rgba(255,255,255,0.05); color:#CCCCCC; text-decoration:none;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="#CCCCCC" style="display:block; color:#CCCCCC;">
+                <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.15C10.56 20.15 9.11 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.8 13.47 3.8 11.91C3.8 7.37 7.5 3.67 12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.05 20.15ZM16.57 14.42C16.32 14.29 15.1 13.69 14.87 13.61C14.65 13.52 14.48 13.48 14.32 13.73C14.15 13.98 13.67 14.54 13.52 14.71C13.38 14.88 13.23 14.9 12.98 14.77C12.73 14.65 11.93 14.38 10.98 13.54C10.24 12.88 9.74 12.07 9.6 11.82C9.45 11.57 9.58 11.44 9.71 11.31C9.82 11.2 9.96 11.02 10.08 10.87C10.21 10.73 10.25 10.63 10.33 10.46C10.41 10.3 10.37 10.15 10.31 10.02C10.25 9.9 9.76 8.7 9.56 8.2C9.36 7.72 9.16 7.78 9.01 7.77H8.54C8.38 7.77 8.11 7.83 7.88 8.08C7.65 8.33 7.02 8.92 7.02 10.13C7.02 11.34 7.9 12.5 8.02 12.67C8.15 12.83 9.75 15.3 12.2 16.36C12.78 16.61 13.24 16.76 13.59 16.87C14.18 17.06 14.72 17.03 15.15 16.97C15.63 16.9 16.62 16.37 16.83 15.79C17.03 15.21 17.03 14.71 16.97 14.6C16.91 14.5 16.74 14.44 16.57 14.42Z"/>
+              </svg>
+            </a>
+            <a href="https://www.instagram.com/oddperfumeofficial/" target="_blank" rel="noopener noreferrer" class="footer-social-icon-btn" aria-label="Instagram" title="Follow on Instagram (@oddperfumeofficial)" style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; border:1px solid #2e323d; background:rgba(255,255,255,0.05); color:#CCCCCC; text-decoration:none;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#CCCCCC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; color:#CCCCCC;">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <div class="footer-col-title">Pay Your Way</div>
+          <div class="payment-pills-row">
+            <span class="pay-pill-badge">UPI</span>
+            <span class="pay-pill-badge">Cards</span>
+            <span class="pay-pill-badge">Netbanking</span>
+            <span class="pay-pill-badge">Cash on delivery</span>
+          </div>
+          <div class="pay-razorpay-secure">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>Secure payments by Razorpay</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Massive Statement: It's good to be ODD. -->
+      <div class="footer-massive-odd-container">
+        <span class="massive-odd-lead-text">It's good to be</span>
+        <div class="massive-odd-display-text">ODD<span class="massive-odd-dot-orange">.</span></div>
+      </div>
+
+      <!-- Legal Bar -->
+      <div class="footer-legal-bar">
+        <div class="legal-left">&copy; 2026 ODD Perfume &middot; India</div>
+        <div class="footer-legal-links">
+          <a href="shipping-policy.html">Shipping policy</a>
+          <a href="refund-policy.html">Returns &amp; refunds</a>
+          <a href="cancellation-policy.html">Cancellation policy</a>
+          <a href="privacy-policy.html">Privacy policy</a>
+          <a href="terms.html">Terms of service</a>
+        </div>
+        <div class="legal-right">Pan-India Shipping.</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Cart Drawer -->
+  <div class="cart-drawer-backdrop" id="cart-backdrop" onclick="toggleCartDrawer()"></div>
+  <aside class="cart-drawer" id="cart-drawer">
+    <div class="cart-header">
+      <h3>YOUR BAG (<span id="cart-drawer-count">0</span>)</h3>
+      <button class="close-drawer" onclick="toggleCartDrawer()">&times;</button>
+    </div>
+    <div class="free-shipping-banner">
+      <span>Free Express Shipping Unlocked Across India</span>
+      <div class="shipping-progress"><div class="fill" style="width: 100%;"></div></div>
+    </div>
+    <div class="cart-items-list" id="cart-items"></div>
+    <div class="cart-footer" id="cart-footer" style="display: none;">
+      <div class="coupon-box">
+        <input type="text" id="cart-coupon-input" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;">
+        <button type="button" class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
+      </div>
+      <div class="coupon-applied-tag" id="coupon-tag-applied" style="display: none;">
+        <span>Code <strong id="applied-code-name">LAUNCH20</strong> applied</span>
+        <button type="button" onclick="removeCartCoupon()" class="remove-coupon" aria-label="Remove coupon">&times;</button>
+      </div>
+      <div class="cart-totals">
+        <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹0</span></div>
+        <div class="total-row" id="cart-discount-row" style="display:none; color:var(--brand-orange);"><span>Discount:</span><span id="cart-discount">-₹0</span></div>
+        <div class="total-row" id="cart-shipping-row"><span>Shipping:</span><span id="cart-shipping-fee">₹50</span></div>
+        <div class="total-row grand-total"><span>Total:</span><span id="cart-total">₹0</span></div>
+      </div>
+      <a href="checkout.html" class="btn btn-primary btn-lg full-width btn-water-float">Proceed to Checkout</a>
+    </div>
+  </aside>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="assets/js/global.js?v=6.3"></script>
+  <script src="assets/js/product-reviews.js?v=1.0"></script>
+  <!-- Global Search Modal -->
+  <div class="search-modal-backdrop" id="search-modal" onclick="if(event.target===this) closeSearchModal()">
+    <div class="search-modal-card">
+      <div class="search-modal-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" class="search-modal-input" placeholder="Search by name, notes, or occasion..." oninput="handleSearchInput(this.value)">
+        <button class="search-modal-close" onclick="closeSearchModal()">&times;</button>
+      </div>
+      <div class="search-modal-results" id="search-modal-results"></div>
+    </div>
+  </div>
+</body>
+</html>

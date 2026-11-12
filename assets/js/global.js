@@ -23,7 +23,7 @@ const PRODUCTS = {
     id: 'phantom',
     name: 'Phantom',
     fullName: 'ODD Phantom',
-    tagline: 'Unseen. Unforgotten. Dominant.',
+    tagline: 'Unseen. Unforgotten. Undeniable.',
     price: 1599,
     originalPrice: null,
     notes: 'Oud · Saffron · Amberwood',
@@ -75,6 +75,25 @@ const PRODUCTS = {
     themeColor: '#E67A7A',
     bgColor: '#110A0A',
     textColor: '#ffffff'
+  },
+  hamper: {
+    id: 'hamper',
+    name: 'The Trio Gift Hamper',
+    fullName: 'ODD Trio Gift Hamper',
+    tagline: 'The Complete Trio. Ready to Gift.',
+    price: 4797,
+    originalPrice: null,
+    notes: 'Phantom · Lucid · First Move (3 × 100ml)',
+    bottleImage: 'Trio Gift Hamper.webp',
+    notesList: ['Phantom 100ml', 'Lucid 100ml', 'First Move 100ml'],
+    intensity: 'Full Wardrobe',
+    warmth: 'Versatile',
+    freshness: 'Day & Night',
+    sweetness: 'Balanced',
+    occasion: 'Luxury gifting, celebrations, collectors, every mood',
+    themeColor: '#C57B48',
+    bgColor: '#141110',
+    textColor: '#ffffff'
   }
 };
 
@@ -98,13 +117,145 @@ try {
   }
 } catch (e) {}
 
+function normalizeCouponCode(code) {
+  const cleaned = String(code || '').trim().toUpperCase();
+  return cleaned || null;
+}
+
 let cartState = readStorageJSON('odd_cart', []).filter(item => item && PRODUCTS[item.id] && Number.isInteger(Number(item.qty)) && Number(item.qty) > 0).map(item => ({ id: item.id, qty: Number(item.qty) }));
-let appliedCoupon = localStorage.getItem('odd_coupon') || localStorage.getItem('odd_coupon_code') || null;
+let appliedCoupon = normalizeCouponCode(localStorage.getItem('odd_coupon') || localStorage.getItem('odd_coupon_code'));
+let ACTIVE_COUPONS = (function hydrateInitialCoupons() {
+  const local = readStorageJSON('odd_coupons', null) || readStorageJSON('odd_admin_coupons', []);
+  return Array.isArray(local) ? local.filter(c => c && c.active !== false) : [];
+})();
+let STORE_STATE_FROM_SERVER = false;
+let COUPONS_SYNCED_FROM_SERVER = false;
 let STORE_INVENTORY = {
   phantom: { sku: 'ODD-PH-001', stock: 0, price: 1599 },
   lucid: { sku: 'ODD-LC-003', stock: 0, price: 1599 },
-  'first-move': { sku: 'ODD-FM-002', stock: 0, price: 1599 }
+  'first-move': { sku: 'ODD-FM-002', stock: 0, price: 1599 },
+  hamper: { sku: 'ODD-HM-004', stock: 0, price: 4797 }
 };
+
+function getGlobalShippingConfig() {
+  const fallback = { enabled: true, standardRate: 50, freeThreshold: 0 };
+  const raw = readStorageJSON('odd_admin_shipping', null);
+  if (raw && typeof raw === 'object') {
+    return {
+      enabled: raw.enabled !== false,
+      standardRate: Math.max(0, Number(raw.standardRate ?? 50) || 0),
+      freeThreshold: Math.max(0, Number(raw.freeThreshold ?? 0) || 0)
+    };
+  }
+  return fallback;
+}
+
+function getGlobalShippingFee(subtotal) {
+  const cfg = getGlobalShippingConfig();
+  if (!cfg.enabled) return 0;
+  if (cfg.freeThreshold > 0 && Number(subtotal) >= cfg.freeThreshold) return 0;
+  return cfg.standardRate;
+}
+
+function getCartSubtotal() {
+  if (!Array.isArray(cartState)) return 0;
+  return cartState.reduce((sum, item) => {
+    const prod = PRODUCTS[item.id];
+    if (!prod) return sum;
+    const qty = Math.min(25, Math.max(0, Number(item.qty) || 0));
+    if (qty <= 0) return sum;
+    const availability = getProductAvailability(item.id);
+    const price = Number(availability.price ?? prod.price) || 0;
+    return sum + (price * qty);
+  }, 0);
+}
+
+function saveAppliedCouponState(couponData) {
+  if (!couponData || !couponData.code) {
+    appliedCoupon = null;
+    localStorage.removeItem('odd_coupon');
+    localStorage.removeItem('odd_coupon_code');
+    localStorage.removeItem('odd_coupon_discount');
+    localStorage.removeItem('odd_coupon_meta');
+    return;
+  }
+  const code = normalizeCouponCode(couponData.code);
+  const discount = Math.max(0, Number(couponData.discount ?? couponData.discountPercent ?? couponData.discount_percent ?? 0));
+  const maxDiscount = Math.max(0, Number(couponData.maxDiscount ?? couponData.max_discount ?? 0));
+  const minSpend = Math.max(0, Number(couponData.minSpend ?? couponData.min_spend ?? 0));
+  appliedCoupon = code;
+  localStorage.setItem('odd_coupon', code);
+  localStorage.setItem('odd_coupon_code', code);
+  localStorage.setItem('odd_coupon_discount', String(discount));
+  localStorage.setItem('odd_coupon_meta', JSON.stringify({ code, discount, maxDiscount, minSpend }));
+}
+
+function resolveAppliedCoupon(subtotal) {
+  const code = normalizeCouponCode(appliedCoupon);
+  if (!code) {
+    return { active: false, code: null, discountPercent: 0, discountAmount: 0, minSpend: 0, minSpendShortfall: 0 };
+  }
+
+  let record = ACTIVE_COUPONS.find(c => normalizeCouponCode(c.code) === code && c.active !== false) || null;
+  if (!record) {
+    const adminCoupons = readStorageJSON('odd_admin_coupons', null) || readStorageJSON('odd_coupons', []);
+    if (Array.isArray(adminCoupons)) {
+      record = adminCoupons.find(c => normalizeCouponCode(c.code) === code && c.active !== false) || null;
+    }
+  }
+
+  // If the server explicitly responded with the active coupon list and this code is no longer active, clear it
+  if (!record && COUPONS_SYNCED_FROM_SERVER) {
+    saveAppliedCouponState(null);
+    return { active: false, code: null, discountPercent: 0, discountAmount: 0, minSpend: 0, minSpendShortfall: 0 };
+  }
+
+  // Before server sync finishes (or offline after validation), honor persisted validated coupon metadata
+  if (!record) {
+    const meta = readStorageJSON('odd_coupon_meta', null);
+    const savedPct = Number(localStorage.getItem('odd_coupon_discount') || 0);
+    if (meta && normalizeCouponCode(meta.code) === code && Number(meta.discount) > 0) {
+      record = meta;
+    } else if (savedPct > 0) {
+      record = { code, discount: savedPct, maxDiscount: 0, minSpend: 0 };
+    } else if (COUPONS_SYNCED_FROM_SERVER) {
+      saveAppliedCouponState(null);
+      return { active: false, code: null, discountPercent: 0, discountAmount: 0, minSpend: 0, minSpendShortfall: 0 };
+    } else {
+      return { active: false, code: null, discountPercent: 0, discountAmount: 0, minSpend: 0, minSpendShortfall: 0 };
+    }
+  }
+
+  const discountPercent = Math.max(0, Number(record.discount ?? record.discountPercent ?? record.discount_percent ?? 0));
+  const minSpend = Math.max(0, Number(record.minSpend ?? record.min_spend ?? 0));
+  const maxDiscount = Math.max(0, Number(record.maxDiscount ?? record.max_discount ?? 0));
+  const safeSubtotal = Math.max(0, Number(subtotal) || 0);
+
+  if (minSpend > 0 && safeSubtotal < minSpend) {
+    return {
+      active: true,
+      code: normalizeCouponCode(record.code) || code,
+      discountPercent,
+      discountAmount: 0,
+      minSpend,
+      minSpendShortfall: minSpend - safeSubtotal
+    };
+  }
+
+  let discountAmount = Math.round(safeSubtotal * (discountPercent / 100));
+  if (maxDiscount > 0 && discountAmount > maxDiscount) {
+    discountAmount = maxDiscount;
+  }
+
+  return {
+    active: true,
+    code: normalizeCouponCode(record.code) || code,
+    discountPercent,
+    discountAmount,
+    minSpend,
+    minSpendShortfall: 0
+  };
+}
 
 // Function to synchronize all price tags, cards, CTA buttons, and modal elements
 function syncAllPriceElementsUI() {
@@ -147,6 +298,7 @@ function syncAllPriceElementsUI() {
       if (path.includes('first-move')) pid = 'first-move';
       else if (path.includes('lucid')) pid = 'lucid';
       else if (path.includes('phantom')) pid = 'phantom';
+      else if (path.includes('hamper')) pid = 'hamper';
     }
     if (pid && PRODUCTS[pid] && PRODUCTS[pid].price) {
       const stock = STORE_INVENTORY[pid]?.stock ?? 0;
@@ -167,6 +319,7 @@ function syncAllPriceElementsUI() {
     if (href.includes('first-move')) pid = 'first-move';
     else if (href.includes('lucid')) pid = 'lucid';
     else if (href.includes('phantom')) pid = 'phantom';
+    else if (href.includes('hamper')) pid = 'hamper';
     if (pid && PRODUCTS[pid] && PRODUCTS[pid].price) {
       const bTag = card.querySelector('b');
       if (bTag) {
@@ -190,13 +343,14 @@ function syncAllPriceElementsUI() {
 }
 window.syncAllPriceElementsUI = syncAllPriceElementsUI;
 
-// Sync live inventory, prices, coupons, and banner directly from authoritative backend
+// Sync live inventory, prices, coupons, banner, and shipping settings directly from authoritative backend
 async function syncInventoryFromApi() {
   try {
-    const [prodRes, coupRes, bannerRes] = await Promise.all([
+    const [prodRes, coupRes, bannerRes, shipRes] = await Promise.all([
       fetch('/api/products').catch(() => null),
       fetch('/api/coupons/active').catch(() => null),
-      fetch('/api/settings/banner').catch(() => null)
+      fetch('/api/settings/banner').catch(() => null),
+      fetch('/api/settings/shipping').catch(() => null)
     ]);
 
     if (prodRes && prodRes.ok) {
@@ -224,12 +378,26 @@ async function syncInventoryFromApi() {
       if (typeof syncStockStatusUI === 'function') syncStockStatusUI();
     }
 
+    if (shipRes && shipRes.ok) {
+      const sData = await shipRes.json().catch(() => null);
+      if (sData && typeof sData === 'object') {
+        try {
+          localStorage.setItem('odd_admin_shipping', JSON.stringify(sData));
+        } catch (e) {}
+      }
+    }
+
     if (coupRes && coupRes.ok) {
       const cData = await coupRes.json();
       if (Array.isArray(cData.coupons)) {
-        ACTIVE_COUPONS = cData.coupons;
+        COUPONS_SYNCED_FROM_SERVER = true;
+        ACTIVE_COUPONS = cData.coupons.filter(c => c && c.active !== false);
         try {
-          localStorage.setItem('odd_coupons', JSON.stringify(cData.coupons));
+          localStorage.setItem('odd_coupons', JSON.stringify(ACTIVE_COUPONS));
+          if (appliedCoupon) {
+            const matched = ACTIVE_COUPONS.find(c => normalizeCouponCode(c.code) === normalizeCouponCode(appliedCoupon));
+            if (matched) saveAppliedCouponState(matched);
+          }
         } catch (e) {}
       }
     }
@@ -257,12 +425,12 @@ async function syncInventoryFromApi() {
         }
       }
     }
+
+    if (typeof updateCartUI === 'function') updateCartUI();
+    if (typeof renderCheckoutSummary === 'function') renderCheckoutSummary();
   } catch (e) {}
 }
 syncInventoryFromApi();
-
-let ACTIVE_COUPONS = [];
-let STORE_STATE_FROM_SERVER = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   syncAllPriceElementsUI();
@@ -325,7 +493,7 @@ function getProductAvailability(productId) {
   try {
     const localInv = JSON.parse(localStorage.getItem('odd_admin_inventory'));
     if (localInv && typeof localInv === 'object') {
-      const skuMap = { 'phantom': 'ODD-PH-001', 'lucid': 'ODD-LC-003', 'first-move': 'ODD-FM-002' };
+      const skuMap = { 'phantom': 'ODD-PH-001', 'lucid': 'ODD-LC-003', 'first-move': 'ODD-FM-002', 'hamper': 'ODD-HM-004' };
       const sku = skuMap[productId] || productId;
       if (localInv[sku]) {
         const liveStock = Math.max(0, Number(localInv[sku].stock ?? 0));
@@ -401,12 +569,14 @@ function removeFromCart(productId) {
 function saveCart() {
   localStorage.setItem('odd_cart', JSON.stringify(cartState));
   if (appliedCoupon) {
-    localStorage.setItem('odd_coupon', appliedCoupon);
-    localStorage.setItem('odd_coupon_code', appliedCoupon);
+    const code = normalizeCouponCode(appliedCoupon);
+    localStorage.setItem('odd_coupon', code);
+    localStorage.setItem('odd_coupon_code', code);
   } else {
     localStorage.removeItem('odd_coupon');
     localStorage.removeItem('odd_coupon_code');
     localStorage.removeItem('odd_coupon_discount');
+    localStorage.removeItem('odd_coupon_meta');
   }
   document.dispatchEvent(new CustomEvent('odd:cart-updated', { detail: { items: cartState.length } }));
 }
@@ -436,6 +606,8 @@ function updateCartUI() {
     if (cartFooter) cartFooter.style.display = 'none';
     cartItemsList.querySelectorAll('.cart-item-single').forEach(el => el.remove());
     const subtotalEl = document.getElementById('cart-subtotal'); if (subtotalEl) subtotalEl.textContent = '₹0';
+    const discountRow = document.getElementById('cart-discount-row'); if (discountRow) discountRow.style.display = 'none';
+    const appliedTag = document.getElementById('coupon-tag-applied'); if (appliedTag) appliedTag.style.display = 'none';
     const totalEl = document.getElementById('cart-total'); if (totalEl) totalEl.textContent = '₹0';
     return;
   }
@@ -480,35 +652,42 @@ function updateCartUI() {
   oldItems.forEach(el => el.remove());
   cartItemsList.insertAdjacentHTML('beforeend', itemsHtml);
 
-  function getGlobalShippingFee(subtotal) {
-    try {
-      const raw = localStorage.getItem('odd_admin_shipping');
-      if (raw) {
-        const cfg = JSON.parse(raw);
-        if (cfg.enabled === false) return 0;
-        const thresh = Number(cfg.freeThreshold ?? 0);
-        if (thresh > 0 && subtotal >= thresh) return 0;
-        return Number(cfg.standardRate ?? 50);
-      }
-    } catch (e) {}
-    return 50;
-  }
-
-  let discountAmount = 0;
-  const appliedCouponRecord = appliedCoupon ? ACTIVE_COUPONS.find(coupon => coupon.code === appliedCoupon && coupon.active !== false) : null;
+  const couponInfo = resolveAppliedCoupon(subtotal);
+  const discountAmount = couponInfo.discountAmount;
   const appliedTag = document.getElementById('coupon-tag-applied');
   const appliedName = document.getElementById('applied-code-name');
-  if (appliedCouponRecord) {
-    discountAmount = Math.round(subtotal * (Number(appliedCouponRecord.discount) / 100));
+  if (couponInfo.active) {
     if (appliedTag) appliedTag.style.display = 'flex';
-    if (appliedName) appliedName.textContent = `${appliedCouponRecord.code} (${appliedCouponRecord.discount}% OFF)`;
-  } else if (appliedCoupon) {
-    appliedCoupon = null; localStorage.removeItem('odd_coupon'); localStorage.removeItem('odd_coupon_discount');
+    if (appliedName) {
+      appliedName.textContent = couponInfo.minSpendShortfall > 0
+        ? `${couponInfo.code} (Add ₹${couponInfo.minSpendShortfall.toLocaleString('en-IN')} for ${couponInfo.discountPercent}% OFF)`
+        : `${couponInfo.code} (${couponInfo.discountPercent}% OFF)`;
+    }
+  } else {
     if (appliedTag) appliedTag.style.display = 'none';
   }
 
+  const shippingCfg = getGlobalShippingConfig();
   const shippingFee = getGlobalShippingFee(subtotal);
   const grandTotal = Math.max(0, subtotal - discountAmount + shippingFee);
+
+  const shippingBanner = cartDrawer?.querySelector('.free-shipping-banner');
+  if (shippingBanner) {
+    const bannerSpan = shippingBanner.querySelector('span');
+    const fillBar = shippingBanner.querySelector('.shipping-progress .fill');
+    if (shippingFee <= 0 || !shippingCfg.enabled) {
+      if (bannerSpan) bannerSpan.textContent = 'Free Express Shipping Unlocked Across India';
+      if (fillBar) fillBar.style.width = '100%';
+    } else if (shippingCfg.freeThreshold > 0) {
+      const remaining = Math.max(0, shippingCfg.freeThreshold - subtotal);
+      const pct = Math.min(100, Math.round((subtotal / shippingCfg.freeThreshold) * 100));
+      if (bannerSpan) bannerSpan.textContent = `Add ₹${remaining.toLocaleString('en-IN')} more for Free Shipping`;
+      if (fillBar) fillBar.style.width = `${pct}%`;
+    } else {
+      if (bannerSpan) bannerSpan.textContent = `Flat Shipping: ₹${shippingFee.toLocaleString('en-IN')} Across India`;
+      if (fillBar) fillBar.style.width = '100%';
+    }
+  }
 
   const subElem = document.getElementById('cart-subtotal');
   if (subElem) subElem.textContent = `₹${subtotal.toLocaleString('en-IN')}`;
@@ -518,7 +697,7 @@ function updateCartUI() {
     if (discountAmount > 0) {
       discountRow.style.display = 'flex';
       const discElem = document.getElementById('cart-discount');
-      if (discElem) discElem.innerText = `-₹${discountAmount.toLocaleString('en-IN')}`;
+      if (discElem) discElem.textContent = `-₹${discountAmount.toLocaleString('en-IN')}`;
     } else {
       discountRow.style.display = 'none';
     }
@@ -528,6 +707,7 @@ function updateCartUI() {
   const shippingVal = document.getElementById('cart-shipping-fee');
   if (shippingVal) {
     shippingVal.textContent = shippingFee > 0 ? `₹${shippingFee.toLocaleString('en-IN')}` : 'FREE';
+    shippingVal.style.color = shippingFee > 0 ? '' : '#2E7D32';
     if (shippingRow) shippingRow.style.display = 'flex';
   }
 
@@ -543,12 +723,17 @@ function renderCartPage() {
   const discountRow = document.getElementById('cart-page-discount-row');
   const discountEl = document.getElementById('cart-page-discount');
   const totalEl = document.getElementById('cart-page-total');
+  const pageCouponTag = document.getElementById('cart-page-coupon-tag');
+  const pageAppliedCode = document.getElementById('cart-page-applied-code-name');
   const checkoutLink = document.getElementById('cart-page-checkout');
   const items = Array.isArray(cartState) ? cartState.filter(item => PRODUCTS[item.id] && Number(item.qty) > 0) : [];
   if (!items.length) {
     container.innerHTML = '<div class="cart-page-empty"><span class="cart-empty-mark">ODD.</span><h2>Your bag is taking a breather.</h2><p>Add a fragrance and it will appear here.</p><a class="btn btn-primary" href="shop.html">Explore the three fragrances</a></div>';
     if (subtotalEl) subtotalEl.textContent = '₹0';
-    if (discountRow) discountRow.hidden = true;
+    if (discountRow) { discountRow.hidden = true; discountRow.style.display = 'none'; }
+    if (pageCouponTag) pageCouponTag.style.display = 'none';
+    const cartPageShip = document.getElementById('cart-page-shipping');
+    if (cartPageShip) cartPageShip.textContent = '₹0';
     if (totalEl) totalEl.textContent = '₹0';
     if (checkoutLink) { checkoutLink.setAttribute('aria-disabled', 'true'); checkoutLink.classList.add('is-disabled'); }
   } else {
@@ -561,16 +746,28 @@ function renderCartPage() {
       const out = stock <= 0 || qty > stock; if (out) unavailable = true;
       return `<article class="cart-page-line${out ? ' is-unavailable' : ''}">
         <div class="cart-page-product-image"><img src="assets/images/${product.bottleImage}" alt="ODD ${product.name}" loading="lazy"></div>
-        <div class="cart-page-product-copy"><a href="${item.id === 'first-move' ? 'products-odd-first-move.html' : `products-odd-${item.id}.html`}">${product.name}</a><span>100 ml · ${price.toLocaleString('en-IN')} each</span>
+        <div class="cart-page-product-copy"><a href="${item.id === 'first-move' ? 'products-odd-first-move.html' : `products-odd-${item.id}.html`}">${product.name}</a><span>${item.id === 'hamper' ? '3 × 100 ml' : '100 ml'} · ₹${price.toLocaleString('en-IN')} each</span>
           <div class="cart-page-qty"><button type="button" data-cart-page-qty="-1" data-product-id="${item.id}" aria-label="Remove one ${product.name}">−</button><span>Qty ${qty}</span><button type="button" data-cart-page-qty="1" data-product-id="${item.id}" aria-label="Add one ${product.name}" ${out || qty >= stock ? 'disabled' : ''}>+</button><button type="button" class="cart-page-remove" data-cart-page-remove="${item.id}">Remove</button></div>
           ${out ? `<small class="cart-page-stock-warning">${stock <= 0 ? 'Currently out of stock. Remove this item to continue.' : `Only ${stock} available. Reduce the quantity to continue.`}</small>` : ''}</div>
         <strong class="cart-page-line-total">₹${lineTotal.toLocaleString('en-IN')}</strong>
       </article>`;
     }).join('');
-    const coupon = appliedCoupon ? ACTIVE_COUPONS.find(item => item.code === appliedCoupon && item.active !== false) : null;
-    const discount = coupon ? Math.round(subtotal * Number(coupon.discount) / 100) : 0;
+    const couponInfo = resolveAppliedCoupon(subtotal);
+    const discount = couponInfo.discountAmount;
     const shipping = getGlobalShippingFee(subtotal);
     if (subtotalEl) subtotalEl.textContent = `₹${subtotal.toLocaleString('en-IN')}`;
+    if (pageCouponTag) {
+      if (couponInfo.active) {
+        pageCouponTag.style.display = 'flex';
+        if (pageAppliedCode) {
+          pageAppliedCode.textContent = couponInfo.minSpendShortfall > 0
+            ? `${couponInfo.code} (Add ₹${couponInfo.minSpendShortfall.toLocaleString('en-IN')} for ${couponInfo.discountPercent}% OFF)`
+            : `${couponInfo.code} (${couponInfo.discountPercent}% OFF)`;
+        }
+      } else {
+        pageCouponTag.style.display = 'none';
+      }
+    }
     if (discountRow) {
       discountRow.hidden = discount <= 0;
       discountRow.style.display = discount > 0 ? 'flex' : 'none';
@@ -579,6 +776,7 @@ function renderCartPage() {
     const cartPageShip = document.getElementById('cart-page-shipping');
     if (cartPageShip) {
       cartPageShip.textContent = shipping > 0 ? `₹${shipping.toLocaleString('en-IN')}` : 'FREE';
+      cartPageShip.style.color = shipping > 0 ? '' : '#2E7D32';
     }
     if (totalEl) totalEl.textContent = `₹${Math.max(0, subtotal - discount + shipping).toLocaleString('en-IN')}`;
     if (checkoutLink) { checkoutLink.setAttribute('aria-disabled', String(unavailable)); checkoutLink.classList.toggle('is-disabled', unavailable); }
@@ -600,56 +798,74 @@ function renderCartPage() {
   }
 }
 
-async function applyCartCoupon() {
-  const input = document.getElementById('cart-coupon-input') || document.getElementById('coupon-input-drawer');
+async function applyCartCoupon(source) {
+  const drawerInput = document.getElementById('cart-coupon-input') || document.getElementById('coupon-input-drawer');
+  const pageInput = document.getElementById('cart-page-coupon-input');
+  const input = (source === 'page' && pageInput)
+    ? pageInput
+    : (drawerInput && drawerInput.value.trim() ? drawerInput : (pageInput && pageInput.value.trim() ? pageInput : (drawerInput || pageInput)));
   if (!input) return;
-  const code = input.value.trim().toUpperCase();
-  if (!code) return;
+  const code = normalizeCouponCode(input.value);
+  if (!code) {
+    showToast('Please enter a promo code.');
+    input.focus();
+    return;
+  }
 
   const subtotal = getCartSubtotal();
+  const customerSession = readStorageJSON('odd_customer_session', null);
+  const customerEmail = String(customerSession?.email || '').trim().toLowerCase();
 
   try {
     const res = await fetch('/api/coupons/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, subtotal })
+      body: JSON.stringify({ code, subtotal, email: customerEmail })
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (res.ok && data.valid) {
-      appliedCoupon = data.code;
-      localStorage.setItem('odd_coupon', data.code);
-      localStorage.setItem('odd_coupon_code', data.code);
-      localStorage.setItem('odd_coupon_discount', String(data.discountPercent));
+      const normalized = normalizeCouponCode(data.code || code);
+      const matched = ACTIVE_COUPONS.find(c => normalizeCouponCode(c.code) === normalized);
+      const couponPayload = {
+        code: normalized,
+        discount: Number(data.discountPercent || matched?.discount || 0),
+        maxDiscount: Number(matched?.maxDiscount ?? matched?.max_discount ?? 0),
+        minSpend: Number(matched?.minSpend ?? matched?.min_spend ?? 0)
+      };
+      if (!matched) {
+        ACTIVE_COUPONS.push(couponPayload);
+      }
+      saveAppliedCouponState(couponPayload);
       saveCart();
-      const tag = document.getElementById('coupon-tag-applied');
-      if (tag) tag.style.display = 'flex';
-      const codeName = document.getElementById('applied-code-name');
-      if (codeName) codeName.innerText = `${data.code} (${data.discountPercent}% OFF)`;
       input.value = '';
+      if (drawerInput && drawerInput !== input) drawerInput.value = '';
+      if (pageInput && pageInput !== input) pageInput.value = '';
       updateCartUI();
-      showToast(`Code ${data.code} applied: ${data.discountPercent}% discount!`);
+      if (typeof renderCheckoutSummary === 'function') renderCheckoutSummary();
+      showToast(`Code ${normalized} applied: ${couponPayload.discount}% discount!`);
       return;
     } else {
       showToast(data.error || 'Invalid or expired promo code.');
       return;
     }
   } catch (e) {
-    // Fallback to local admin coupons if server is offline
+    // Fallback to cached active coupons if network is temporarily unreachable
     try {
-      const localCoupons = JSON.parse(localStorage.getItem('odd_admin_coupons') || localStorage.getItem('odd_coupons') || '[]');
-      const found = localCoupons.find(c => String(c.code).toUpperCase() === code && c.active !== false);
+      const localCoupons = readStorageJSON('odd_admin_coupons', null) || readStorageJSON('odd_coupons', null) || ACTIVE_COUPONS;
+      const found = Array.isArray(localCoupons)
+        ? localCoupons.find(c => normalizeCouponCode(c.code) === code && c.active !== false)
+        : null;
       if (found) {
-        appliedCoupon = found.code;
-        localStorage.setItem('odd_coupon', found.code);
-        localStorage.setItem('odd_coupon_code', found.code);
-        localStorage.setItem('odd_coupon_discount', String(found.discount || found.discount_percent || 0));
+        const minSpend = Number(found.minSpend ?? found.min_spend ?? 0);
+        if (minSpend > 0 && subtotal < minSpend) {
+          showToast(`Minimum order of ₹${minSpend.toLocaleString('en-IN')} required for ${found.code}.`);
+          return;
+        }
+        saveAppliedCouponState(found);
         saveCart();
-        const tag = document.getElementById('coupon-tag-applied');
-        if (tag) tag.style.display = 'flex';
-        const codeName = document.getElementById('applied-code-name');
-        if (codeName) codeName.innerText = `${found.code} (${found.discount || found.discount_percent || 0}% OFF)`;
         input.value = '';
         updateCartUI();
+        if (typeof renderCheckoutSummary === 'function') renderCheckoutSummary();
         showToast(`Code ${found.code} applied!`);
         return;
       }
@@ -659,61 +875,79 @@ async function applyCartCoupon() {
 }
 
 function removeCartCoupon() {
-  appliedCoupon = null;
-  localStorage.removeItem('odd_coupon');
-  localStorage.removeItem('odd_coupon_code');
-  localStorage.removeItem('odd_coupon_discount');
+  saveAppliedCouponState(null);
   saveCart();
-  const tag = document.getElementById('coupon-tag-applied');
-  if (tag) tag.style.display = 'none';
   updateCartUI();
+  if (typeof renderCheckoutSummary === 'function') renderCheckoutSummary();
   showToast('Coupon removed.');
 }
 
 function applyCoupon() { applyCartCoupon(); }
 async function applyCouponFromBanner() {
-  const code = (document.getElementById('banner-code')?.textContent || 'LAUNCH20').trim().toUpperCase();
+  const code = normalizeCouponCode(document.getElementById('banner-code')?.textContent || 'LAUNCH20') || 'LAUNCH20';
   const subtotal = getCartSubtotal();
+  const customerSession = readStorageJSON('odd_customer_session', null);
+  const customerEmail = String(customerSession?.email || '').trim().toLowerCase();
 
   try {
     const res = await fetch('/api/coupons/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, subtotal })
+      body: JSON.stringify({ code, subtotal, email: customerEmail })
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.valid) {
-      appliedCoupon = data.code;
-      localStorage.setItem('odd_coupon', data.code);
-      localStorage.setItem('odd_coupon_code', data.code);
-      localStorage.setItem('odd_coupon_discount', String(data.discountPercent));
+      const normalized = normalizeCouponCode(data.code || code);
+      const matched = ACTIVE_COUPONS.find(c => normalizeCouponCode(c.code) === normalized);
+      const couponPayload = {
+        code: normalized,
+        discount: Number(data.discountPercent || matched?.discount || 0),
+        maxDiscount: Number(matched?.maxDiscount ?? matched?.max_discount ?? 0),
+        minSpend: Number(matched?.minSpend ?? matched?.min_spend ?? 0)
+      };
+      if (!matched) ACTIVE_COUPONS.push(couponPayload);
+      saveAppliedCouponState(couponPayload);
       saveCart();
       updateCartUI();
-      showToast(`${data.code} applied! ${data.discountPercent}% discount is ready for your order.`);
+      if (typeof renderCheckoutSummary === 'function') renderCheckoutSummary();
+      showToast(`${normalized} applied! ${couponPayload.discount}% discount is ready for your order.`);
+      return;
+    } else if (res.status >= 400 && data.error) {
+      showToast(data.error);
       return;
     }
   } catch (e) {}
 
-  const found = ACTIVE_COUPONS.find(item => item.code === code && item.active !== false);
+  const found = ACTIVE_COUPONS.find(item => normalizeCouponCode(item.code) === code && item.active !== false);
   if (found) {
-    appliedCoupon = found.code;
-    localStorage.setItem('odd_coupon', found.code);
-    localStorage.setItem('odd_coupon_code', found.code);
-    localStorage.setItem('odd_coupon_discount', String(found.discount || 20));
+    saveAppliedCouponState(found);
     saveCart();
     updateCartUI();
+    if (typeof renderCheckoutSummary === 'function') renderCheckoutSummary();
     showToast(`${found.code} applied: ${found.discount || 20}% discount ready.`);
   } else {
-    // Standard site default
-    appliedCoupon = code;
-    localStorage.setItem('odd_coupon', code);
-    localStorage.setItem('odd_coupon_code', code);
-    localStorage.setItem('odd_coupon_discount', '20');
+    saveAppliedCouponState({ code, discount: 20, maxDiscount: 500, minSpend: 0 });
     saveCart();
     updateCartUI();
+    if (typeof renderCheckoutSummary === 'function') renderCheckoutSummary();
     showToast(`${code} applied: 20% discount ready.`);
   }
 }
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter' || !event.target) return;
+  const id = event.target.id;
+  if (id === 'cart-coupon-input' || id === 'coupon-input-drawer') {
+    event.preventDefault();
+    applyCartCoupon('drawer');
+  } else if (id === 'cart-page-coupon-input') {
+    event.preventDefault();
+    applyCartCoupon('page');
+  } else if (id === 'chk-coupon-input' && typeof applyCheckoutCoupon === 'function') {
+    event.preventDefault();
+    applyCheckoutCoupon();
+  }
+});
 
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
@@ -832,7 +1066,10 @@ function syncStockStatusUI() {
   Object.keys(PRODUCTS).forEach(productId => {
     const product = PRODUCTS[productId]; const stock = getProductAvailability(productId).stock;
     const out = stock <= 0;
-    const addButtons = [...document.querySelectorAll('[onclick]')].filter(button => (button.getAttribute('onclick') || '').includes(`addToCart('${productId}')`));
+    const addButtons = [...document.querySelectorAll('[onclick]')].filter(button => {
+      const handler = button.getAttribute('onclick') || '';
+      return handler.includes(`addToCart('${productId}')`) || handler.includes(`buyNow('${productId}')`);
+    });
     addButtons.forEach(button => {
       button.disabled = out;
       button.setAttribute('aria-disabled', String(out));
@@ -848,7 +1085,7 @@ function syncStockStatusUI() {
       const priceBlock = document.querySelector('.product-detail-price');
       let status = document.getElementById('product-stock-status');
       if (!status && priceBlock) { status = document.createElement('span'); status.id = 'product-stock-status'; status.className = 'product-stock-status'; priceBlock.insertAdjacentElement('afterend', status); }
-      if (status) { status.textContent = out ? 'Currently out of stock' : `${stock} available · Ready to ship`; status.classList.toggle('out-stock', out); }
+      if (status) { status.textContent = out ? 'Currently out of stock' : 'Available · Ready to ship'; status.classList.toggle('out-stock', out); }
     }
     document.querySelectorAll(`.product-card[data-product="${productId}"]`).forEach(card => {
       const button = card.querySelector('[onclick*="addToCart"]');
@@ -866,7 +1103,7 @@ function syncStockStatusUI() {
     if (typeof currentQvId !== 'undefined' && currentQvId === productId) {
       const add = document.querySelector('.qv-add-btn'); if (add) { add.disabled = out; add.textContent = out ? 'Out of stock' : 'Add to cart'; }
       const buy = document.querySelector('.qv-buy-btn'); if (buy) { buy.disabled = out; buy.textContent = out ? 'Out of stock' : 'Buy now'; }
-      const stockBadge = document.querySelector('.qv-stock-badge'); if (stockBadge) stockBadge.textContent = out ? 'Currently out of stock' : `${stock} in stock, ready to ship`;
+      const stockBadge = document.querySelector('.qv-stock-badge'); if (stockBadge) stockBadge.innerHTML = out ? '<span class="qv-stock-dot"></span> Currently out of stock' : '<span class="qv-stock-dot"></span> In stock, ready to ship';
     }
   });
 }
@@ -879,7 +1116,8 @@ async function refreshStoreState() {
       const skuMap = {
         'ODD-PH-001': 'phantom',
         'ODD-LC-003': 'lucid',
-        'ODD-FM-002': 'first-move'
+        'ODD-FM-002': 'first-move',
+        'ODD-HM-004': 'hamper'
       };
       Object.entries(localInv).forEach(([key, item]) => {
         const pid = skuMap[key] || key;
@@ -935,9 +1173,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener('storage', (e) => {
-  if (e.key === 'odd_admin_inventory' || e.key === 'odd_orders' || e.key === 'odd_admin_coupons') {
+  if (e.key === 'odd_admin_inventory' || e.key === 'odd_orders' || e.key === 'odd_admin_coupons' || e.key === 'odd_admin_shipping' || e.key === 'odd_coupons') {
     refreshStoreState();
     syncStockStatusUI();
+  }
+  if (e.key === 'odd_coupon' || e.key === 'odd_coupon_code' || e.key === 'odd_coupon_discount' || e.key === 'odd_coupon_meta') {
+    appliedCoupon = normalizeCouponCode(localStorage.getItem('odd_coupon') || localStorage.getItem('odd_coupon_code'));
+    updateCartUI();
   }
   if (e.key === 'odd_cart') {
     cartState = readStorageJSON('odd_cart', []).filter(item => item && PRODUCTS[item.id] && Number.isInteger(Number(item.qty)) && Number(item.qty) > 0).map(item => ({ id: item.id, qty: Number(item.qty) }));
@@ -1006,7 +1248,7 @@ function openQuickView(productId) {
     name: targetId.charAt(0).toUpperCase() + targetId.slice(1),
     price: 899,
     notes: 'Luxury Perfume',
-    bottleImage: targetId === 'lucid' ? 'Lucid single bottle.webp' : targetId === 'first-move' ? 'First Move single bottle.webp' : 'Phantom Single bottle.webp'
+    bottleImage: targetId === 'lucid' ? 'Lucid single bottle.webp' : targetId === 'first-move' ? 'First Move single bottle.webp' : targetId === 'hamper' ? 'Trio Gift Hamper.webp' : 'Phantom Single bottle.webp'
   };
 
   currentQvId = targetId;
@@ -1068,6 +1310,16 @@ function addQvToCart() {
   }
   closeQuickView();
   if (typeof toggleCartDrawer === 'function') toggleCartDrawer();
+}
+
+function buyNow(productId) {
+  const availability = typeof getProductAvailability === 'function' ? getProductAvailability(productId) : { stock: 0 };
+  if (!availability || Number(availability.stock) <= 0) {
+    if (typeof addToCart === 'function') addToCart(productId);
+    return;
+  }
+  if (typeof addToCart === 'function') addToCart(productId);
+  window.location.href = 'checkout.html';
 }
 
 function buyNowQv() {

@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ODD Admin & Inventory Management Portal</title>
-  <link rel="stylesheet" href="assets/css/global.css?v=6.1">
-  <link rel="stylesheet" href="assets/css/admin.css?v=6.1">
+  <link rel="stylesheet" href="assets/css/global.css?v=6.2">
+  <link rel="stylesheet" href="assets/css/admin.css?v=6.2">
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="assets/js/html5-qrcode.min.js"></script>
   <script>
@@ -437,6 +437,14 @@
               <div style="font-size:1.6rem; font-weight:700; color:#fff; margin:2px 0;" id="scanner-stock-ph">0</div>
               <span style="font-size:0.7rem; color:var(--admin-accent); font-family:var(--font-mono);">ODD-PH-001</span>
             </div>
+            <div
+              style="background:#0E1015; border:1px solid var(--admin-border); border-radius:8px; padding:0.85rem 1rem; text-align:center;">
+              <span
+                style="font-size:0.72rem; font-family:var(--font-mono); color:var(--admin-text-muted); text-transform:uppercase; letter-spacing:0.06em;">TRIO
+                HAMPER</span>
+              <div style="font-size:1.6rem; font-weight:700; color:#fff; margin:2px 0;" id="scanner-stock-hm">0</div>
+              <span style="font-size:0.7rem; color:var(--admin-accent); font-family:var(--font-mono);">ODD-HM-004</span>
+            </div>
           </div>
 
           <div class="mode-pill-selector">
@@ -601,6 +609,16 @@
                     <div style="display:flex; align-items:center; gap:0.4rem;">
                       <span style="font-size:0.75rem; color:var(--admin-text-muted);">Prints:</span>
                       <input type="number" id="copies-ph" value="5" min="1" max="5000"
+                        style="width:80px; text-align:right;" class="admin-input">
+                    </div>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                    <label style="cursor:pointer;"><input type="checkbox" id="chk-hm" checked> <strong id="lbl-hm">ODD
+                        TRIO HAMPER</strong> <span
+                        style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-HM-004)</span></label>
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                      <span style="font-size:0.75rem; color:var(--admin-text-muted);">Prints:</span>
+                      <input type="number" id="copies-hm" value="5" min="1" max="5000"
                         style="width:80px; text-align:right;" class="admin-input">
                     </div>
                   </div>
@@ -928,7 +946,7 @@
               <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem;">
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">City</label>
-                  <input type="text" id="shiprocket-origin-city" class="admin-input" placeholder="Mumbai" value="Mumbai"
+                  <input type="text" id="shiprocket-origin-city" class="admin-input" placeholder="City" value=""
                     required>
                 </div>
                 <div class="admin-form-group" style="margin:0;">
@@ -963,7 +981,7 @@
                   Tracking Webhook</span>
                 <span
                   id="shiprocket-webhook-url"
-                  style="font-size:0.82rem; color:var(--admin-text); font-family:monospace;">https://oddperfume.com/api/shipping/shiprocket/webhook</span>
+                  style="font-size:0.82rem; color:var(--admin-text); font-family:monospace; overflow-wrap:anywhere; word-break:break-word;">https://oddperfume.com/api/shipping/shiprocket/webhook</span>
                 <div style="font-size:0.75rem; color:#10B981; margin-top:2px;">Status: Active &bull; Auto-syncs live
                   courier tracking scans</div>
               </div>
@@ -1174,8 +1192,8 @@
               <h2 class="admin-card-title">Customer &amp; Studio Inquiries</h2>
               <p class="admin-card-subtitle">All incoming messages submitted through the website contact form, stored directly in the database.</p>
             </div>
-            <div style="display:flex; gap:0.5rem; align-items:center;">
-              <div class="btn-group" role="group" style="display:inline-flex; border:1px solid var(--admin-border); border-radius:6px; overflow:hidden;">
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; max-width:100%;">
+              <div class="btn-group" role="group" style="display:inline-flex; flex-wrap:wrap; max-width:100%; border:1px solid var(--admin-border); border-radius:6px; overflow:hidden;">
                 <button type="button" class="admin-btn admin-btn-sm active" id="btn-inq-filter-all" onclick="filterInquiries('all')" style="border:none; border-radius:0;">All (<span id="inq-count-all">0</span>)</button>
                 <button type="button" class="admin-btn admin-btn-sm" id="btn-inq-filter-new" onclick="filterInquiries('new')" style="border:none; border-radius:0; border-left:1px solid var(--admin-border);">New (<span id="inq-count-new">0</span>)</button>
                 <button type="button" class="admin-btn admin-btn-sm" id="btn-inq-filter-read" onclick="filterInquiries('read')" style="border:none; border-radius:0; border-left:1px solid var(--admin-border);">Read</button>

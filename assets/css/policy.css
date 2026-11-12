@@ -95,10 +95,13 @@
 
 @media (max-width: 600px) {
   .page-hero {
-    padding: 3rem 1rem 2rem;
+    padding: 2.5rem 1rem 1.8rem;
+  }
+  .page-hero .section-title {
+    font-size: clamp(2rem, 8.5vw, 3rem);
   }
   .page-content-wrapper {
-    margin: 2rem auto;
+    margin: 1.75rem auto;
     padding: 0 1rem;
     font-size: 0.95rem;
   }
@@ -109,6 +112,27 @@
   .checkout-page-grid {
     gap: 2rem;
     margin-top: 1.5rem;
+  }
+  .receipt-bill-card {
+    padding: 1.75rem 1.15rem 2.75rem;
+  }
+  .checkout-promo-row {
+    flex-wrap: nowrap;
+  }
+  .checkout-promo-row input {
+    min-width: 0;
+    flex: 1 1 auto;
+    font-size: 0.78rem !important;
+    padding: 0.55rem 0.7rem !important;
+  }
+  .checkout-promo-row .btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 0.55rem 0.95rem;
+  }
+  .cart-page-actions {
+    flex-direction: column;
+    gap: 0.75rem !important;
   }
 }
 

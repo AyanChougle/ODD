@@ -169,6 +169,14 @@ body {
     margin: 0;
     padding: 0;
     width: 100%;
+    max-width: 100%;
+}
+
+main,
+section,
+header,
+footer {
+    max-width: 100%;
 }
 
 img,
@@ -276,9 +284,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .container {
+    width: 100%;
     max-width: 1240px;
     margin: 0 auto;
     padding: 0 clamp(1rem, 4vw, 2.5rem);
+}
+
+.container.center {
+    text-align: center;
 }
 
 .section-padding {
@@ -531,15 +544,15 @@ h1, h2, h3, h4, h5, h6 {
 
 @media (max-width: 640px) {
   .launch-banner {
-    padding: 0.45rem 0.5rem;
+    padding: 0.38rem 0.5rem;
   }
   .banner-container {
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0 0.5rem;
+    gap: 0.45rem;
+    padding: 0 0.25rem;
     flex-wrap: nowrap;
   }
   .status-bullet {
@@ -549,24 +562,25 @@ h1, h2, h3, h4, h5, h6 {
     display: none;
   }
   .banner-text {
-    font-size: 0.72rem;
-    line-height: 1.3;
+    font-size: 0.67rem;
+    line-height: 1.25;
     text-align: left;
     flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: normal;
   }
   .banner-btn {
     flex: 0 0 auto;
-    padding: 0.25rem 0.65rem;
-    font-size: 0.68rem;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.62rem;
     white-space: nowrap;
   }
   .banner-close {
     flex: 0 0 auto;
-    font-size: 1.1rem;
-    padding: 0 0.2rem;
+    font-size: 1.05rem;
+    padding: 0 0.15rem;
   }
 }
 
@@ -984,10 +998,16 @@ h1, h2, h3, h4, h5, h6 {
 
 .coupon-box input {
     flex: 1;
+    min-width: 0;
     padding: 0.6rem 0.8rem;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     font-size: 0.8rem;
+}
+
+.coupon-box .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .coupon-applied-tag {
@@ -1332,6 +1352,7 @@ h1, h2, h3, h4, h5, h6 {
     border: 1px solid var(--border-dark);
     border-radius: var(--radius-full);
     overflow: hidden;
+    max-width: 100%;
 }
 
 .footer-email-input {
@@ -1340,7 +1361,10 @@ h1, h2, h3, h4, h5, h6 {
     padding: 0.7rem 1.2rem;
     color: white;
     font-size: 0.9rem;
-    min-width: 240px;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 240px;
+    max-width: 100%;
     outline: none;
 }
 
@@ -1628,9 +1652,11 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    pointer-events: none;
 }
 
 .toast {
+    pointer-events: auto;
     background-color: var(--bg-dark);
     color: white;
     padding: 0.8rem 1.2rem;
@@ -1640,6 +1666,25 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     transition: opacity 0.3s, transform 0.3s;
     max-width: 340px;
+}
+
+@media (max-width: 768px) {
+    .toast-container {
+        top: max(12px, env(safe-area-inset-top));
+        bottom: auto;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: calc(100vw - 24px);
+        max-width: 360px;
+        align-items: center;
+    }
+
+    .toast {
+        width: 100%;
+        max-width: 100%;
+        text-align: center;
+    }
 }
 
 /* ==========================================================================
@@ -1797,12 +1842,22 @@ h1, h2, h3, h4, h5, h6 {
     }
 
     .footer-nav-columns {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.75rem 1rem;
+        padding: 2rem 0;
     }
 
     .footer-top-signup {
         flex-direction: column;
         text-align: center;
+    }
+
+    .footer-signup-header {
+        justify-content: center;
+    }
+
+    .footer-signup-title {
+        font-size: clamp(1.85rem, 7vw, 2.5rem);
     }
 
     .footer-signup-form {
@@ -1826,7 +1881,27 @@ h1, h2, h3, h4, h5, h6 {
    ========================================================================== */
 @media (max-width: 480px) {
     .footer-nav-columns {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.5rem 0.9rem;
+    }
+
+    .footer-email-input {
+        padding: 0.65rem 0.9rem;
+        font-size: 0.82rem;
+    }
+
+    .footer-email-btn {
+        padding: 0.65rem 1rem;
+        font-size: 0.72rem;
+    }
+
+    .cart-footer .coupon-box .btn {
+        padding: 0.55rem 0.9rem;
+        font-size: 0.72rem;
+    }
+
+    .cart-footer .btn {
+        padding: 0.78rem 1rem;
     }
 
     .footer-massive-odd-container {
@@ -2126,7 +2201,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .search-result-action { gap: .5rem; }
   .search-add-btn { min-width: 100px; padding-inline: .65rem; }
   .form-group-row { grid-template-columns: minmax(0,1fr); }
-  .footer-nav-columns { grid-template-columns: minmax(0,1fr); }
+  .footer-nav-columns { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1.35rem 0.85rem; }
 }
 
 /* Navigation uses a quiet underline instead of a detached dot. */
@@ -2469,6 +2544,7 @@ h1, h2, h3, h4, h5, h6, .section-title, .acc-section-title, .cart-header h3, .pa
 .brand-logo-cr7,
 a.brand-logo-cr7,
 span.brand-logo-cr7,
+.odd-wordmark,
 .hero-giant-odd,
 h1.hero-giant-odd,
 .massive-odd-display-text,
@@ -2478,6 +2554,16 @@ a.admin-brand-logo,
 .footer-brand,
 .site-logo {
   font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', Georgia, serif !important;
+}
+
+.odd-wordmark {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  display: inline;
+}
+
+.odd-wordmark .logo-dot {
+  color: var(--brand-orange);
 }
 
 .slide-title,

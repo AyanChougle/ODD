@@ -25,7 +25,8 @@ let scannerMode = 'receive';
 const SKU_LABELS = {
   'ODD-FM-002': 'ODD FIRST MOVE',
   'ODD-LC-003': 'ODD LUCID',
-  'ODD-PH-001': 'ODD PHANTOM'
+  'ODD-PH-001': 'ODD PHANTOM',
+  'ODD-HM-004': 'ODD TRIO HAMPER'
 };
 
 // Immediate global exposure with distinct delegate names to guarantee zero ReferenceErrors and zero RangeError recursions
@@ -99,6 +100,9 @@ function resolveProductSku(identifier) {
   if (str === 'ODD-PH-001' || str.includes('PHANTOM') || str.includes('ODD-PH') || str === 'PH') {
     return 'ODD-PH-001';
   }
+  if (str === 'ODD-HM-004' || str.includes('HAMPER') || str.includes('TRIO') || str.includes('ODD-HM') || str === 'HM') {
+    return 'ODD-HM-004';
+  }
   return null;
 }
 
@@ -164,6 +168,7 @@ function normalizeOrder(o) {
       if (it.id === 'phantom' || it.id === 'ODD-PH-001') name = 'ODD PHANTOM';
       else if (it.id === 'lucid' || it.id === 'ODD-LC-003') name = 'ODD LUCID';
       else if (it.id === 'first-move' || it.id === 'ODD-FM-002') name = 'ODD FIRST MOVE';
+      else if (it.id === 'hamper' || it.id === 'ODD-HM-004') name = 'ODD TRIO HAMPER';
       else name = String(it.id || 'Fragrance');
     }
     return {
@@ -863,25 +868,30 @@ function updateScannerLiveStock() {
   const fmEl = document.getElementById('scanner-stock-fm');
   const lcEl = document.getElementById('scanner-stock-lc');
   const phEl = document.getElementById('scanner-stock-ph');
+  const hmEl = document.getElementById('scanner-stock-hm');
 
-  let fmStock = 0, lcStock = 0, phStock = 0;
+  let fmStock = 0, lcStock = 0, phStock = 0, hmStock = 0;
   if (Array.isArray(inventoryData) && inventoryData.length > 0) {
     const fm = inventoryData.find(i => i.sku === 'ODD-FM-002');
     const lc = inventoryData.find(i => i.sku === 'ODD-LC-003');
     const ph = inventoryData.find(i => i.sku === 'ODD-PH-001');
+    const hm = inventoryData.find(i => i.sku === 'ODD-HM-004');
     if (fm) fmStock = fm.stock;
     if (lc) lcStock = lc.stock;
     if (ph) phStock = ph.stock;
+    if (hm) hmStock = hm.stock;
   } else {
     const inv = getOfflineInventory();
     fmStock = inv['ODD-FM-002']?.stock ?? 0;
     lcStock = inv['ODD-LC-003']?.stock ?? 0;
     phStock = inv['ODD-PH-001']?.stock ?? 0;
+    hmStock = inv['ODD-HM-004']?.stock ?? 0;
   }
 
   if (fmEl) fmEl.textContent = fmStock;
   if (lcEl) lcEl.textContent = lcStock;
   if (phEl) phEl.textContent = phStock;
+  if (hmEl) hmEl.textContent = hmStock;
 }
 
 function updateInventoryKpis() {
@@ -1490,7 +1500,7 @@ function backToBarcodeSelection() {
 }
 
 function setAllCopies(qty) {
-  ['copies-fm', 'copies-lc', 'copies-ph'].forEach(id => {
+  ['copies-fm', 'copies-lc', 'copies-ph', 'copies-hm'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = qty;
   });
@@ -1516,7 +1526,8 @@ async function generateBarcodeSheet(event) {
   const selected = [
     { sku: 'ODD-FM-002', checked: document.getElementById('chk-fm')?.checked, qty: Number(document.getElementById('copies-fm')?.value) },
     { sku: 'ODD-LC-003', checked: document.getElementById('chk-lc')?.checked, qty: Number(document.getElementById('copies-lc')?.value) },
-    { sku: 'ODD-PH-001', checked: document.getElementById('chk-ph')?.checked, qty: Number(document.getElementById('copies-ph')?.value) }
+    { sku: 'ODD-PH-001', checked: document.getElementById('chk-ph')?.checked, qty: Number(document.getElementById('copies-ph')?.value) },
+    { sku: 'ODD-HM-004', checked: document.getElementById('chk-hm')?.checked, qty: Number(document.getElementById('copies-hm')?.value) }
   ].filter(item => item.checked).map(({ sku, qty }) => ({ sku, qty }));
 
   if (!selected.length) {
@@ -2430,7 +2441,7 @@ function handlePrintOrderInvoice(orderId) {
     <div class="header-row">
       <div>
         <div class="brand-title">ODD<span class="brand-dot">.</span></div>
-        <div class="brand-subtitle">Haute Parfumerie &middot; Mumbai, India</div>
+        <div class="brand-subtitle">Haute Parfumerie &middot; India</div>
         <div style="font-size:11px; color:#6b7280; margin-top:4px;">GSTIN: 27AABCO0000A1Z5 &middot; Support: hello@oddperfume.com</div>
       </div>
       <div class="invoice-badge-box">
@@ -2467,7 +2478,7 @@ function handlePrintOrderInvoice(orderId) {
           </div>
           <div style="display:flex; justify-content:space-between;">
             <span style="color:#6b7280;">Fulfillment:</span>
-            <span>Dispatched from Mumbai Hub</span>
+            <span>Dispatched from Fulfillment Hub</span>
           </div>
         </div>
       </div>

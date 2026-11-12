@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>How ODD Started — Brand Story</title>
-  <meta name="description" content="We started ODD because most perfume counters smell the same. Focus on high perfume oil concentration (20-25% Eau De Parfum) direct from Mumbai.">
-  <link rel="stylesheet" href="assets/css/global.css?v=6.1">
-  <link rel="stylesheet" href="assets/css/policy.css?v=6.1">
+  <meta name="description" content="We started ODD because most perfume counters smell the same. Focus on high perfume oil concentration (20-25% Eau De Parfum) crafted in India.">
+  <link rel="stylesheet" href="assets/css/global.css?v=6.3">
+  <link rel="stylesheet" href="assets/css/policy.css?v=6.3">
 </head>
 <body>
 
@@ -54,7 +54,7 @@
   <main>
     <section class="page-hero">
       <div class="container">
-        <span class="section-subtitle">Mumbai, INDIA</span>
+        <span class="section-subtitle">CRAFTED IN INDIA</span>
         <h1 class="section-title">How ODD Started</h1>
       </div>
     </section>
@@ -62,7 +62,7 @@
     <section class="page-content-wrapper">
       <p>ODD was born out of frustration with fragrance options. You either had synthetic deodorants that faded in 20 minutes, or hyper-inflated designer perfumes imported at 4x cost.</p>
       
-      <p>We set up shop in Mumbai with a simple rule: <strong>Focus on high perfume oil concentration (20—25% Eau De Parfum)</strong> and remove all unnecessary fluff. No celebrity endorsements, no fancy gold-gilded caps that end up in the trash.</p>
+      <p>We set up shop with a simple rule: <strong>Focus on high perfume oil concentration (20—25% Eau De Parfum)</strong> and remove all unnecessary fluff. No celebrity endorsements, no fancy gold-gilded caps that end up in the trash.</p>
       
       <h3>A Few Rules We Break</h3>
       <ul>
@@ -73,7 +73,7 @@
         <li>Be ODD — normal dulls the senses.</li>
       </ul>
 
-      <p style="margin-top:2rem;"><em>— the ODD team (Mumbai)</em></p>
+      <p style="margin-top:2rem;"><em>— the ODD team</em></p>
       <div style="margin-top:2rem;">
         <a href="shop.html" class="btn btn-primary">Explore The Three Fragrances</a>
       </div>
@@ -93,7 +93,7 @@
           <p class="footer-signup-sub">New scents, the odd offer, and nothing else. About once a month.</p>
         </div>
         <form class="footer-signup-form" onsubmit="handleEmailSignup(event)">
-          <input type="email" placeholder="contact@oddperfume.com.com" class="footer-email-input" required>
+          <input type="email" placeholder="email@domain.com" class="footer-email-input" required>
           <button type="submit" class="footer-email-btn btn-water-float">Join</button>
         </form>
       </div>
@@ -175,7 +175,7 @@
 
       <!-- Legal Bar -->
       <div class="footer-legal-bar">
-        <div class="legal-left">&copy; 2026 ODD Perfume &middot; Mumbai, India</div>
+        <div class="legal-left">&copy; 2026 ODD Perfume &middot; India</div>
         <div class="footer-legal-links">
           <a href="shipping-policy.html">Shipping policy</a>
           <a href="refund-policy.html">Returns &amp; refunds</a>
@@ -183,7 +183,7 @@
           <a href="privacy-policy.html">Privacy policy</a>
           <a href="terms.html">Terms of service</a>
         </div>
-        <div class="legal-right">Based in Mumbai.</div>
+        <div class="legal-right">Pan-India Shipping.</div>
       </div>
     </div>
   </footer>
@@ -228,11 +228,25 @@
     </div>
     <div class="cart-items-list" id="cart-items"></div>
     <div class="cart-footer" id="cart-footer" style="display: none;">
-      <a href="checkout.html" class="btn btn-primary btn-lg full-width">Checkout</a>
+      <div class="coupon-box">
+        <input type="text" id="cart-coupon-input" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;">
+        <button type="button" class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
+      </div>
+      <div class="coupon-applied-tag" id="coupon-tag-applied" style="display: none;">
+        <span>Code <strong id="applied-code-name">LAUNCH20</strong> applied</span>
+        <button type="button" onclick="removeCartCoupon()" class="remove-coupon" aria-label="Remove coupon">&times;</button>
+      </div>
+      <div class="cart-totals">
+        <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹0</span></div>
+        <div class="total-row" id="cart-discount-row" style="display:none; color:var(--brand-orange);"><span>Discount:</span><span id="cart-discount">-₹0</span></div>
+        <div class="total-row" id="cart-shipping-row"><span>Shipping:</span><span id="cart-shipping-fee">₹50</span></div>
+        <div class="total-row grand-total"><span>Total:</span><span id="cart-total">₹0</span></div>
+      </div>
+      <a href="checkout.html" class="btn btn-primary btn-lg full-width btn-water-float">Proceed to Checkout</a>
     </div>
   </div>
 
-  <script src="assets/js/global.js?v=6.1"></script>
+  <script src="assets/js/global.js?v=6.3"></script>
 
   <!-- Global Mobile Navigation Drawer -->
   <div class="mobile-nav-drawer" id="mobile-nav">
@@ -252,7 +266,7 @@
       <a href="contact.html">Contact Us</a>
       <div class="drawer-footer">
         <p>hello@oddperfume.com</p>
-        <p>Mon—Sat &middot; 10am—7pm IST &middot; Mumbai</p>
+        <p>Mon—Sat &middot; 10am—7pm IST</p>
       </div>
     </div>
   </div>

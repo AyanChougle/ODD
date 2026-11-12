@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Contact Us — ODD Perfume</title>
-  <meta name="description" content="Get in touch with the ODD Perfume team in Mumbai, India.">
-  <link rel="stylesheet" href="assets/css/global.css?v=6.1">
-  <link rel="stylesheet" href="assets/css/policy.css?v=6.1">
+  <meta name="description" content="Get in touch with the ODD Perfume team in India.">
+  <link rel="stylesheet" href="assets/css/global.css?v=6.3">
+  <link rel="stylesheet" href="assets/css/policy.css?v=6.3">
 </head>
 <body>
 
@@ -59,9 +59,9 @@
     </section>
 
     <section class="page-content-wrapper">
-      <p style="font-size:1.05rem; color:var(--text-muted); line-height:1.6; max-width:680px; margin:0 auto 2.5rem; text-align:center;">Have questions, feedback, bespoke gifting, or custom order inquiries? Reach out directly to our studio team in Mumbai.</p>
+      <p style="font-size:1.05rem; color:var(--text-muted); line-height:1.6; max-width:680px; margin:0 auto 2.5rem; text-align:center;">Have questions, feedback, bespoke gifting, or custom order inquiries? Reach out directly to our studio team.</p>
       
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:2rem; max-width:960px; margin:0 auto 3rem;">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap:2rem; max-width:960px; margin:0 auto 3rem;">
         <!-- Studio Info & Quick Mail Redirection Card -->
         <div style="background:var(--bg-subtle); padding:2rem; border-radius:var(--radius-sm); border:1px solid var(--border-color); display:flex; flex-direction:column; justify-content:space-between;">
           <div>
@@ -82,7 +82,7 @@
 
             <div style="border-top:1px solid var(--border-color); padding-top:1.2rem; font-size:0.88rem; color:var(--text-main); line-height:1.7;">
               <p style="margin:0 0 0.5rem;"><strong>Support Hours:</strong> Mon&mdash;Sat &middot; 10am&mdash;7pm IST</p>
-              <p style="margin:0 0 0.5rem;"><strong>Studio Location:</strong> Mumbai, Maharashtra, India</p>
+              <p style="margin:0 0 0.5rem;"><strong>Studio Location:</strong> India</p>
               <p style="margin:0;"><strong>Orders &amp; Tracking:</strong> Track in real time via our <a href="order-tracking.html" style="color:var(--brand-orange); text-decoration:underline;">Tracking Portal</a></p>
             </div>
           </div>
@@ -222,7 +222,7 @@
 
       <!-- Legal Bar -->
       <div class="footer-legal-bar">
-        <div class="legal-left">&copy; 2026 ODD Perfume &middot; Mumbai, India</div>
+        <div class="legal-left">&copy; 2026 ODD Perfume &middot; India</div>
         <div class="footer-legal-links">
           <a href="shipping-policy.html">Shipping policy</a>
           <a href="refund-policy.html">Returns &amp; refunds</a>
@@ -230,7 +230,7 @@
           <a href="privacy-policy.html">Privacy policy</a>
           <a href="terms.html">Terms of service</a>
         </div>
-        <div class="legal-right">Based in Mumbai.</div>
+        <div class="legal-right">Pan-India Shipping.</div>
       </div>
     </div>
   </footer>
@@ -279,7 +279,7 @@
     </div>
   </div>
 
-  <script src="assets/js/global.js?v=6.1"></script>
+  <script src="assets/js/global.js?v=6.3"></script>
   <script>
     function copyContactEmail(email) {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -379,7 +379,7 @@
       <a href="contact.html">Contact Us</a>
       <div class="drawer-footer">
         <p>hello@oddperfume.com</p>
-        <p>Mon—Sat &middot; 10am—7pm IST &middot; Mumbai</p>
+        <p>Mon—Sat &middot; 10am—7pm IST</p>
       </div>
     </div>
   </div>
@@ -399,14 +399,16 @@
     <div class="cart-footer" id="cart-footer" style="display: none;">
       <div class="coupon-box">
         <input type="text" id="cart-coupon-input" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;">
-        <button class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
+        <button type="button" class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
       </div>
       <div class="coupon-applied-tag" id="coupon-tag-applied" style="display: none;">
         <span>Code <strong id="applied-code-name">LAUNCH20</strong> applied</span>
-        <button onclick="removeCartCoupon()" class="remove-coupon">&times;</button>
+        <button type="button" onclick="removeCartCoupon()" class="remove-coupon" aria-label="Remove coupon">&times;</button>
       </div>
       <div class="cart-totals">
         <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹ 0</span></div>
+        <div class="total-row" id="cart-discount-row" style="display:none; color:var(--brand-orange);"><span>Discount:</span><span id="cart-discount">-₹0</span></div>
+        <div class="total-row" id="cart-shipping-row"><span>Shipping:</span><span id="cart-shipping-fee">₹50</span></div>
         <div class="total-row grand-total"><span>Total:</span><span id="cart-total">₹ 0</span></div>
       </div>
       <a href="checkout.html" class="btn btn-primary btn-lg full-width btn-water-float">Proceed to Checkout</a>

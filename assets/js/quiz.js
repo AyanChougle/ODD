@@ -52,7 +52,7 @@ window.showQuizResult = function() {
 
   if (resTitle) resTitle.innerText = prod.name;
   if (resDesc) {
-    resDesc.innerText = `Based on your lifestyle and preferences, your signature match is ${prod.name} (${prod.notes}). Formulated in Mumbai with 30% fragrance concentration for long projection.`;
+    resDesc.innerText = `Based on your lifestyle and preferences, your signature match is ${prod.name} (${prod.notes}). Crafted in India with 30% fragrance concentration for long projection.`;
   }
 
   if (addBtn) {

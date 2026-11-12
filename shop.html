@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shop The Three — ODD Perfume</title>
-  <meta name="description" content="Phantom, Lucid and First Move. Strong enough that two sprays last most of the day, priced so you don’t have to save them for special occasions. Direct from Mumbai.">
+  <meta name="description" content="Phantom, Lucid and First Move. Strong enough that two sprays last most of the day, priced so you don’t have to save them for special occasions. Crafted in India.">
   <link rel="preload" as="image" href="assets/images/Phantom Single bottle.webp" type="image/webp" fetchpriority="high">
   <link rel="preload" as="font" href="assets/fonts/doren-perfume-serif.otf" type="font/otf" crossorigin>
   <link rel="preload" as="font" href="assets/fonts/DMSans-Regular.ttf" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="assets/css/global.css?v=6.1">
-  <link rel="stylesheet" href="assets/css/shop.css">
+  <link rel="stylesheet" href="assets/css/global.css?v=6.4">
+  <link rel="stylesheet" href="assets/css/shop.css?v=6.4">
 </head>
 <body>
 
@@ -83,7 +83,7 @@
       <a href="contact.html">Contact Us</a>
       <div class="drawer-footer">
         <p>hello@oddperfume.com</p>
-        <p>Mon—Sat &middot; 10am—7pm IST &middot; Mumbai</p>
+        <p>Mon—Sat &middot; 10am—7pm IST</p>
       </div>
     </div>
   </div>
@@ -102,70 +102,70 @@
         <div class="shop-grid">
           
           <!-- PHANTOM -->
-          <div class="product-card">
+          <div class="product-card" data-product="phantom">
             <div class="product-door-container phantom-door">
-              
               <img src="assets/images/Phantom Single bottle.webp" alt="ODD Phantom" class="door-product-img" width="400" height="400" fetchpriority="high">
             </div>
             <div class="product-details">
               <h3 class="product-name">Phantom</h3>
-              <p class="product-tagline">"Unseen. Unforgotten. Dominant."</p>
-              <div class="scent-notes-pills">
-                <span>Oud</span><span>Saffron</span><span>Amberwood</span>
-              </div>
-              <p class="product-body">A dark, commanding blend of Cambodian oud and smoky birch. Built for the night and leaving an unforgettable trail.</p>
-              <div class="product-detail-price" data-product="phantom" style="font-size: 1.4rem;">
+              <div class="product-detail-price" data-product="phantom">
                 <span class="price-current"></span>
               </div>
               <div class="card-actions">
-                <button class="btn btn-primary full-width" onclick="addToCart('phantom')">Add To Bag</button>
-                <a href="products-odd-phantom.html" class="btn btn-outline full-width">View Details</a>
+                <button class="btn btn-primary" onclick="buyNow('phantom')">Buy Now</button>
+                <a href="products-odd-phantom.html" class="btn btn-outline">View Details</a>
               </div>
             </div>
           </div>
 
           <!-- LUCID -->
-          <div class="product-card">
+          <div class="product-card" data-product="lucid">
             <div class="product-door-container lucid-door">
-              
               <img src="assets/images/Lucid single bottle.webp" alt="ODD Lucid" class="door-product-img" width="400" height="400" loading="lazy">
             </div>
             <div class="product-details">
               <h3 class="product-name">Lucid</h3>
-              <p class="product-tagline">"Clear Mind. Sharp Presence."</p>
-              <div class="scent-notes-pills">
-                <span>Bergamot</span><span>Patchouli</span><span>Blackcurrant</span>
-              </div>
-              <p class="product-body">Crisp, energizing citrus smoothed with black tea leaves. Ideal for morning hustles, meetings, and daytime heat.</p>
-              <div class="product-detail-price" data-product="lucid" style="font-size: 1.4rem;">
+              <div class="product-detail-price" data-product="lucid">
                 <span class="price-current"></span>
               </div>
               <div class="card-actions">
-                <button class="btn btn-primary full-width" onclick="addToCart('lucid')">Add To Bag</button>
-                <a href="products-odd-lucid.html" class="btn btn-outline full-width">View Details</a>
+                <button class="btn btn-primary" onclick="buyNow('lucid')">Buy Now</button>
+                <a href="products-odd-lucid.html" class="btn btn-outline">View Details</a>
               </div>
             </div>
           </div>
 
           <!-- FIRST MOVE -->
-          <div class="product-card">
+          <div class="product-card" data-product="first-move">
             <div class="product-door-container move-door">
-              
               <img src="assets/images/First Move single bottle.webp" alt="ODD First Move" class="door-product-img" width="400" height="400" loading="lazy">
             </div>
             <div class="product-details">
               <h3 class="product-name">First Move</h3>
-              <p class="product-tagline">"Start First. Stay Ahead."</p>
-              <div class="scent-notes-pills">
-                <span>Citrus</span><span>Black Tea</span><span>Smoky Musk</span>
-              </div>
-              <p class="product-body">Juicy pineapple cut with smoky wood layers. Designed for social dates, evenings out, and compliment hunting.</p>
-              <div class="product-detail-price" data-product="first-move" style="font-size: 1.4rem;">
+              <div class="product-detail-price" data-product="first-move">
                 <span class="price-current"></span>
               </div>
               <div class="card-actions">
-                <button class="btn btn-primary full-width" onclick="addToCart('first-move')">Add To Bag</button>
-                <a href="products-odd-first-move.html" class="btn btn-outline full-width">View Details</a>
+                <button class="btn btn-primary" onclick="buyNow('first-move')">Buy Now</button>
+                <a href="products-odd-first-move.html" class="btn btn-outline">View Details</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- THE TRIO GIFT HAMPER -->
+          <div class="product-card" data-product="hamper">
+            <div class="product-door-container hamper-door">
+              <span class="badge-tag">Gift Edition</span>
+              <img src="assets/images/Trio Gift Hamper.webp" alt="ODD The Trio Gift Hamper containing Phantom, Lucid, and First Move" class="door-product-img" width="400" height="400" loading="lazy">
+            </div>
+            <div class="product-details">
+              <h3 class="product-name">The Trio Gift Hamper</h3>
+              <div class="product-detail-price" data-product="hamper">
+                <span class="price-current"></span>
+              </div>
+              <div class="card-actions">
+                <button class="btn btn-primary" onclick="buyNow('hamper')">Buy Now</button>
+                <a href="products-odd-hamper.html" class="btn btn-outline">View Details</a>
               </div>
             </div>
           </div>
@@ -189,7 +189,7 @@
           <p class="footer-signup-sub">New scents, the odd offer, and nothing else. About once a month.</p>
         </div>
         <form class="footer-signup-form" onsubmit="handleEmailSignup(event)">
-          <input type="email" placeholder="contact@oddperfume.com.com" class="footer-email-input" required>
+          <input type="email" placeholder="email@domain.com" class="footer-email-input" required>
           <button type="submit" class="footer-email-btn btn-water-float">Join</button>
         </form>
       </div>
@@ -271,7 +271,7 @@
 
       <!-- Legal Bar -->
       <div class="footer-legal-bar">
-        <div class="legal-left">&copy; 2026 ODD Perfume &middot; Mumbai, India</div>
+        <div class="legal-left">&copy; 2026 ODD Perfume &middot; India</div>
         <div class="footer-legal-links">
           <a href="shipping-policy.html">Shipping policy</a>
           <a href="refund-policy.html">Returns &amp; refunds</a>
@@ -279,7 +279,7 @@
           <a href="privacy-policy.html">Privacy policy</a>
           <a href="terms.html">Terms of service</a>
         </div>
-        <div class="legal-right">Based in Mumbai.</div>
+        <div class="legal-right">Pan-India Shipping.</div>
       </div>
     </div>
   </footer>
@@ -331,21 +331,23 @@
     <div class="cart-footer" id="cart-footer" style="display: none;">
       <div class="coupon-box">
         <input type="text" id="cart-coupon-input" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;">
-        <button class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
+        <button type="button" class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
       </div>
       <div class="coupon-applied-tag" id="coupon-tag-applied" style="display: none;">
         <span>Code <strong id="applied-code-name">LAUNCH20</strong> applied</span>
-        <button onclick="removeCartCoupon()" class="remove-coupon">&times;</button>
+        <button type="button" onclick="removeCartCoupon()" class="remove-coupon" aria-label="Remove coupon">&times;</button>
       </div>
       <div class="cart-totals">
         <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹0</span></div>
+        <div class="total-row" id="cart-discount-row" style="display:none; color:var(--brand-orange);"><span>Discount:</span><span id="cart-discount">-₹0</span></div>
+        <div class="total-row" id="cart-shipping-row"><span>Shipping:</span><span id="cart-shipping-fee">₹50</span></div>
         <div class="total-row grand-total"><span>Total:</span><span id="cart-total">₹0</span></div>
       </div>
       <a href="checkout.html" class="btn btn-primary btn-lg full-width">Checkout</a>
     </div>
   </div>
 
-  <script src="assets/js/global.js?v=6.1"></script>
+  <script src="assets/js/global.js?v=6.3"></script>
 
   <!-- Global Mobile Navigation Drawer -->
   

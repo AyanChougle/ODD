@@ -47,6 +47,27 @@ function ensureInquiriesTable(PDO $pdo): void {
     } catch (Throwable $e) {}
 }
 
+function ensureProductReviewsTable(PDO $pdo): void {
+    static $ensured = false;
+    if ($ensured) return;
+    try {
+        $pdo->exec('
+            CREATE TABLE IF NOT EXISTS product_reviews (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                product_id VARCHAR(64) NOT NULL,
+                reviewer_name VARCHAR(128) NOT NULL,
+                rating TINYINT UNSIGNED NOT NULL DEFAULT 5,
+                wear_occasion VARCHAR(128) DEFAULT NULL,
+                comment TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_reviews_product (product_id),
+                INDEX idx_reviews_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ');
+        $ensured = true;
+    } catch (Throwable $e) {}
+}
+
 function sendJson(int $status, $data): void {
     if (!is_array($data)) {
         $data = is_null($data) ? [] : ['data' => $data];
@@ -160,16 +181,22 @@ function ensureDatabaseSchema(PDO $pdo): void {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ');
 
-        // Seed 3 products if products table is empty
+        // Seed products if products table is empty
         $cnt = (int)$pdo->query('SELECT COUNT(*) FROM products')->fetchColumn();
         if ($cnt === 0) {
             $pdo->exec("
                 INSERT INTO products (id, sku, name, price, original_price, stock, active, tagline, notes) VALUES
-                ('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, NULL, 240, 1, 'Unseen. Unforgotten. Dominant.', 'Oud · Amber · Smoky Woods'),
+                ('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, NULL, 240, 1, 'Unseen. Unforgotten. Undeniable.', 'Oud · Amber · Smoky Woods'),
                 ('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, NULL, 180, 1, 'Clear Mind. Sharp Presence.', 'Citrus · Black Tea · Clean Woods'),
-                ('first-move', 'ODD-FM-002', 'ODD First Move', 1599, NULL, 0, 1, 'Start First. Stay Ahead.', 'Pineapple · Woods · Smoky Musk');
+                ('first-move', 'ODD-FM-002', 'ODD First Move', 1599, NULL, 0, 1, 'Start First. Stay Ahead.', 'Pineapple · Woods · Smoky Musk'),
+                ('hamper', 'ODD-HM-004', 'The Trio Gift Hamper', 4797, 4797, 50, 1, 'The Complete Trio. Ready to Gift.', 'Phantom · Lucid · First Move (3 × 100ml)');
             ");
         }
+        // Idempotent migration for pre-seeded databases
+        $pdo->exec("
+            INSERT IGNORE INTO products (id, sku, name, price, original_price, stock, active, tagline, notes) VALUES
+            ('hamper', 'ODD-HM-004', 'The Trio Gift Hamper', 4797, 4797, 50, 1, 'The Complete Trio. Ready to Gift.', 'Phantom · Lucid · First Move (3 × 100ml)');
+        ");
 
         // 5. Orders table
         $pdo->exec('
@@ -1615,7 +1642,7 @@ try {
             </div>
             <div style='padding:30px;'>
               <h2 style='font-size:18px; margin-top:0;'>Thank you for your order, {$customerName}!</h2>
-              <p style='color:#4b5563; font-size:14px;'>We have received your order <strong>#{$orderId}</strong> and are preparing it at our Mumbai fulfillment studio.</p>
+              <p style='color:#4b5563; font-size:14px;'>We have received your order <strong>#{$orderId}</strong> and are preparing it at our fulfillment studio.</p>
               
               {$paymentNotice}
 
@@ -1660,7 +1687,7 @@ try {
               </div>
             </div>
             <div style='background:#f9fafb; border-top:1px solid #e5e7eb; padding:16px; text-align:center; font-size:11px; color:#9ca3af;'>
-              &copy; 2026 ODD Perfumes &middot; Mumbai, India &middot; hello@oddperfume.com
+              &copy; 2026 ODD Perfumes &middot; India &middot; hello@oddperfume.com
             </div>
           </div>
         </body>
@@ -1738,7 +1765,7 @@ try {
               </div>
             </div>
             <div style='background:#f9fafb; border-top:1px solid #e5e7eb; padding:16px; text-align:center; font-size:11px; color:#9ca3af;'>
-              &copy; 2026 ODD Perfumes &middot; Mumbai, India &middot; hello@oddperfume.com
+              &copy; 2026 ODD Perfumes &middot; India &middot; hello@oddperfume.com
             </div>
           </div>
         </body>
@@ -2217,12 +2244,14 @@ try {
         $skuCodes = [
             'ODD-FM-002' => 'ODD-FM',
             'ODD-LC-003' => 'ODD-LC',
-            'ODD-PH-001' => 'ODD-PH'
+            'ODD-PH-001' => 'ODD-PH',
+            'ODD-HM-004' => 'ODD-HM'
         ];
         $skuNames = [
             'ODD-FM-002' => 'ODD FIRST MOVE',
             'ODD-LC-003' => 'ODD LUCID',
-            'ODD-PH-001' => 'ODD PHANTOM'
+            'ODD-PH-001' => 'ODD PHANTOM',
+            'ODD-HM-004' => 'ODD TRIO HAMPER'
         ];
 
         foreach ($prods as $p) {
@@ -2376,6 +2405,8 @@ try {
                     $matchedProduct = $pdo->query("SELECT * FROM products WHERE sku = 'ODD-LC-003'")->fetch();
                 } elseif (str_contains($rawCode, 'PH') || str_contains($rawCode, 'PHANTOM')) {
                     $matchedProduct = $pdo->query("SELECT * FROM products WHERE sku = 'ODD-PH-001'")->fetch();
+                } elseif (str_contains($rawCode, 'HM') || str_contains($rawCode, 'HAMPER') || str_contains($rawCode, 'TRIO')) {
+                    $matchedProduct = $pdo->query("SELECT * FROM products WHERE sku = 'ODD-HM-004'")->fetch();
                 } else {
                     $st = $pdo->prepare('SELECT * FROM products WHERE sku = ?');
                     $st->execute([$rawCode]);
@@ -2828,6 +2859,78 @@ HTML;
         sendJson(200, [
             'success' => true,
             'message' => 'Thank you for subscribing to ODD Fragrance Notes.'
+        ]);
+    }
+
+    // --- 13. Product Reviews & Customer Feedback ---
+    if ($route === 'reviews' && $method === 'GET') {
+        ensureProductReviewsTable($pdo);
+        $productId = strtolower(trim((string)($_GET['product'] ?? '')));
+        $allowedProducts = ['phantom', 'lucid', 'first-move', 'hamper'];
+        if ($productId && !in_array($productId, $allowedProducts, true)) {
+            sendJson(400, ['error' => 'Invalid product identifier.']);
+        }
+        if ($productId) {
+            $stmt = $pdo->prepare('
+                SELECT id, product_id AS productId, reviewer_name AS name, rating, wear_occasion AS occasion, comment, created_at AS createdAt
+                FROM product_reviews
+                WHERE product_id = ?
+                ORDER BY created_at DESC, id DESC
+                LIMIT 100
+            ');
+            $stmt->execute([$productId]);
+            $rows = $stmt->fetchAll();
+        } else {
+            $rows = $pdo->query('
+                SELECT id, product_id AS productId, reviewer_name AS name, rating, wear_occasion AS occasion, comment, created_at AS createdAt
+                FROM product_reviews
+                ORDER BY created_at DESC, id DESC
+                LIMIT 200
+            ')->fetchAll();
+        }
+        sendJson(200, ['reviews' => $rows]);
+    }
+
+    if ($route === 'reviews' && $method === 'POST') {
+        ensureProductReviewsTable($pdo);
+        $body = getJsonBody();
+        $productId = strtolower(trim((string)($body['productId'] ?? $body['product_id'] ?? '')));
+        $name = trim((string)($body['name'] ?? ''));
+        $occasion = trim((string)($body['occasion'] ?? ''));
+        $comment = trim((string)($body['comment'] ?? ''));
+        $rating = max(1, min(5, (int)($body['rating'] ?? 5)));
+
+        if (!in_array($productId, ['phantom', 'lucid', 'first-move', 'hamper'], true)) {
+            sendJson(400, ['error' => 'Please select a valid product.']);
+        }
+        if ($name === '' || mb_strlen($name) > 64) {
+            sendJson(400, ['error' => 'Please enter your name (max 64 characters).']);
+        }
+        if ($comment === '' || mb_strlen($comment) > 600) {
+            sendJson(400, ['error' => 'Please write a short feedback comment (max 600 characters).']);
+        }
+        if (mb_strlen($occasion) > 64) {
+            $occasion = mb_substr($occasion, 0, 64);
+        }
+
+        $stmt = $pdo->prepare('
+            INSERT INTO product_reviews (product_id, reviewer_name, rating, wear_occasion, comment)
+            VALUES (?, ?, ?, ?, ?)
+        ');
+        $stmt->execute([$productId, $name, $rating, $occasion, $comment]);
+        $newId = (int)$pdo->lastInsertId();
+
+        sendJson(201, [
+            'success' => true,
+            'review' => [
+                'id' => $newId,
+                'productId' => $productId,
+                'name' => $name,
+                'rating' => $rating,
+                'occasion' => $occasion,
+                'comment' => $comment,
+                'createdAt' => gmdate('c'),
+            ]
         ]);
     }
 

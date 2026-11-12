@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ODD Perfume — It's good to be ODD.</title>
-  <meta name="description" content="Phantom, Lucid and First Move. Strong enough that two sprays last most of the day, priced so you don’t have to save them for special occasions. Direct from Mumbai.">
+  <meta name="description" content="Phantom, Lucid and First Move. Strong enough that two sprays last most of the day, priced so you don’t have to save them for special occasions. Crafted in India.">
   <link rel="preload" as="image" href="assets/images/First Move single bottle.webp" type="image/webp" fetchpriority="high">
   <link rel="preload" as="font" href="assets/fonts/doren-perfume-serif.otf" type="font/otf" crossorigin>
   <link rel="preload" as="font" href="assets/fonts/DMSans-Regular.ttf" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="assets/css/global.css?v=6.1">
-  <link rel="stylesheet" href="assets/css/home.css?v=6.1">
+  <link rel="stylesheet" href="assets/css/global.css?v=6.4">
+  <link rel="stylesheet" href="assets/css/home.css?v=6.4">
 
 <style>
 .compare-title {
@@ -113,7 +113,7 @@
       <a href="contact.html">Contact Us</a>
       <div class="drawer-footer">
         <p>hello@oddperfume.com</p>
-        <p>Mon-Sat &middot; 10am-7pm IST &middot; Mumbai</p>
+        <p>Mon-Sat &middot; 10am-7pm IST</p>
       </div>
     </div>
   </div>
@@ -142,22 +142,28 @@
           </div>
         </div>
 
-        <!-- Right: Floating Pick of the Day Luxury Card -->
+        <!-- Right: Floating Launch Date Card -->
         <div class="hero-floating-pick-wrapper">
-          <a href="products-odd-first-move.html" class="hero-pick-card">
+          <a href="index.html#showcase" class="hero-pick-card hero-launch-card">
             <div class="hero-pick-badge">
-              <span class="orange-dot-sm"></span> PICK OF THE DAY
+              <span class="orange-dot-sm"></span> <span id="launch-status-label">LAUNCHING ON 27TH NOV</span>
             </div>
-            <div class="hero-pick-body">
-              <img src="assets/images/First Move single bottle.webp" alt="First Move" class="hero-pick-img" width="320" height="320" fetchpriority="high">
-              <div class="hero-pick-info">
-                <span class="hero-pick-category">Eau De Parfum &middot; 100ml</span>
-                <h4 class="hero-pick-name">First Move</h4>
-                <div class="hero-pick-notes">Citrus &middot; Black Tea &middot; Smoky Musk</div>
-                <div class="hero-pick-price-row">
-                  <span class="hero-pick-price" data-product-price="first-move"></span>
-                  <span class="hero-pick-cta">Discover &rarr;</span>
-                </div>
+            <div class="hero-launch-body">
+              <span class="hero-pick-category">First Edition &middot; Limited Batch</span>
+              <h4 class="hero-launch-date">27 Nov 2026</h4>
+              <p class="hero-launch-sub">Phantom, Lucid &amp; First Move arrive this November.</p>
+              <div class="hero-launch-countdown" aria-label="Launch countdown">
+                <div class="launch-unit"><strong id="launch-days">--</strong><span>Days</span></div>
+                <span class="launch-sep">:</span>
+                <div class="launch-unit"><strong id="launch-hours">--</strong><span>Hrs</span></div>
+                <span class="launch-sep">:</span>
+                <div class="launch-unit"><strong id="launch-mins">--</strong><span>Min</span></div>
+                <span class="launch-sep">:</span>
+                <div class="launch-unit"><strong id="launch-secs">--</strong><span>Sec</span></div>
+              </div>
+              <div class="hero-pick-price-row hero-launch-footer">
+                <span class="hero-launch-edition">Three Signature Scents</span>
+                <span class="hero-pick-cta">Explore Drop &rarr;</span>
               </div>
             </div>
           </a>
@@ -168,7 +174,7 @@
             <span class="hero-trust-dot"></span>
             <span>Lasts 8&ndash;10 hrs</span>
             <span class="hero-trust-dot"></span>
-            <span>Mumbai</span>
+            <span>Pan-India Shipping</span>
           </div>
         </div>
       </div>
@@ -224,19 +230,12 @@
     <!-- 3D Perspective Showcase Carousel (Initio Style Reference: media_1791440583472.png) -->
     <section class="showcase-section bg-alt" id="showcase">
       <div class="container center">
-        <span class="section-subtitle">THE PERFUMES</span>
-        <h2 class="section-title" style="font-size: clamp(3rem, 6vw, 4.5rem); margin-bottom: 1.5rem;">Three perfumes. <span style="color: var(--brand-orange); font-style: italic;">Which one's yours?</span></h2>
-        <p class="section-desc" style="max-width: 400px; margin: 0 auto; text-align: center;">Swipe or click to explore the trio. Find your signature scent.</p>
+        <span class="section-subtitle">THE SCENTS</span>
+        <h2 class="section-title" style="font-size: clamp(1.95rem, 7vw, 4.5rem); margin-bottom: 1rem;">Three Scents. <span style="color: var(--brand-orange); font-style: italic;">Which one's yours?</span></h2>
+        <p class="section-desc" style="max-width: min(400px, 100%); margin: 0 auto; text-align: center;">Swipe or click to explore the trio. Find your signature scent.</p>
       </div>
 
       <div class="carousel-viewport">
-        <button class="carousel-arrow prev-arrow" onclick="rotateShowcase('prev')" aria-label="Previous Slide">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
-        </button>
-        <button class="carousel-arrow next-arrow" onclick="rotateShowcase('next')" aria-label="Next Slide">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </button>
-
                 <div class="carousel-track">
           <!-- Slide 0: Phantom -->
           <div class="carousel-slide active" onclick="selectShowcaseSlide(0)">
@@ -245,7 +244,7 @@
             </div>
             <div class="slide-notes">Oud &middot; Saffron &middot; Amberwood</div>
             <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">PHANTOM</h3>
-            <p class="slide-tagline">"Unseen. Unforgotten. Dominant."</p>
+            <p class="slide-tagline">"Unseen. Unforgotten. Undeniable."</p>
             <div class="slide-actions">
               <button class="btn btn-sm btn-primary btn-water-float" onclick="addToCart('phantom')">Add To Bag</button>
               <button class="btn btn-sm btn-outline btn-water-float" onclick="openQuickView('phantom')">Discover &rarr;</button>
@@ -281,6 +280,20 @@
               <button class="btn btn-sm btn-outline btn-water-float" onclick="openQuickView('first-move')">Discover &rarr;</button>
             </div>
           </div>
+
+          <!-- Slide 3: The Trio Gift Hamper -->
+          <div class="carousel-slide" onclick="selectShowcaseSlide(3)">
+            <div class="slide-image-box hamper-slide-box">
+              <img src="assets/images/Trio Gift Hamper.webp" alt="ODD Trio Gift Hamper Box" class="carousel-bottle-img" width="400" height="400" loading="lazy">
+            </div>
+            <div class="slide-notes">Phantom &middot; Lucid &middot; First Move</div>
+            <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">THE TRIO HAMPER</h3>
+            <p class="slide-tagline">"The Complete Trio. Ready to Gift."</p>
+            <div class="slide-actions">
+              <button class="btn btn-sm btn-primary btn-water-float" onclick="addToCart('hamper')">Add To Bag</button>
+              <button class="btn btn-sm btn-outline btn-water-float" onclick="openQuickView('hamper')">Discover &rarr;</button>
+            </div>
+          </div>
         </div>
       </div>
     
@@ -288,6 +301,7 @@
         <span class="carousel-dot active" onclick="selectShowcaseSlide(0)" aria-label="Slide 1" style="width: 10px; height: 10px; border-radius: 50%; background: var(--brand-orange); cursor: pointer; transition: all 0.3s;"></span>
         <span class="carousel-dot" onclick="selectShowcaseSlide(1)" aria-label="Slide 2" style="width: 10px; height: 10px; border-radius: 50%; background: #ccc; cursor: pointer; transition: all 0.3s;"></span>
         <span class="carousel-dot" onclick="selectShowcaseSlide(2)" aria-label="Slide 3" style="width: 10px; height: 10px; border-radius: 50%; background: #ccc; cursor: pointer; transition: all 0.3s;"></span>
+        <span class="carousel-dot" onclick="selectShowcaseSlide(3)" aria-label="Slide 4" style="width: 10px; height: 10px; border-radius: 50%; background: #ccc; cursor: pointer; transition: all 0.3s;"></span>
       </div>
     </section>
 
@@ -425,7 +439,7 @@
           <div class="story-landing-visual">
             <div class="story-img-frame">
               <img src="assets/images/BGphoto1.webp" alt="ODD Perfume Story" width="800" height="450" loading="lazy">
-              <div class="story-badge-loc">Mumbai, INDIA</div>
+              <div class="story-badge-loc">CRAFTED IN INDIA</div>
             </div>
           </div>
           <div class="story-landing-content">
@@ -433,11 +447,11 @@
             <h2 class="story-title">Normal dulls the senses.<br><span class="orange-italic">We wanted something real.</span></h2>
             <div class="story-body-text">
               <p>ODD was born out of frustration with everyday fragrance options. You either had synthetic deodorants that faded in 20 minutes, or hyper-inflated designer perfumes imported at 4x cost with watered-down wear.</p>
-              <p>We set up shop in Mumbai with a simple rule: <strong>Focus on high perfume oil concentration (20&ndash;25% Eau De Parfum)</strong> and remove all unnecessary fluff. No celebrity endorsements, no gilded caps that end up in the trash.</p>
+              <p>We set up shop with a simple rule: <strong>Focus on high perfume oil concentration (20&ndash;25% Eau De Parfum)</strong> and remove all unnecessary fluff. No celebrity endorsements, no gilded caps that end up in the trash.</p>
               <p>Just three perfected everyday perfumes designed to make an unshakeable impression from morning standup to late dinners.</p>
             </div>
             <div class="story-signature-row">
-              <span class="story-signature">&mdash; The ODD Team &middot; Mumbai</span>
+              <span class="story-signature">&mdash; The ODD Team</span>
               <a href="shop.html" class="btn-pill-orange liquid-btn btn-water-float">Shop The Three <span>&rarr;</span></a>
             </div>
           </div>
@@ -460,7 +474,7 @@
           <p class="footer-signup-sub">New scents, the odd offer, and nothing else. About once a month.</p>
         </div>
         <form class="footer-signup-form" onsubmit="handleEmailSignup(event)">
-          <input type="email" placeholder="contact@oddperfume.com.com" class="footer-email-input" required>
+          <input type="email" placeholder="email@domain.com" class="footer-email-input" required>
           <button type="submit" class="footer-email-btn btn-water-float">Join</button>
         </form>
       </div>
@@ -542,7 +556,7 @@
 
       <!-- Legal Bar -->
       <div class="footer-legal-bar">
-        <div class="legal-left">&copy; 2026 ODD Perfume &middot; Mumbai, India</div>
+        <div class="legal-left">&copy; 2026 ODD Perfume &middot; India</div>
         <div class="footer-legal-links">
           <a href="shipping-policy.html">Shipping policy</a>
           <a href="refund-policy.html">Returns &amp; refunds</a>
@@ -550,7 +564,7 @@
           <a href="privacy-policy.html">Privacy policy</a>
           <a href="terms.html">Terms of service</a>
         </div>
-        <div class="legal-right">Based in Mumbai.</div>
+        <div class="legal-right">Pan-India Shipping.</div>
       </div>
     </div>
   </footer>
@@ -602,14 +616,16 @@
     <div class="cart-footer" id="cart-footer" style="display: none;">
       <div class="coupon-box">
         <input type="text" id="cart-coupon-input" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;">
-        <button class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
+        <button type="button" class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
       </div>
       <div class="coupon-applied-tag" id="coupon-tag-applied" style="display: none;">
         <span>Code <strong id="applied-code-name">LAUNCH20</strong> applied</span>
-        <button onclick="removeCartCoupon()" class="remove-coupon">&times;</button>
+        <button type="button" onclick="removeCartCoupon()" class="remove-coupon" aria-label="Remove coupon">&times;</button>
       </div>
       <div class="cart-totals">
         <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹ 0</span></div>
+        <div class="total-row" id="cart-discount-row" style="display:none; color:var(--brand-orange);"><span>Discount:</span><span id="cart-discount">-₹0</span></div>
+        <div class="total-row" id="cart-shipping-row"><span>Shipping:</span><span id="cart-shipping-fee">₹50</span></div>
         <div class="total-row grand-total"><span>Total:</span><span id="cart-total">₹ 0</span></div>
       </div>
       <a href="checkout.html" class="btn btn-primary btn-lg full-width btn-water-float">Proceed to Checkout</a>
@@ -628,8 +644,8 @@
     </div>
   </div>
 
-  <script src="assets/js/global.js?v=6.1"></script>
-  <script src="assets/js/home.js"></script>
+  <script src="assets/js/global.js?v=6.3"></script>
+  <script src="assets/js/home.js?v=6.3"></script>
 </body>
 </html>
 
