@@ -12,11 +12,11 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>ODD First Move</title>
-  <link rel="preload" as="image" href="assets/images/First Move.webp" type="image/webp" fetchpriority="high">
+  <link rel="preload" as="image" href="assets/images/First Move single bottle.webp" type="image/webp" fetchpriority="high">
   <link rel="preload" as="font" href="assets/fonts/doren-perfume-serif.otf" type="font/otf" crossorigin>
   <link rel="preload" as="font" href="assets/fonts/DMSans-Regular.ttf" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="assets/css/global.css?v=7.3">
-  <link rel="stylesheet" href="assets/css/product.css?v=7.3">
+  <link rel="stylesheet" href="assets/css/global.css?v=7.4">
+  <link rel="stylesheet" href="assets/css/product.css?v=7.4">
 </head>
 <body>
 
@@ -70,9 +70,24 @@
     <section class="product-detail-section">
       <div class="container product-detail-grid">
 
-        <!-- LEFT: Image -->
-        <div class="product-gallery-box">
-          <img src="assets/images/First Move.webp" alt="ODD First Move" class="product-lifestyle-img" width="600" height="600" fetchpriority="high" style="aspect-ratio: 1 / 1;">
+        <!-- LEFT: Image Gallery Scroll -->
+        <div class="product-gallery-box" id="productGallery">
+          <div class="product-gallery-slider" id="gallerySlider">
+            <div class="product-gallery-slide" id="slide-bottle">
+              <img src="assets/images/First Move single bottle.webp" alt="ODD First Move Luxury Bottle" class="product-lifestyle-img" width="1080" height="1350" fetchpriority="high" style="aspect-ratio: 4 / 5; object-fit: contain; padding: 2rem 1rem;">
+            </div>
+            <div class="product-gallery-slide lifestyle-slide" id="slide-lifestyle">
+              <img src="assets/images/First Move-lifestyle.webp" alt="ODD First Move Scent Atmosphere" class="product-lifestyle-img" width="1080" height="1440" loading="lazy" style="aspect-ratio: 3 / 4; object-fit: cover;">
+            </div>
+          </div>
+          <div class="product-gallery-thumbs">
+            <button type="button" class="product-gallery-thumb-btn active" onclick="switchProductSlide(0)">
+              <span>Bottle</span>
+            </button>
+            <button type="button" class="product-gallery-thumb-btn" onclick="switchProductSlide(1)">
+              <span>Atmosphere</span>
+            </button>
+          </div>
         </div>
 
         <!-- RIGHT: Info -->
@@ -291,8 +306,8 @@
   <!-- Toast -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="assets/js/global.js?v=7.3"></script>
-  <script src="assets/js/product-reviews.js?v=7.3"></script>
+  <script src="assets/js/global.js?v=7.4"></script>
+  <script src="assets/js/product-reviews.js?v=7.4"></script>
   <!-- Global Search Modal -->
   <div class="search-modal-backdrop" id="search-modal" onclick="if(event.target===this) closeSearchModal()">
     <div class="search-modal-card">

@@ -54,14 +54,16 @@ async function syncLiveProductsAndInventory() {
       const inv = getLiveInventory();
       list.forEach(p => {
         const sku = p.sku || ID_TO_SKU[p.id] || p.id;
+        const fallbackPrice = (typeof PRODUCTS !== 'undefined' && PRODUCTS[p.id]?.price) ? PRODUCTS[p.id].price : 1599;
+        const validPrice = Number(p.price) > 0 ? Number(p.price) : fallbackPrice;
         inv[sku] = {
           sku: sku,
           name: p.name,
           stock: Math.max(0, Number(p.stock ?? 0)),
-          price: Number(p.price || 1599)
+          price: validPrice
         };
         if (typeof PRODUCTS !== 'undefined' && PRODUCTS[p.id]) {
-          PRODUCTS[p.id].price = Number(p.price || 1599);
+          PRODUCTS[p.id].price = validPrice;
         }
       });
       localStorage.setItem('odd_admin_inventory', JSON.stringify(inv));
@@ -256,13 +258,13 @@ function renderCheckoutSummary() {
   let hasUnavailable = false;
 
   cart.forEach(item => {
+    const avail = getProductAvailability(item.id);
     const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[item.id]) ? PRODUCTS[item.id] : null;
     const name = prod ? prod.name : (item.name || item.id);
-    const price = prod ? prod.price : (item.price || 1599);
+    const price = Number(avail.price || prod?.price || item.price || 1599);
     const total = price * item.qty;
     subtotal += total;
 
-    const avail = getProductAvailability(item.id);
     const isOutOfStock = avail.stock <= 0 || item.qty > avail.stock;
     if (isOutOfStock) hasUnavailable = true;
 

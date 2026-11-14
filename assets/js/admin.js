@@ -149,6 +149,21 @@ function getOfflineInventory() {
 function saveOfflineInventory(inv) {
   try {
     localStorage.setItem('odd_admin_inventory', JSON.stringify(inv || {}));
+    // Also keep odd_live_products updated in sync
+    const skuMap = { 'ODD-PH-001': 'phantom', 'ODD-LC-003': 'lucid', 'ODD-FM-002': 'first-move', 'ODD-HM-004': 'hamper' };
+    let liveProds = {};
+    try { liveProds = JSON.parse(localStorage.getItem('odd_live_products') || '{}'); } catch (_) {}
+    if (inv && typeof inv === 'object') {
+      Object.entries(inv).forEach(([key, item]) => {
+        const pid = skuMap[key] || key;
+        if (item && item.price) {
+          if (!liveProds[pid]) liveProds[pid] = {};
+          liveProds[pid].price = Number(item.price);
+          if (item.originalPrice != null) liveProds[pid].originalPrice = Number(item.originalPrice);
+        }
+      });
+      localStorage.setItem('odd_live_products', JSON.stringify(liveProds));
+    }
     window.dispatchEvent(new CustomEvent('odd:inventory-updated', { detail: inv }));
   } catch (e) {}
 }
@@ -853,7 +868,7 @@ async function loadInventory() {
   // Sync offline storage cache with live inventory
   const cacheObj = {};
   inventoryData.forEach(item => {
-    cacheObj[item.sku] = { stock: item.stock, price: item.price };
+    cacheObj[item.sku] = { stock: item.stock, price: item.price, originalPrice: item.originalPrice };
   });
   if (Object.keys(cacheObj).length) {
     saveOfflineInventory(cacheObj);

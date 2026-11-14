@@ -179,7 +179,14 @@ try {
       const pid = skuMap[key] || key;
       if (STORE_INVENTORY[pid] && item) {
         if (item.stock != null) STORE_INVENTORY[pid].stock = Math.max(0, Number(item.stock));
-        if (item.price != null && Number(item.price) > 0) STORE_INVENTORY[pid].price = Number(item.price);
+        if (item.price != null && Number(item.price) > 0) {
+          const pNum = Number(item.price);
+          if ((pid === 'phantom' && pNum === 1599) || (pid === 'first-move' && pNum === 1599) || (pid === 'hamper' && pNum === 4797)) {
+            // Keep authoritative price
+          } else {
+            STORE_INVENTORY[pid].price = pNum;
+          }
+        }
       }
     });
   }
@@ -1263,14 +1270,26 @@ window.addEventListener('storage', (e) => {
         Object.entries(adminInv).forEach(([key, item]) => {
           const pid = skuMap[key] || key;
           if (PRODUCTS[pid] && item && item.price) {
-            PRODUCTS[pid].price = Number(item.price);
-            if (item.originalPrice != null && Number(item.originalPrice) > Number(item.price)) {
-              PRODUCTS[pid].originalPrice = Number(item.originalPrice);
+            const pNum = Number(item.price);
+            if ((pid === 'phantom' && pNum === 1599) || (pid === 'first-move' && pNum === 1599) || (pid === 'hamper' && pNum === 4797)) {
+              // Keep authoritative price
+            } else if (!isNaN(pNum) && pNum > 0) {
+              PRODUCTS[pid].price = pNum;
+              if (item.originalPrice != null && Number(item.originalPrice) > pNum) {
+                PRODUCTS[pid].originalPrice = Number(item.originalPrice);
+              }
             }
           }
           if (STORE_INVENTORY[pid] && item) {
             if (item.stock != null) STORE_INVENTORY[pid].stock = Math.max(0, Number(item.stock));
-            if (item.price != null && Number(item.price) > 0) STORE_INVENTORY[pid].price = Number(item.price);
+            if (item.price != null && Number(item.price) > 0) {
+              const pNum = Number(item.price);
+              if ((pid === 'phantom' && pNum === 1599) || (pid === 'first-move' && pNum === 1599) || (pid === 'hamper' && pNum === 4797)) {
+                // Keep authoritative price
+              } else {
+                STORE_INVENTORY[pid].price = pNum;
+              }
+            }
           }
         });
       }
@@ -1532,7 +1551,27 @@ function checkAdminAccountRole() {
 
 document.addEventListener('DOMContentLoaded', () => {
   checkAdminAccountRole();
+  const slider = document.getElementById('gallerySlider');
+  if (slider) {
+    slider.addEventListener('scroll', () => {
+      const idx = Math.round(slider.scrollLeft / (slider.clientWidth || 1));
+      const btns = document.querySelectorAll('.product-gallery-thumb-btn');
+      btns.forEach((b, i) => b.classList.toggle('active', i === idx));
+    }, { passive: true });
+  }
 });
+
+function switchProductSlide(index) {
+  const slider = document.getElementById('gallerySlider');
+  if (!slider) return;
+  const slides = slider.querySelectorAll('.product-gallery-slide');
+  if (slides[index]) {
+    slides[index].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+    const btns = document.querySelectorAll('.product-gallery-thumb-btn');
+    btns.forEach((b, i) => b.classList.toggle('active', i === index));
+  }
+}
+window.switchProductSlide = switchProductSlide;
 
 
 
