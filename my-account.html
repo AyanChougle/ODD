@@ -195,7 +195,7 @@
         <!-- 4. Account Details Section -->
         <div class="acc-content-card" id="details" style="display:none;">
           <h2 class="acc-section-title">Account Details</h2>
-          <form id="acc-details-form" onsubmit="saveCustomerDetails(event)" style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem;">
+          <form id="acc-details-form" onsubmit="saveCustomerDetails(event)">
             <div>
               <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.4rem;">Full Name</label>
               <input type="text" id="details-name" name="full_name" class="form-control" required style="margin-bottom:0;">
@@ -373,7 +373,7 @@
     <div class="quick-view-card">
       <button class="quick-view-close-btn" onclick="closeQuickView()">&times;</button>
       <div class="quick-view-visual">
-        <img src="assets/images/Phantom.webp?v=8.0" id="qv-img" alt="ODD Perfume" class="quick-view-bottle-img" width="1024" height="1024" loading="lazy" style="aspect-ratio: 1 / 1;">
+        <img src="assets/images/Phantom.webp?v=8.1" id="qv-img" alt="ODD Perfume" class="quick-view-bottle-img" width="1024" height="1024" loading="lazy" style="aspect-ratio: 1 / 1;">
       </div>
       <div class="quick-view-details">
         <span class="qv-brand">ODD PARFUMS</span>
@@ -418,7 +418,7 @@
       <a href="contact.html">Contact Us</a>
       <div class="drawer-footer">
         <p>hello@oddperfume.com</p>
-        <p>Mon—Sat &middot; 10am—7pm IST</p>
+        <p>Mon&mdash;Sat &middot; 10am&mdash;7pm IST</p>
       </div>
     </div>
   </div>
@@ -445,10 +445,10 @@
         <button type="button" onclick="removeCartCoupon()" class="remove-coupon" aria-label="Remove coupon">&times;</button>
       </div>
       <div class="cart-totals">
-        <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹ 0</span></div>
-        <div class="total-row" id="cart-discount-row" style="display:none; color:var(--brand-orange);"><span>Discount:</span><span id="cart-discount">-₹ 0</span></div>
-        <div class="total-row" id="cart-shipping-row"><span>Shipping:</span><span id="cart-shipping-fee">₹50</span></div>
-        <div class="total-row grand-total"><span>Total:</span><span id="cart-total">₹ 0</span></div>
+        <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">&#8377;0</span></div>
+        <div class="total-row" id="cart-discount-row" style="display:none; color:var(--brand-orange);"><span>Discount:</span><span id="cart-discount">-&#8377;0</span></div>
+        <div class="total-row" id="cart-shipping-row"><span>Shipping:</span><span id="cart-shipping-fee">&#8377;50</span></div>
+        <div class="total-row grand-total"><span>Total:</span><span id="cart-total">&#8377;0</span></div>
       </div>
       <a href="checkout.html" class="btn btn-primary btn-lg full-width btn-water-float">Proceed to Checkout</a>
     </div>
@@ -733,7 +733,7 @@
 
     tbody.innerHTML = userOrders.map(o => {
       const rawTotal = o.total || o.amount || 0;
-      const amountStr = `₹${Number(rawTotal).toLocaleString('en-IN')}`;
+      const amountStr = `&#8377;${Number(rawTotal).toLocaleString('en-IN')}`;
       const status = o.status || 'Confirmed';
       const dateStr = o.date ? new Date(o.date).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : 'Recent';
       const itemsList = Array.isArray(o.items) ? o.items.map(it => `${it.name || it.id} (${it.qty})`).join(', ') : 'Fragrance item';
@@ -755,7 +755,7 @@
           </td>
           <td>
             <strong>${accountEscape(amountStr)}</strong>
-            ${o.shipping ? `<small style="display:block; color:var(--text-muted); font-size:0.72rem;">(Includes ₹${o.shipping} Shipping)</small>` : ''}
+            ${o.shipping ? `<small style="display:block; color:var(--text-muted); font-size:0.72rem;">(Includes &#8377;${o.shipping} Shipping)</small>` : ''}
           </td>
           <td>
             <a href="order-tracking.html?orderId=${encodeURIComponent(o.id)}" class="btn btn-sm btn-outline" style="padding:0.35rem 0.8rem; font-size:0.75rem; text-decoration:none;">Track</a>
@@ -769,10 +769,10 @@
       cardsWrap.style.display = 'flex';
       cardsWrap.innerHTML = userOrders.map(o => {
         const rawTotal = o.total || o.amount || 0;
-        const amountStr = `₹${Number(rawTotal).toLocaleString('en-IN')}`;
+        const amountStr = `&#8377;${Number(rawTotal).toLocaleString('en-IN')}`;
         const status = o.status || 'Confirmed';
         const dateStr = o.date ? new Date(o.date).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : 'Recent';
-        const itemsList = Array.isArray(o.items) ? o.items.map(it => `${it.name || it.id} × ${it.qty}`).join(', ') : 'Fragrance item';
+        const itemsList = Array.isArray(o.items) ? o.items.map(it => `${it.name || it.id} &times; ${it.qty}`).join(', ') : 'Fragrance item';
         const isPaid = String(o.paymentMethod || '').toLowerCase().includes('razorpay') || o.paymentStatus === 'Paid';
 
         return `
@@ -785,7 +785,7 @@
               <span>${accountEscape(dateStr)}</span>
               <span style="font-family:var(--font-mono); font-weight:600; color:${isPaid ? '#10B981' : '#F59E0B'};">${accountEscape(isPaid ? 'Razorpay Paid' : 'Cash on Delivery')}</span>
             </div>
-            <div style="font-size:0.85rem; color:var(--text-main); padding:0.4rem 0; border-top:1px dashed var(--border-color); border-bottom:1px dashed var(--border-color);">
+            <div style="font-size:0.85rem; color:var(--text-main); padding:0.4rem 0; border-top:1px solid rgba(0,0,0,0.06); border-bottom:1px solid rgba(0,0,0,0.06);">
               ${accountEscape(itemsList)}
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.2rem;">
@@ -843,7 +843,7 @@
 
     if (!coupons.length) {
       container.innerHTML = `
-        <div style="grid-column:1/-1; background:#FFFFFF; border:1px dashed var(--border-color); border-radius:10px; padding:2rem; text-align:center; color:var(--text-muted);">
+        <div style="grid-column:1/-1; background:#FFFFFF; border:1px solid rgba(0,0,0,0.08); border-radius:10px; padding:2rem; text-align:center; color:var(--text-muted);">
           <strong style="display:block; margin-bottom:0.4rem; color:var(--text-main); font-size:1rem;">No active promotional coupons right now.</strong>
           <span style="font-size:0.85rem;">Check back soon or subscribe to our newsletter for exclusive fragrance offers.</span>
         </div>
@@ -865,7 +865,7 @@
           
           ${isRedeemed ? `
             <div style="background:#F3F4F6; color:#4B5563; font-size:0.75rem; font-family:var(--font-mono); font-weight:600; padding:0.4rem 0.8rem; border-radius:4px; text-align:center;">
-              Redeemed on Order #${accountEscape(usage.orderId || 'ODD')} · ₹${accountEscape(usage.discount || 0)} Saved
+              Redeemed on Order #${accountEscape(usage.orderId || 'ODD')} &middot; &#8377;${accountEscape(usage.discount || 0)} Saved
             </div>
           ` : `
             <div style="display:flex; gap:0.6rem;">

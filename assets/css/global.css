@@ -2487,6 +2487,13 @@ body.drawer-open { overflow:hidden; }
   #account-orders-cards {
     display: flex !important;
   }
+  #acc-details-form {
+    grid-template-columns: 1fr !important;
+    gap: 0.9rem !important;
+  }
+  #acc-details-form > div {
+    grid-column: span 1 !important;
+  }
 }
 
 @media (min-width: 681px) {
