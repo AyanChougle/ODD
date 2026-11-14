@@ -75,11 +75,15 @@
           <div class="product-gallery-slider-wrapper">
             <div class="product-gallery-slider" id="gallerySlider">
               <div class="product-gallery-slide" id="slide-bottle">
-              <img src="assets/images/Lucid single bottle.webp" alt="ODD Lucid Luxury Bottle" class="product-lifestyle-img" width="1080" height="1350" fetchpriority="high" style="aspect-ratio: 4 / 5; object-fit: contain; padding: 2rem 1rem;">
+                <img src="assets/images/Lucid single bottle.webp" alt="ODD Lucid Luxury Bottle" class="product-lifestyle-img" width="1080" height="1350" fetchpriority="high" style="aspect-ratio: 4 / 5; object-fit: contain; padding: 2rem 1rem;">
+              </div>
+              <div class="product-gallery-slide lifestyle-slide" id="slide-lifestyle">
+                <img src="assets/images/Lucid-lifestyle.webp" alt="ODD Lucid Scent Atmosphere" class="product-lifestyle-img" width="1080" height="1440" loading="lazy" style="aspect-ratio: 3 / 4; object-fit: cover;">
+              </div>
             </div>
-            <div class="gallery-dots">
-              <span class="gallery-dot active"></span>
-              <span class="gallery-dot"></span>
+            <div class="gallery-dots" aria-label="Product Gallery Controls">
+              <button type="button" class="gallery-dot active" aria-label="Slide 1: Bottle" onclick="switchProductSlide(0)"></button>
+              <button type="button" class="gallery-dot" aria-label="Slide 2: Atmosphere" onclick="switchProductSlide(1)"></button>
             </div>
           </div>
         </div>
@@ -96,15 +100,15 @@
             <span class="price-current"></span>
           </div>
 
-          <p class="product-desc-text">A crisp, energetic blend perfect for daytime wear, office meetings, and a clear, focused presence. Loaded with 20-25% pure perfume oil for an 8-10 hour wear time.</p>
+          <p class="product-desc-text">A smooth, magnetic blend of rich vanilla, silver birch, and crushed black pepper. Loaded with 20-25% pure perfume oil for an 8-10 hour wear time.</p>
 
           <!-- Notes -->
           <div class="notes-breakdown-box">
             <div class="notes-label">KEY SCENT NOTES</div>
             <div class="notes-pills">
-              <span class="note-pill">Calabrian Bergamot</span>
-              <span class="note-pill">Black Tea</span>
-              <span class="note-pill">White Cedar</span>
+              <span class="note-pill">Vanilla</span>
+              <span class="note-pill">Birch</span>
+              <span class="note-pill">Black pepper</span>
             </div>
           </div>
 
@@ -125,15 +129,15 @@
 
     <section class="product-editorial-section" aria-labelledby="product-story-title">
       <div class="container">
-        <div class="product-editorial-heading"><span class="product-eyebrow">THE ODD PROFILE</span><h2 id="product-story-title">A scent with its own point of view.</h2><p>Crisp bergamot and black tea meet clean cedar and vetiver. A fresh, focused fragrance suited to daytime wear, office meetings and warm afternoons.</p></div>
+        <div class="product-editorial-heading"><span class="product-eyebrow">THE ODD PROFILE</span><h2 id="product-story-title">A scent with its own point of view.</h2><p>Smooth vanilla and crisp birch meet crackling black pepper. A refined, versatile fragrance suited to daytime wear, office meetings and evening plans.</p></div>
         <div class="product-facts-grid">
           <article class="product-fact-card"><span>01 / CONCENTRATION</span><strong>20–25%</strong><p>Perfume oil for a considered, everyday spray.</p></article>
           <article class="product-fact-card"><span>02 / WEAR</span><strong>8–10 hours</strong><p>Wear time can vary with skin, heat and weather.</p></article>
           <article class="product-fact-card"><span>03 / FORMAT</span><strong>100 ml</strong><p>Eau de Parfum, small-batch formulated.</p></article>
         </div>
         <div class="product-detail-lower-grid">
-          <div class="product-detail-note-card"><span class="product-eyebrow">SCENT NOTES</span><h3>What you'll notice</h3><p>Bright citrus gives the first impression; tea and clean woods keep the dry-down calm and composed. A clear choice when you want your fragrance to feel light and deliberate.</p><div class="product-note-pills"><span>Bergamot</span><span>Darjeeling Black Tea</span><span>White Cedar</span><span>Vetiver</span></div></div>
-          <div class="product-detail-note-card"><span class="product-eyebrow">WHEN TO WEAR</span><h3>Made for real plans.</h3><p>Daily office, daytime meetings, workouts and warm summer afternoons.</p><div class="product-wear-ratings"><div><span>Intensity</span><strong>4 / 5</strong></div><div><span>Warmth</span><strong>2 / 5</strong></div><div><span>Freshness</span><strong>4 / 5</strong></div><div><span>Sweetness</span><strong>3 / 5</strong></div></div></div>
+          <div class="product-detail-note-card"><span class="product-eyebrow">SCENT NOTES</span><h3>What you'll notice</h3><p>Warm bourbon vanilla gives a velvety opening, balanced by fresh silver birch wood and punctuated with lively black pepper. A clear, stylish signature for any setting.</p><div class="product-note-pills"><span>Vanilla</span><span>Birch</span><span>Black pepper</span></div></div>
+          <div class="product-detail-note-card"><span class="product-eyebrow">WHEN TO WEAR</span><h3>Made for real plans.</h3><p>Daily office, daytime meetings, dinner dates and versatile daily wear.</p><div class="product-wear-ratings"><div><span>Intensity</span><strong>4 / 5</strong></div><div><span>Warmth</span><strong>3 / 5</strong></div><div><span>Freshness</span><strong>3 / 5</strong></div><div><span>Sweetness</span><strong>3 / 5</strong></div></div></div>
         </div>
       </div>
     </section>
@@ -144,7 +148,7 @@
       </div>
     </section>
     <section class="product-related-section"><div class="container"><div class="product-related-heading"><div><span class="product-eyebrow">KEEP EXPLORING</span><h2>Meet the other <span class="odd-wordmark">ODDs<span class="logo-dot">.</span></span></h2></div><a href="shop.html">Shop all three →</a></div><div class="product-related-grid">
-      <a class="product-related-card" href="products-odd-first-move.html"><span class="product-related-image"><img src="assets/images/First Move single bottle.webp" alt="ODD First Move" width="1080" height="1350" loading="lazy" style="aspect-ratio: 4 / 5;"></span><span class="product-related-meta"><strong>First Move</strong><span>Pineapple · Woods · Smoky Musk</span><b>Discover →</b></span></a><a class="product-related-card" href="products-odd-phantom.html"><span class="product-related-image"><img src="assets/images/Phantom Single bottle.webp" alt="ODD Phantom" width="1080" height="1350" loading="lazy" style="aspect-ratio: 4 / 5;"></span><span class="product-related-meta"><strong>Phantom</strong><span>Oud · Amber · Smoky Woods</span><b>Discover →</b></span></a>
+      <a class="product-related-card" href="products-odd-first-move.html"><span class="product-related-image"><img src="assets/images/First Move single bottle.webp" alt="ODD First Move" width="1080" height="1350" loading="lazy" style="aspect-ratio: 4 / 5;"></span><span class="product-related-meta"><strong>First Move</strong><span>Bergamot · Ginger · Amber</span><b>Discover →</b></span></a><a class="product-related-card" href="products-odd-phantom.html"><span class="product-related-image"><img src="assets/images/Phantom Single bottle.webp" alt="ODD Phantom" width="1080" height="1350" loading="lazy" style="aspect-ratio: 4 / 5;"></span><span class="product-related-meta"><strong>Phantom</strong><span>Oud · Incense · Benzoin</span><b>Discover →</b></span></a>
     </div></div></section>
   </main>
 

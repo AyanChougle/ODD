@@ -282,9 +282,9 @@ function initDatabase() {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     // CRITICAL: First Move strictly starts with 0 units as documented
-    insertProd.run('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, 1599, 0, 1, 'Unseen. Unforgotten. Undeniable.', 'Oud · Amber · Smoky Woods');
-    insertProd.run('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, 1599, 0, 1, 'Clear Mind. Sharp Presence.', 'Citrus · Black Tea · Clean Woods');
-    insertProd.run('first-move', 'ODD-FM-002', 'ODD First Move', 1599, 1599, 0, 1, 'Start First. Stay Ahead.', 'Pineapple · Woods · Smoky Musk');
+    insertProd.run('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, 1599, 0, 1, 'Unseen. Unforgotten. Undeniable.', 'Oud · Incense · Benzoin');
+    insertProd.run('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, 1599, 0, 1, 'Clear Mind. Sharp Presence.', 'Vanilla · Birch · Black pepper');
+    insertProd.run('first-move', 'ODD-FM-002', 'ODD First Move', 1599, 1599, 0, 1, 'Start First. Stay Ahead.', 'Bergamot · Ginger · Amber');
     insertProd.run('hamper', 'ODD-HM-004', 'The Trio Gift Hamper', 4999, 4999, 50, 1, 'The Complete Trio. Ready to Gift.', 'Phantom · Lucid · First Move (3 × 100ml)');
 
     const insertMov = db.prepare(`
