@@ -15,8 +15,8 @@
   <link rel="preload" as="image" href="assets/images/Trio Gift Hamper.webp" type="image/webp" fetchpriority="high">
   <link rel="preload" as="font" href="assets/fonts/doren-perfume-serif.otf" type="font/otf" crossorigin>
   <link rel="preload" as="font" href="assets/fonts/DMSans-Regular.ttf" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="assets/css/global.css?v=7.4">
-  <link rel="stylesheet" href="assets/css/product.css?v=7.4">
+  <link rel="stylesheet" href="assets/css/global.css?v=7.6">
+  <link rel="stylesheet" href="assets/css/product.css?v=7.6">
 </head>
 <body>
 
@@ -71,21 +71,15 @@
 
         <!-- LEFT: Image Gallery Scroll -->
         <div class="product-gallery-box" id="productGallery">
-          <div class="product-gallery-slider" id="gallerySlider">
-            <div class="product-gallery-slide" id="slide-bottle">
+          <div class="product-gallery-slider-wrapper">
+            <div class="product-gallery-slider" id="gallerySlider">
+              <div class="product-gallery-slide" id="slide-bottle">
               <img src="assets/images/Trio Gift Hamper.webp" alt="ODD The Trio Gift Hamper Luxury Box" class="product-lifestyle-img" width="1080" height="1350" fetchpriority="high" style="aspect-ratio: 4 / 5; object-fit: contain; padding: 2rem 1rem;">
             </div>
-            <div class="product-gallery-slide lifestyle-slide" id="slide-lifestyle">
-              <img src="assets/images/Trio Gift Hamper Box.webp" alt="ODD The Trio Gift Hamper Presentation" class="product-lifestyle-img" width="1080" height="1440" loading="lazy" style="aspect-ratio: 3 / 4; object-fit: cover;">
+            <div class="gallery-dots">
+              <span class="gallery-dot active"></span>
+              <span class="gallery-dot"></span>
             </div>
-          </div>
-          <div class="product-gallery-thumbs">
-            <button type="button" class="product-gallery-thumb-btn active" onclick="switchProductSlide(0)">
-              <span>Bottle</span>
-            </button>
-            <button type="button" class="product-gallery-thumb-btn" onclick="switchProductSlide(1)">
-              <span>Atmosphere</span>
-            </button>
           </div>
         </div>
 
@@ -304,8 +298,8 @@
   <!-- Toast -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="assets/js/global.js?v=7.4"></script>
-  <script src="assets/js/product-reviews.js?v=7.4"></script>
+  <script src="assets/js/global.js?v=7.6"></script>
+  <script src="assets/js/product-reviews.js?v=7.6"></script>
   <!-- Global Search Modal -->
   <div class="search-modal-backdrop" id="search-modal" onclick="if(event.target===this) closeSearchModal()">
     <div class="search-modal-card">

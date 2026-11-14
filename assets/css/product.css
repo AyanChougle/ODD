@@ -27,6 +27,13 @@
   overflow: hidden;
   background: var(--bg-subtle);
   border: 1px solid rgba(0, 0, 0, 0.05);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.product-gallery-slider-wrapper {
+  position: relative;
+  width: 100%;
 }
 
 .product-gallery-slider {
@@ -35,6 +42,12 @@
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.product-gallery-slider:active {
+  cursor: grabbing;
 }
 
 .product-gallery-slider::-webkit-scrollbar {
@@ -45,11 +58,13 @@
   flex: 0 0 100%;
   width: 100%;
   scroll-snap-align: start;
+  scroll-snap-stop: always;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   background: var(--bg-subtle);
+  touch-action: pan-y;
 }
 
 .product-lifestyle-img {
@@ -57,45 +72,39 @@
   height: 600px;
   object-fit: contain;
   display: block;
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
 }
 
 .product-gallery-slide.lifestyle-slide .product-lifestyle-img {
   object-fit: cover;
 }
 
-.product-gallery-thumbs {
+.gallery-dots {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: rgba(0, 0, 0, 0.03);
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  gap: 8px;
+  z-index: 5;
+  pointer-events: none;
 }
 
-.product-gallery-thumb-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 16px;
+.gallery-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gallery-dot.active {
+  width: 22px;
   border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  background: #fff;
-  color: var(--text-main);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.product-gallery-thumb-btn.active,
-.product-gallery-thumb-btn:hover {
   background: var(--brand-orange);
-  color: #fff;
-  border-color: var(--brand-orange);
 }
 
 /* --- Info Column --- */
@@ -260,7 +269,7 @@
     position: static;
   }
   .product-lifestyle-img {
-    height: 380px;
+    height: clamp(340px, 80vw, 460px);
   }
   .product-detail-section {
     padding: 3rem 0;
@@ -269,7 +278,7 @@
 
 @media (max-width: 480px) {
   .product-lifestyle-img {
-    height: 280px;
+    height: clamp(300px, 85vw, 380px);
   }
   .product-detail-title {
     font-size: 2.8rem;

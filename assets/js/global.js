@@ -1551,27 +1551,125 @@ function checkAdminAccountRole() {
 
 document.addEventListener('DOMContentLoaded', () => {
   checkAdminAccountRole();
-  const slider = document.getElementById('gallerySlider');
-  if (slider) {
-    slider.addEventListener('scroll', () => {
-      const idx = Math.round(slider.scrollLeft / (slider.clientWidth || 1));
-      const btns = document.querySelectorAll('.product-gallery-thumb-btn');
-      btns.forEach((b, i) => b.classList.toggle('active', i === idx));
-    }, { passive: true });
-  }
+  initProductGallerySwipe();
 });
+
+let currentProductSlide = 0;
 
 function switchProductSlide(index) {
   const slider = document.getElementById('gallerySlider');
   if (!slider) return;
   const slides = slider.querySelectorAll('.product-gallery-slide');
-  if (slides[index]) {
-    slides[index].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-    const btns = document.querySelectorAll('.product-gallery-thumb-btn');
-    btns.forEach((b, i) => b.classList.toggle('active', i === index));
+  if (!slides.length) return;
+  const targetIdx = Math.max(0, Math.min(slides.length - 1, index));
+  currentProductSlide = targetIdx;
+  
+  const targetSlide = slides[targetIdx];
+  if (targetSlide) {
+    slider.scrollTo({
+      left: targetSlide.offsetLeft,
+      behavior: 'smooth'
+    });
   }
+  
+  const dots = document.querySelectorAll('.gallery-dot');
+  dots.forEach((d, i) => d.classList.toggle('active', i === targetIdx));
+  const btns = document.querySelectorAll('.product-gallery-thumb-btn');
+  btns.forEach((b, i) => b.classList.toggle('active', i === targetIdx));
 }
 window.switchProductSlide = switchProductSlide;
+
+function stepProductSlide(delta) {
+  const slider = document.getElementById('gallerySlider');
+  if (!slider) return;
+  const slides = slider.querySelectorAll('.product-gallery-slide');
+  if (!slides.length) return;
+  const nextIdx = (currentProductSlide + delta + slides.length) % slides.length;
+  switchProductSlide(nextIdx);
+}
+window.stepProductSlide = stepProductSlide;
+
+function initProductGallerySwipe() {
+  const slider = document.getElementById('gallerySlider');
+  if (!slider) return;
+
+  let startX = 0;
+  let startY = 0;
+  let isPointerDown = false;
+  let isSwiping = false;
+
+  // Touch Swipe
+  slider.addEventListener('touchstart', (e) => {
+    if (!e.touches.length) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    isSwiping = true;
+  }, { passive: true });
+
+  slider.addEventListener('touchmove', (e) => {
+    if (!isSwiping || !e.touches.length) return;
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const diffX = currentX - startX;
+    const diffY = currentY - startY;
+
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+      // Horizontal swipe gesture in progress
+    }
+  }, { passive: true });
+
+  slider.addEventListener('touchend', (e) => {
+    if (!isSwiping || !e.changedTouches.length) return;
+    isSwiping = false;
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const diffX = endX - startX;
+    const diffY = endY - startY;
+
+    if (Math.abs(diffX) > 35 && Math.abs(diffX) > Math.abs(diffY)) {
+      if (diffX < 0) {
+        stepProductSlide(1); // Swipe left -> next
+      } else {
+        stepProductSlide(-1); // Swipe right -> prev
+      }
+    }
+  }, { passive: true });
+
+  // Mouse Drag Swipe for Desktop
+  slider.addEventListener('mousedown', (e) => {
+    isPointerDown = true;
+    startX = e.clientX;
+    startY = e.clientY;
+  });
+
+  window.addEventListener('mouseup', (e) => {
+    if (!isPointerDown) return;
+    isPointerDown = false;
+    const diffX = e.clientX - startX;
+    const diffY = e.clientY - startY;
+    if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
+      if (diffX < 0) {
+        stepProductSlide(1);
+      } else {
+        stepProductSlide(-1);
+      }
+    }
+  });
+
+  // Keep button states in sync with scroll/snap
+  slider.addEventListener('scroll', () => {
+    const width = slider.clientWidth || 1;
+    const idx = Math.round(slider.scrollLeft / width);
+    if (idx !== currentProductSlide && idx >= 0) {
+      currentProductSlide = idx;
+      const dots = document.querySelectorAll('.gallery-dot');
+      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      const btns = document.querySelectorAll('.product-gallery-thumb-btn');
+      btns.forEach((b, i) => b.classList.toggle('active', i === idx));
+    }
+  }, { passive: true });
+}
+window.initProductGallerySwipe = initProductGallerySwipe;
 
 
 
