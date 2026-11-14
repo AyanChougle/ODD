@@ -232,7 +232,7 @@ function renderCheckoutSummary() {
   }
 
   if (!cart || cart.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding: 2rem 0;">Your bag is currently empty.</p>';
+    container.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding: 2rem 0;">Your Cart is currently empty.</p>';
     
     const subtotalEl = document.getElementById('chk-page-subtotal');
     if (subtotalEl) subtotalEl.innerText = '₹0';
@@ -246,7 +246,7 @@ function renderCheckoutSummary() {
     const submit = document.getElementById('checkout-submit');
     if (submit) {
       submit.disabled = true;
-      submit.textContent = 'Your bag is empty';
+      submit.textContent = 'Your Cart is empty';
     }
     return;
   }
@@ -474,8 +474,8 @@ async function processPageOrder(e) {
   }
 
   if (!cart || cart.length === 0) {
-    if (typeof showToast === 'function') showToast('Your bag is currently empty.');
-    else alert('Your bag is currently empty.');
+    if (typeof showToast === 'function') showToast('Your Cart is currently empty.');
+    else alert('Your Cart is currently empty.');
     return;
   }
 
@@ -489,7 +489,7 @@ async function processPageOrder(e) {
   for (let item of cart) {
     const avail = getProductAvailability(item.id);
     if (avail.stock < item.qty) {
-      const msg = `Error: ${avail.name} has only ${avail.stock} in stock. Please adjust your bag.`;
+      const msg = `Error: ${avail.name} has only ${avail.stock} in stock. Please adjust your Cart.`;
       if (typeof showToast === 'function') showToast(msg);
       else alert(msg);
       if (submitBtn) {

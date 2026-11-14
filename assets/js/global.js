@@ -30,9 +30,9 @@ const PRODUCTS = {
     bottleImage: 'Phantom Single bottle.webp',
     notesList: ['Cambodian Oud', 'Saffron', 'Smoky Birch'],
     intensity: '5/5',
-    warmth: '4/5',
+    warmth: '5/5',
     freshness: '1/5',
-    sweetness: '2/5',
+    sweetness: '3/5',
     occasion: 'Late nights, formal dinners, winter evenings',
     themeColor: '#E6C27A',
     bgColor: '#110E0A',
@@ -48,10 +48,10 @@ const PRODUCTS = {
     notes: 'Calabrian Bergamot · Black Tea · White Cedar',
     bottleImage: 'Lucid single bottle.webp',
     notesList: ['Calabrian Bergamot', 'Black Tea', 'White Cedar'],
-    intensity: '2/5',
-    warmth: '1/5',
-    freshness: '5/5',
-    sweetness: '1/5',
+    intensity: '4/5',
+    warmth: '2/5',
+    freshness: '4/5',
+    sweetness: '3/5',
     occasion: 'Office, daytime meetings, summer',
     themeColor: '#7AE6B2',
     bgColor: '#0A110E',
@@ -67,10 +67,10 @@ const PRODUCTS = {
     notes: 'Juicy Pineapple · Smoky Cedar · Oakmoss Musk',
     bottleImage: 'First Move single bottle.webp',
     notesList: ['Juicy Pineapple', 'Smoky Cedar', 'Oakmoss Musk'],
-    intensity: '4/5',
-    warmth: '4/5',
-    freshness: '2/5',
-    sweetness: '3/5',
+    intensity: '3/5',
+    warmth: '2/5',
+    freshness: '5/5',
+    sweetness: '1/5',
     occasion: 'Dates, evenings out, anytime you need confidence',
     themeColor: '#E67A7A',
     bgColor: '#110A0A',
@@ -81,7 +81,7 @@ const PRODUCTS = {
     name: 'The Trio Gift Hamper',
     fullName: 'ODD Trio Gift Hamper',
     tagline: 'The Complete Trio. Ready to Gift.',
-    price: 4797,
+    price: 4999,
     originalPrice: null,
     notes: 'Phantom · Lucid · First Move (3 × 100ml)',
     bottleImage: 'Trio Gift Hamper.webp',
@@ -102,8 +102,30 @@ function readStorageJSON(key, fallback) {
   catch { return fallback; }
 }
 
-// Hydrate PRODUCTS and STORE_INVENTORY immediately from database cache to eliminate any default price flash
+// Hydrate PRODUCTS and STORE_INVENTORY immediately from database & admin storage cache to eliminate any price discrepancy
 try {
+  const skuMap = {
+    'ODD-PH-001': 'phantom',
+    'ODD-LC-003': 'lucid',
+    'ODD-FM-002': 'first-move',
+    'ODD-HM-004': 'hamper'
+  };
+
+  // 1. Live admin inventory cache (set when admin updates prices in dashboard)
+  const adminInv = readStorageJSON('odd_admin_inventory', null);
+  if (adminInv && typeof adminInv === 'object') {
+    Object.entries(adminInv).forEach(([key, item]) => {
+      const pid = skuMap[key] || key;
+      if (PRODUCTS[pid] && item && item.price) {
+        PRODUCTS[pid].price = Number(item.price);
+        if (item.originalPrice != null && Number(item.originalPrice) > Number(item.price)) {
+          PRODUCTS[pid].originalPrice = Number(item.originalPrice);
+        }
+      }
+    });
+  }
+
+  // 2. Synchronous cache from live API products
   const cachedProducts = readStorageJSON('odd_live_products', null);
   if (cachedProducts && typeof cachedProducts === 'object') {
     Object.keys(cachedProducts).forEach(pid => {
@@ -131,11 +153,26 @@ let ACTIVE_COUPONS = (function hydrateInitialCoupons() {
 let STORE_STATE_FROM_SERVER = false;
 let COUPONS_SYNCED_FROM_SERVER = false;
 let STORE_INVENTORY = {
-  phantom: { sku: 'ODD-PH-001', stock: 0, price: 1599 },
-  lucid: { sku: 'ODD-LC-003', stock: 0, price: 1599 },
-  'first-move': { sku: 'ODD-FM-002', stock: 0, price: 1599 },
-  hamper: { sku: 'ODD-HM-004', stock: 0, price: 4797 }
+  phantom: { sku: 'ODD-PH-001', stock: 0, price: PRODUCTS['phantom']?.price || 1599 },
+  lucid: { sku: 'ODD-LC-003', stock: 0, price: PRODUCTS['lucid']?.price || 1599 },
+  'first-move': { sku: 'ODD-FM-002', stock: 0, price: PRODUCTS['first-move']?.price || 1599 },
+  hamper: { sku: 'ODD-HM-004', stock: 0, price: PRODUCTS['hamper']?.price || 4999 }
 };
+
+// Immediate hydration of inventory stock from admin cache
+try {
+  const adminInv = readStorageJSON('odd_admin_inventory', null);
+  if (adminInv && typeof adminInv === 'object') {
+    const skuMap = { 'ODD-PH-001': 'phantom', 'ODD-LC-003': 'lucid', 'ODD-FM-002': 'first-move', 'ODD-HM-004': 'hamper' };
+    Object.entries(adminInv).forEach(([key, item]) => {
+      const pid = skuMap[key] || key;
+      if (STORE_INVENTORY[pid] && item) {
+        if (item.stock != null) STORE_INVENTORY[pid].stock = Math.max(0, Number(item.stock));
+        if (item.price != null && Number(item.price) > 0) STORE_INVENTORY[pid].price = Number(item.price);
+      }
+    });
+  }
+} catch (e) {}
 
 function getGlobalShippingConfig() {
   const fallback = { enabled: true, standardRate: 50, freeThreshold: 0 };
@@ -290,7 +327,7 @@ function syncAllPriceElementsUI() {
     heroPickPrice.innerHTML = `&#8377;${Number(fmPrice).toLocaleString('en-IN')}`;
   }
 
-  // 3. Update "Add to Bag — ₹..." CTA buttons on product pages
+  // 3. Update "Add to Cart — ₹..." CTA buttons on product pages
   document.querySelectorAll('.product-add-btn').forEach(btn => {
     let pid = btn.dataset.productBtn;
     if (!pid) {
@@ -306,7 +343,7 @@ function syncAllPriceElementsUI() {
         btn.innerHTML = 'Out of Stock';
         btn.disabled = true;
       } else {
-        btn.innerHTML = `Add to Bag &mdash; &#8377;${Number(PRODUCTS[pid].price).toLocaleString('en-IN')}`;
+        btn.innerHTML = `Add to Cart &mdash; &#8377;${Number(PRODUCTS[pid].price).toLocaleString('en-IN')}`;
         btn.disabled = false;
       }
     }
@@ -332,7 +369,7 @@ function syncAllPriceElementsUI() {
   const quizBtn = document.getElementById('quiz-add-btn');
   if (quizBtn) {
     const p = PRODUCTS['phantom']?.price || 1599;
-    quizBtn.textContent = `Add Match To Bag — ₹ ${Number(p).toLocaleString('en-IN')}`;
+    quizBtn.textContent = `Add Match To Cart — ₹ ${Number(p).toLocaleString('en-IN')}`;
   }
 
   // 6. Update Quick View modal price if open
@@ -344,7 +381,14 @@ function syncAllPriceElementsUI() {
 window.syncAllPriceElementsUI = syncAllPriceElementsUI;
 
 // Sync live inventory, prices, coupons, banner, and shipping settings directly from authoritative backend
+let isSyncingInventory = false;
+let lastSyncTimestamp = 0;
+
 async function syncInventoryFromApi() {
+  if (isSyncingInventory) return;
+  if (Date.now() - lastSyncTimestamp < 3000) return;
+  isSyncingInventory = true;
+  lastSyncTimestamp = Date.now();
   try {
     const [prodRes, coupRes, bannerRes, shipRes] = await Promise.all([
       fetch('/api/products').catch(() => null),
@@ -428,9 +472,18 @@ async function syncInventoryFromApi() {
 
     if (typeof updateCartUI === 'function') updateCartUI();
     if (typeof renderCheckoutSummary === 'function') renderCheckoutSummary();
-  } catch (e) {}
+  } catch (e) {
+  } finally {
+    isSyncingInventory = false;
+  }
 }
-syncInventoryFromApi();
+if (typeof window !== 'undefined') {
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => syncInventoryFromApi(), { timeout: 1500 });
+  } else {
+    setTimeout(syncInventoryFromApi, 100);
+  }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   syncAllPriceElementsUI();
@@ -519,7 +572,7 @@ function addToCart(productId) {
     const stock = availability.stock;
     const existing = cartState.find(item => item.id === productId);
     if (stock <= 0) {
-      showToast(`${prod.name} is currently out of stock. It cannot be added to your bag.`);
+      showToast(`${prod.name} is currently out of stock. It cannot be added to your Cart.`);
       syncStockStatusUI();
       return;
     }
@@ -540,7 +593,7 @@ function addToCart(productId) {
 
     saveCart();
     updateCartUI();
-    showToast(`Added ${prod.name} to your bag.`);
+    showToast(`Added ${prod.name} to your Cart.`);
     
     const drawer = document.getElementById('cart-drawer');
     if (drawer && !drawer.classList.contains('open')) {
@@ -563,7 +616,7 @@ function removeFromCart(productId) {
   cartState = cartState.filter(i => i.id !== productId);
   saveCart();
   updateCartUI();
-  showToast('Item removed from bag.');
+  showToast('Item removed from Cart.');
 }
 
 function saveCart() {
@@ -592,7 +645,7 @@ function updateCartUI() {
   let emptyState = cartEmpty;
   if (!emptyState && cartItemsList) {
     emptyState = cartItemsList.querySelector('.cart-empty-state');
-    if (!emptyState) { emptyState = document.createElement('div'); emptyState.className = 'cart-empty-state'; emptyState.innerHTML = '<span class="cart-empty-mark">ODD.</span><p>Your bag is taking a breather.</p><span>Add a fragrance and it will show up here.</span><a href="shop.html">Explore the three fragrances</a>'; cartItemsList.appendChild(emptyState); }
+    if (!emptyState) { emptyState = document.createElement('div'); emptyState.className = 'cart-empty-state'; emptyState.innerHTML = '<span class="cart-empty-mark">ODD.</span><p>Your Cart is taking a breather.</p><span>Add a fragrance and it will show up here.</span><a href="shop.html">Explore the three fragrances</a>'; cartItemsList.appendChild(emptyState); }
   }
   
   const totalItems = cartState.reduce((sum, i) => sum + i.qty, 0);
@@ -728,7 +781,7 @@ function renderCartPage() {
   const checkoutLink = document.getElementById('cart-page-checkout');
   const items = Array.isArray(cartState) ? cartState.filter(item => PRODUCTS[item.id] && Number(item.qty) > 0) : [];
   if (!items.length) {
-    container.innerHTML = '<div class="cart-page-empty"><span class="cart-empty-mark">ODD.</span><h2>Your bag is taking a breather.</h2><p>Add a fragrance and it will appear here.</p><a class="btn btn-primary" href="shop.html">Explore the three fragrances</a></div>';
+    container.innerHTML = '<div class="cart-page-empty"><span class="cart-empty-mark">ODD.</span><h2>Your Cart is taking a breather.</h2><p>Add a fragrance and it will appear here.</p><a class="btn btn-primary" href="shop.html">Explore the three fragrances</a></div>';
     if (subtotalEl) subtotalEl.textContent = '₹0';
     if (discountRow) { discountRow.hidden = true; discountRow.style.display = 'none'; }
     if (pageCouponTag) pageCouponTag.style.display = 'none';
@@ -991,7 +1044,7 @@ function handleSearchInput(query) {
   resultsContainer.innerHTML = matches.map(product => {
     const stock = getProductAvailability(product.id).stock;
     const detailLink = product.id === 'first-move' ? 'products-odd-first-move.html' : `products-odd-${product.id}.html`;
-    return `<article class="search-result-row"><a class="search-result-visual" href="${detailLink}"><img src="assets/images/${product.bottleImage}" alt="ODD ${product.name}"></a><div class="search-result-copy"><a href="${detailLink}" class="search-result-name">${product.name}</a><p>${product.notes}</p><span class="search-stock ${stock > 0 ? 'in-stock' : 'out-stock'}"><i></i>${stock > 0 ? 'In stock' : 'Currently unavailable'}</span></div><div class="search-result-action"><strong>₹${product.price.toLocaleString('en-IN')}</strong><button type="button" class="search-add-btn" data-search-add="${product.id}" ${stock <= 0 ? 'disabled' : ''}>${stock > 0 ? 'Add to bag' : 'Out of stock'}</button></div></article>`;
+    return `<article class="search-result-row"><a class="search-result-visual" href="${detailLink}"><img src="assets/images/${product.bottleImage}" alt="ODD ${product.name}"></a><div class="search-result-copy"><a href="${detailLink}" class="search-result-name">${product.name}</a><p>${product.notes}</p><span class="search-stock ${stock > 0 ? 'in-stock' : 'out-stock'}"><i></i>${stock > 0 ? 'In stock' : 'Currently unavailable'}</span></div><div class="search-result-action"><strong>₹${product.price.toLocaleString('en-IN')}</strong><button type="button" class="search-add-btn" data-search-add="${product.id}" ${stock <= 0 ? 'disabled' : ''}>${stock > 0 ? 'Add to Cart' : 'Out of stock'}</button></div></article>`;
   }).join('');
   resultsContainer.querySelectorAll('[data-search-add]').forEach(button => button.addEventListener('click', () => { closeSearchModal(); addToCart(button.dataset.searchAdd); }));
 }
@@ -1081,7 +1134,7 @@ function syncStockStatusUI() {
     const productPage = location.pathname.toLowerCase().endsWith(file);
     if (productPage) {
       const button = document.querySelector('.product-add-btn');
-      if (button) { button.disabled = out; button.textContent = out ? 'Out of stock' : `Add to Bag — ₹${product.price.toLocaleString('en-IN')}`; }
+      if (button) { button.disabled = out; button.textContent = out ? 'Out of stock' : `Add to Cart — ₹${product.price.toLocaleString('en-IN')}`; }
       const priceBlock = document.querySelector('.product-detail-price');
       let status = document.getElementById('product-stock-status');
       if (!status && priceBlock) { status = document.createElement('span'); status.id = 'product-stock-status'; status.className = 'product-stock-status'; priceBlock.insertAdjacentElement('afterend', status); }
@@ -1089,13 +1142,13 @@ function syncStockStatusUI() {
     }
     document.querySelectorAll(`.product-card[data-product="${productId}"]`).forEach(card => {
       const button = card.querySelector('[onclick*="addToCart"]');
-      if (button) { button.disabled = out; button.textContent = out ? 'Out of stock' : (button.dataset.originalText || 'Add to bag'); }
+      if (button) { button.disabled = out; button.textContent = out ? 'Out of stock' : (button.dataset.originalText || 'Add to Cart'); }
       let badge = card.querySelector('.stock-state-badge');
       if (out && !badge) { badge = document.createElement('span'); badge.className = 'stock-state-badge'; badge.textContent = 'Out of stock'; card.querySelector('.product-door-container')?.appendChild(badge); }
       if (!out) badge?.remove();
     });
     document.querySelectorAll(`.carousel-slide [onclick*="addToCart('${productId}')"]`).forEach(button => {
-      button.disabled = out; button.textContent = out ? 'Out of stock' : (button.dataset.originalText || 'Add to bag');
+      button.disabled = out; button.textContent = out ? 'Out of stock' : (button.dataset.originalText || 'Add to Cart');
       const slide = button.closest('.carousel-slide'); let badge = slide?.querySelector('.carousel-stock-badge');
       if (slide && out && !badge) { badge = document.createElement('span'); badge.className = 'carousel-stock-badge'; badge.textContent = 'Currently unavailable'; slide.querySelector('.slide-image-box')?.appendChild(badge); }
       if (!out) badge?.remove();
@@ -1264,7 +1317,16 @@ function openQuickView(productId) {
   if (title) title.innerText = prod.name;
   
   const price = modal.querySelector('.qv-price');
-  if (price) price.innerHTML = '&#8377;' + prod.price;
+  if (price) {
+    const livePrice = Number(prod.price || 1599);
+    const origPrice = (prod.originalPrice != null && Number(prod.originalPrice) > livePrice) ? Number(prod.originalPrice) : null;
+    if (origPrice && origPrice > livePrice) {
+      const discount = Math.round((origPrice - livePrice) / origPrice * 100);
+      price.innerHTML = `<span class="price-current">&#8377; ${livePrice.toLocaleString('en-IN')}</span> <span class="price-original">&#8377; ${origPrice.toLocaleString('en-IN')}</span> <span class="price-discount-pill">-${discount}%</span>`;
+    } else {
+      price.innerHTML = `&#8377; ${livePrice.toLocaleString('en-IN')}`;
+    }
+  }
 
   const img = modal.querySelector('.quick-view-bottle-img');
   if (img) img.src = 'assets/images/' + prod.bottleImage;

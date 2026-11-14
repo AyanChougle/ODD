@@ -364,8 +364,8 @@
           </div>
           <form id="product-review-form" class="product-review-form">
             <div class="review-field">
-              <label for="review-rating-group">Your Rating</label>
-              <div id="review-rating-group" class="review-star-picker" role="radiogroup" aria-label="Rating out of 5 stars">
+              <span class="review-label" id="review-rating-heading">Your Rating</span>
+              <div id="review-rating-group" class="review-star-picker" role="radiogroup" aria-labelledby="review-rating-heading">
                 ${[1, 2, 3, 4, 5].map((star) => `
                   <button type="button" class="review-star-btn ${star <= selectedRating ? 'is-selected' : ''}" data-rating="${star}" aria-label="${star} star${star > 1 ? 's' : ''}">&#9733;</button>
                 `).join('')}

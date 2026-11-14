@@ -48,8 +48,8 @@ Options -Indexes -MultiViews
   ExpiresActive On
   ExpiresDefault "access plus 1 month"
 
-  # HTML documents (1 hour for quick propagation of updates)
-  ExpiresByType text/html "access plus 1 hour"
+  # HTML documents (Immediate revalidation so code & price updates propagate instantly)
+  ExpiresByType text/html "access plus 0 seconds"
 
   # CSS and JavaScript (1 year with cache busting query string)
   ExpiresByType text/css "access plus 1 year"
@@ -98,8 +98,12 @@ Options -Indexes -MultiViews
     Header set Access-Control-Allow-Origin "*"
   </FilesMatch>
 
-  <FilesMatch "\.(html|htm|php)$">
-    Header set Cache-Control "max-age=3600, public, must-revalidate"
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, must-revalidate, max-age=0"
+  </FilesMatch>
+
+  <FilesMatch "\.(php)$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
   </FilesMatch>
 </IfModule>
 

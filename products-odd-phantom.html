@@ -7,8 +7,8 @@
   <link rel="preload" as="image" href="assets/images/Phantom.webp" type="image/webp" fetchpriority="high">
   <link rel="preload" as="font" href="assets/fonts/doren-perfume-serif.otf" type="font/otf" crossorigin>
   <link rel="preload" as="font" href="assets/fonts/DMSans-Regular.ttf" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="assets/css/global.css?v=6.3">
-  <link rel="stylesheet" href="assets/css/product.css?v=6.3">
+  <link rel="stylesheet" href="assets/css/global.css?v=7.0">
+  <link rel="stylesheet" href="assets/css/product.css?v=7.0">
 </head>
 <body>
 
@@ -64,7 +64,7 @@
 
         <!-- LEFT: Image -->
         <div class="product-gallery-box">
-          <img src="assets/images/Phantom.webp" alt="ODD Phantom" class="product-lifestyle-img" width="600" height="600" fetchpriority="high">
+          <img src="assets/images/Phantom.webp" alt="ODD Phantom" class="product-lifestyle-img" width="600" height="600" fetchpriority="high" style="aspect-ratio: 1 / 1;">
         </div>
 
         <!-- RIGHT: Info -->
@@ -94,7 +94,7 @@
           <!-- CTA -->
           <div class="product-cta-row">
             <button class="product-add-btn" data-product-btn="phantom" onclick="addToCart('phantom')">
-              Add to Bag
+              Add to Cart
             </button>
           </div>
 
@@ -116,7 +116,7 @@
         </div>
         <div class="product-detail-lower-grid">
           <div class="product-detail-note-card"><span class="product-eyebrow">SCENT NOTES</span><h3>What you'll notice</h3><p>Deep woods and amber create a bold, grounded profile. This is the most intense of the three, built for evening wear and cooler settings.</p><div class="product-note-pills"><span>Cambodian Oud</span><span>Golden Amber</span><span>Smoky Birch Woods</span><span>Guaiacwood</span></div></div>
-          <div class="product-detail-note-card"><span class="product-eyebrow">WHEN TO WEAR</span><h3>Made for real plans.</h3><p>Late nights, formal dinners, winter evenings and lounge parties.</p><div class="product-wear-ratings"><div><span>Intensity</span><strong>5 / 5</strong></div><div><span>Warmth</span><strong>4 / 5</strong></div><div><span>Freshness</span><strong>1 / 5</strong></div><div><span>Sweetness</span><strong>2 / 5</strong></div></div></div>
+          <div class="product-detail-note-card"><span class="product-eyebrow">WHEN TO WEAR</span><h3>Made for real plans.</h3><p>Late nights, formal dinners, winter evenings and lounge parties.</p><div class="product-wear-ratings"><div><span>Intensity</span><strong>5 / 5</strong></div><div><span>Warmth</span><strong>5 / 5</strong></div><div><span>Freshness</span><strong>1 / 5</strong></div><div><span>Sweetness</span><strong>3 / 5</strong></div></div></div>
         </div>
       </div>
     </section>
@@ -127,7 +127,7 @@
       </div>
     </section>
     <section class="product-related-section"><div class="container"><div class="product-related-heading"><div><span class="product-eyebrow">KEEP EXPLORING</span><h2>Meet the other <span class="odd-wordmark">ODDs<span class="logo-dot">.</span></span></h2></div><a href="shop.html">Shop all three →</a></div><div class="product-related-grid">
-      <a class="product-related-card" href="products-odd-lucid.html"><span class="product-related-image"><img src="assets/images/Lucid single bottle.webp" alt="ODD Lucid" width="400" height="400" loading="lazy"></span><span class="product-related-meta"><strong>Lucid</strong><span>Citrus · Black Tea · Clean Woods</span><b>Discover →</b></span></a><a class="product-related-card" href="products-odd-first-move.html"><span class="product-related-image"><img src="assets/images/First Move single bottle.webp" alt="ODD First Move" width="400" height="400" loading="lazy"></span><span class="product-related-meta"><strong>First Move</strong><span>Pineapple · Woods · Smoky Musk</span><b>Discover →</b></span></a>
+      <a class="product-related-card" href="products-odd-lucid.html"><span class="product-related-image"><img src="assets/images/Lucid single bottle.webp" alt="ODD Lucid" width="1080" height="1350" loading="lazy" style="aspect-ratio: 4 / 5;"></span><span class="product-related-meta"><strong>Lucid</strong><span>Citrus · Black Tea · Clean Woods</span><b>Discover →</b></span></a><a class="product-related-card" href="products-odd-first-move.html"><span class="product-related-image"><img src="assets/images/First Move single bottle.webp" alt="ODD First Move" width="1080" height="1350" loading="lazy" style="aspect-ratio: 4 / 5;"></span><span class="product-related-meta"><strong>First Move</strong><span>Pineapple · Woods · Smoky Musk</span><b>Discover →</b></span></a>
     </div></div></section>
   </main>
 
@@ -140,19 +140,23 @@
   <!-- Existing shared footer -->
   <footer class="site-footer-luxury">
     <div class="container">
-      <!-- Top Email Signup -->
+      <!-- Top WhatsApp Community Section -->
       <div class="footer-top-signup">
         <div class="footer-signup-left">
           <div class="footer-signup-header">
             <span class="orange-dot-lg"></span>
-            <h2 class="footer-signup-title">Get our emails.</h2>
+            <h2 class="footer-signup-title">The ODD Community.</h2>
           </div>
-          <p class="footer-signup-sub">New scents, the odd offer, and nothing else. About once a month.</p>
+          <p class="footer-signup-sub">Direct access, secret drops, private batch launches, and member perks on WhatsApp.</p>
         </div>
-        <form class="footer-signup-form" onsubmit="handleEmailSignup(event)">
-          <input type="email" placeholder="email@domain.com" class="footer-email-input" required>
-          <button type="submit" class="footer-email-btn btn-water-float">Join</button>
-        </form>
+        <div class="footer-community-action">
+          <a href="https://chat.whatsapp.com/ODDCommunity" target="_blank" rel="noopener noreferrer" class="footer-whatsapp-btn btn-water-float" aria-label="Join the ODD Community on WhatsApp">
+            <svg class="footer-whatsapp-icon" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
+              <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2M12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.67 12.05 3.67M9.53 7.33C9.33 7.33 9 7.4 8.73 7.69C8.46 7.98 7.7 8.7 7.7 10.15C7.7 11.6 8.76 13 8.91 13.2C9.06 13.4 10.97 16.34 13.88 17.6C16.31 18.65 16.8 18.43 17.33 18.39C17.86 18.34 19.05 17.68 19.3 16.98C19.55 16.28 19.55 15.68 19.47 15.56C19.4 15.43 19.2 15.36 18.9 15.21C18.6 15.06 17.13 14.34 16.85 14.24C16.58 14.14 16.38 14.09 16.18 14.39C15.98 14.68 15.41 15.36 15.24 15.56C15.06 15.75 14.89 15.78 14.59 15.63C14.29 15.48 13.33 15.17 12.2 14.16C11.32 13.37 10.73 12.4 10.55 12.1C10.38 11.81 10.53 11.65 10.68 11.5C10.82 11.37 10.99 11.15 11.14 10.98C11.29 10.8 11.34 10.68 11.44 10.48C11.54 10.28 11.49 10.11 11.41 9.96C11.34 9.81 10.73 8.32 10.48 7.72C10.23 7.13 9.99 7.21 9.8 7.21L9.53 7.33Z"/>
+            </svg>
+            <span>Join WhatsApp Community</span>
+          </a>
+        </div>
       </div>
 
       <!-- 5 Columns Navigation -->
@@ -249,7 +253,7 @@
   <div class="cart-drawer-backdrop" id="cart-backdrop" onclick="toggleCartDrawer()"></div>
   <aside class="cart-drawer" id="cart-drawer">
     <div class="cart-header">
-      <h3>YOUR BAG (<span id="cart-drawer-count">0</span>)</h3>
+      <h3>YOUR Cart (<span id="cart-drawer-count">0</span>)</h3>
       <button class="close-drawer" onclick="toggleCartDrawer()">&times;</button>
     </div>
     <div class="free-shipping-banner">
@@ -259,7 +263,7 @@
     <div class="cart-items-list" id="cart-items"></div>
     <div class="cart-footer" id="cart-footer" style="display: none;">
       <div class="coupon-box">
-        <input type="text" id="cart-coupon-input" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;">
+        <input type="text" id="cart-coupon-input" name="coupon_code" placeholder="Promo code (e.g. LAUNCH20)" autocomplete="off" style="text-transform: uppercase;">
         <button type="button" class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
       </div>
       <div class="coupon-applied-tag" id="coupon-tag-applied" style="display: none;">
@@ -279,14 +283,14 @@
   <!-- Toast -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="assets/js/global.js?v=6.3"></script>
-  <script src="assets/js/product-reviews.js?v=1.0"></script>
+  <script src="assets/js/global.js?v=7.0"></script>
+  <script src="assets/js/product-reviews.js?v=7.0"></script>
   <!-- Global Search Modal -->
   <div class="search-modal-backdrop" id="search-modal" onclick="if(event.target===this) closeSearchModal()">
     <div class="search-modal-card">
       <div class="search-modal-header">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="text" class="search-modal-input" placeholder="Search by name, notes, or occasion..." oninput="handleSearchInput(this.value)">
+        <input type="text" id="search-modal-input" name="search_query" class="search-modal-input" placeholder="Search by name, notes, or occasion..." autocomplete="off" oninput="handleSearchInput(this.value)">
         <button class="search-modal-close" onclick="closeSearchModal()">&times;</button>
       </div>
       <div class="search-modal-results" id="search-modal-results"></div>

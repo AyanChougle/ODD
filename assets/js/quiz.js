@@ -62,7 +62,7 @@ window.showQuizResult = function() {
       addBtn.classList.add('btn-disabled');
     } else {
       addBtn.disabled = false;
-      addBtn.innerText = `Add ${prod.name} To Bag — ₹${Number(prod.price || 899).toLocaleString('en-IN')}`;
+      addBtn.innerText = `Add ${prod.name} To Cart — ₹${Number(prod.price || 899).toLocaleString('en-IN')}`;
       addBtn.classList.remove('btn-disabled');
     }
   }

@@ -201,13 +201,13 @@ function ensureDatabaseSchema(PDO $pdo): void {
                 ('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, NULL, 240, 1, 'Unseen. Unforgotten. Undeniable.', 'Oud · Amber · Smoky Woods'),
                 ('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, NULL, 180, 1, 'Clear Mind. Sharp Presence.', 'Citrus · Black Tea · Clean Woods'),
                 ('first-move', 'ODD-FM-002', 'ODD First Move', 1599, NULL, 0, 1, 'Start First. Stay Ahead.', 'Pineapple · Woods · Smoky Musk'),
-                ('hamper', 'ODD-HM-004', 'The Trio Gift Hamper', 4797, 4797, 50, 1, 'The Complete Trio. Ready to Gift.', 'Phantom · Lucid · First Move (3 × 100ml)');
+                ('hamper', 'ODD-HM-004', 'The Trio Gift Hamper', 4999, 4999, 50, 1, 'The Complete Trio. Ready to Gift.', 'Phantom · Lucid · First Move (3 × 100ml)');
             ");
         }
         // Idempotent migration for pre-seeded databases
         $pdo->exec("
             INSERT IGNORE INTO products (id, sku, name, price, original_price, stock, active, tagline, notes) VALUES
-            ('hamper', 'ODD-HM-004', 'The Trio Gift Hamper', 4797, 4797, 50, 1, 'The Complete Trio. Ready to Gift.', 'Phantom · Lucid · First Move (3 × 100ml)');
+            ('hamper', 'ODD-HM-004', 'The Trio Gift Hamper', 4999, 4999, 50, 1, 'The Complete Trio. Ready to Gift.', 'Phantom · Lucid · First Move (3 × 100ml)');
         ");
 
         // 5. Orders table
