@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,49 +13,54 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>ODD Perfume — It's good to be ODD.</title>
-  <meta name="description" content="Phantom, Lucid and First Move. Strong enough that two sprays last most of the day, priced so you don’t have to save them for special occasions. Crafted in India.">
+  <meta name="description"
+    content="Phantom, Lucid and First Move. Strong enough that two sprays last most of the day, priced so you don’t have to save them for special occasions. Crafted in India.">
   <link rel="preload" as="font" href="assets/fonts/doren-perfume-serif.otf" type="font/otf" crossorigin>
   <link rel="preload" as="font" href="assets/fonts/DMSans-Regular.ttf" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="assets/css/global.css?v=7.6">
   <link rel="stylesheet" href="assets/css/home.css?v=7.6">
 
-<style>
-.compare-title {
-  font-size: 2rem !important;
-  color: #fff !important;
-  font-weight: 400 !important;
-  margin: 0 !important;
-  letter-spacing: -0.01em !important;
-  line-height: 1.2 !important;
-  text-align: center !important;
-}
+  <style>
+    .compare-title {
+      font-size: 2rem !important;
+      color: #fff !important;
+      font-weight: 400 !important;
+      margin: 0 !important;
+      letter-spacing: -0.01em !important;
+      line-height: 1.2 !important;
+      text-align: center !important;
+    }
 
-.compare-notes, .compare-best-for {
-  color: #ccc !important;
-  font-size: 0.85rem !important;
-  margin-bottom: 1rem !important;
-  font-family: var(--font-sans) !important;
-  line-height: 1.4 !important;
-  text-align: left !important;
-}
-.compare-section-label {
-  font-family: var(--font-mono) !important;
-  font-size: 0.62rem !important;
-  letter-spacing: 0.12em !important;
-  color: #555 !important;
-  text-transform: uppercase !important;
-  margin-bottom: 0.5rem !important;
-  text-align: left !important;
-}
-</style>
+    .compare-notes,
+    .compare-best-for {
+      color: #ccc !important;
+      font-size: 0.85rem !important;
+      margin-bottom: 1rem !important;
+      font-family: var(--font-sans) !important;
+      line-height: 1.4 !important;
+      text-align: left !important;
+    }
+
+    .compare-section-label {
+      font-family: var(--font-mono) !important;
+      font-size: 0.62rem !important;
+      letter-spacing: 0.12em !important;
+      color: #555 !important;
+      text-transform: uppercase !important;
+      margin-bottom: 0.5rem !important;
+      text-align: left !important;
+    }
+  </style>
 </head>
+
 <body>
 
   <!-- Announcement / Launch Banner -->
   <div id="launch-banner" class="launch-banner">
     <div class="banner-container">
       <span class="status-bullet"></span>
-      <span class="banner-text"><strong>WE'RE LIVE.</strong> Take 20% OFF your first order with code <code class="coupon-tag" id="banner-code">LAUNCH20</code></span>
+      <span class="banner-text"><strong>WE'RE LIVE.</strong> Take 20% OFF your first order with code <code
+          class="coupon-tag" id="banner-code">LAUNCH20</code></span>
       <div class="banner-timer" id="banner-timer">Offer Ends in <span id="timer-val">06d 14h 22m 45s</span></div>
       <button class="banner-btn" onclick="copyCouponCode('LAUNCH20')">Copy Code</button>
       <button class="banner-close" onclick="closeBanner()" aria-label="Close banner">&times;</button>
@@ -68,7 +74,7 @@
         <button class="mobile-menu-toggle" onclick="toggleMobileNav()" aria-label="Toggle menu">
           <span></span><span></span><span></span>
         </button>
-        
+
       </div>
 
       <div class="top-center">
@@ -77,22 +83,32 @@
         </a>
       </div>
 
-              <div class="top-right">
-          <a href="my-account.html" class="top-nav-btn" aria-label="Account" title="Account">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-          </a>
-          <button class="top-nav-btn" onclick="openSearchModal()" aria-label="Search" title="Search">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          </button>
-          <button class="cart-trigger-btn" onclick="toggleCartDrawer()" aria-label="Cart" title="Cart">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
-            <span class="cart-badge" id="cart-count">0</span>
-          </button>
-        </div>
+      <div class="top-right">
+        <a href="my-account.html" class="top-nav-btn" aria-label="Account" title="Account">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </a>
+        <button class="top-nav-btn" onclick="openSearchModal()" aria-label="Search" title="Search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </button>
+        <button class="cart-trigger-btn" onclick="toggleCartDrawer()" aria-label="Cart" title="Cart">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span class="cart-badge" id="cart-count">0</span>
+        </button>
+      </div>
     </div>
 
     <div class="header-bottom-bar">
-            <nav class="main-desktop-nav">
+      <nav class="main-desktop-nav">
         <a href="index.html" class="main-nav-link active">Home</a>
         <a href="shop.html" class="main-nav-link">Shop The Three</a>
         <a href="index.html#showcase" class="main-nav-link">Collections</a>
@@ -105,7 +121,8 @@
   <!-- Mobile Nav Drawer -->
   <div class="mobile-nav-drawer" id="mobile-nav">
     <div class="drawer-header">
-      <span class="brand-logo-cr7" style="font-size: 1.8rem;">ODD<span class="logo-dot" style="color: var(--brand-orange);">.</span></span>
+      <span class="brand-logo-cr7" style="font-size: 1.8rem;">ODD<span class="logo-dot"
+          style="color: var(--brand-orange);">.</span></span>
       <button class="close-drawer" onclick="toggleMobileNav()">&times;</button>
     </div>
     <div class="drawer-content">
@@ -126,9 +143,10 @@
   </div>
 
   <main>
-            <!-- Hero Section (media_1791442348981.png) -->
-        <section class="hero-section">
-      <video autoplay loop muted playsinline webkit-playsinline preload="auto" class="hero-bg-video-element" id="hero-bg-video">
+    <!-- Hero Section (media_1791442348981.png) -->
+    <section class="hero-section">
+      <video autoplay loop muted playsinline webkit-playsinline preload="auto" class="hero-bg-video-element"
+        id="hero-bg-video">
         <source src="assets/video/BGvideo.mp4" type="video/mp4">
       </video>
       <div class="hero-overlay-gradient"></div>
@@ -141,7 +159,8 @@
           </div>
           <div class="hero-italic-lead">It's good to be</div>
           <h1 class="hero-giant-odd">ODD<span class="hero-orange-dot">.</span></h1>
-          <p class="hero-desc-text">Phantom, Lucid and First Move. Strong enough that two sprays last most of the day, priced so you don't have to save them for special occasions.</p>
+          <p class="hero-desc-text">Phantom, Lucid and First Move. Strong enough that two sprays last most of the day,
+            priced so you don't have to save them for special occasions.</p>
 
           <div class="hero-pill-buttons">
             <a href="index.html#showcase" class="btn-pill-orange liquid-btn">Explore Collections <span>&rarr;</span></a>
@@ -151,7 +170,8 @@
 
         <!-- Right: Editorial Luxury Launch Slab -->
         <div class="hero-floating-pick-wrapper" id="hero-floating-console">
-          <div class="hero-pick-card hero-launch-card hero-launch-slab" id="hero-launch-interactive-card" role="region" aria-label="Official Launch Drop">
+          <div class="hero-pick-card hero-launch-card hero-launch-slab" id="hero-launch-interactive-card" role="region"
+            aria-label="Official Launch Drop">
             <!-- Subtle Specular Spotlight Layer -->
             <div class="hero-card-glow-overlay" id="hero-card-glow" aria-hidden="true"></div>
 
@@ -207,7 +227,8 @@
             <div class="hero-vip-drawer" id="hero-vip-drawer" aria-hidden="true">
               <form class="hero-vip-form" id="hero-vip-form" onsubmit="handleHeroVipSubmit(event)">
                 <div class="slab-vip-input-row">
-                  <input type="email" id="hero-vip-email" name="email" class="slab-vip-input" placeholder="Enter your email" required autocomplete="email">
+                  <input type="email" id="hero-vip-email" name="email" class="slab-vip-input"
+                    placeholder="Enter your email" required autocomplete="email">
                   <button type="submit" class="slab-vip-submit" id="hero-vip-btn">Notify Me</button>
                 </div>
                 <div class="hero-vip-feedback" id="hero-vip-msg" aria-live="polite"></div>
@@ -217,7 +238,7 @@
         </div>
       </div>
     </section><!-- Value Ticker (media_1791442507114.png) -->
-        <!-- Value Ticker Continuous Marquee -->
+    <!-- Value Ticker Continuous Marquee -->
     <div class="value-ticker-bar">
       <div class="ticker-marquee-wrapper">
         <div class="ticker-marquee-track">
@@ -269,8 +290,10 @@
     <section class="showcase-section bg-alt" id="showcase">
       <div class="container center">
         <span class="section-subtitle">THE SCENTS</span>
-        <h2 class="section-title" style="font-size: clamp(1.95rem, 7vw, 4.5rem); margin-bottom: 1rem;">Three Scents. <span style="color: var(--brand-orange); font-style: italic;">Which one's yours?</span></h2>
-        <p class="section-desc" style="max-width: min(400px, 100%); margin: 0 auto; text-align: center;">Swipe or click to explore the trio. Find your signature scent.</p>
+        <h2 class="section-title" style="font-size: clamp(1.95rem, 7vw, 4.5rem); margin-bottom: 1rem;">Three Scents.
+          <span style="color: var(--brand-orange); font-style: italic;">Which one's yours?</span></h2>
+        <p class="section-desc" style="max-width: min(400px, 100%); margin: 0 auto; text-align: center;">Swipe or click
+          to explore the trio. Find your signature scent.</p>
       </div>
 
       <div class="carousel-viewport">
@@ -278,66 +301,87 @@
           <!-- Slide 0: Phantom -->
           <div class="carousel-slide active" onclick="selectShowcaseSlide(0)">
             <div class="slide-image-box phantom-slide-box">
-              <img src="assets/images/Phantom Single bottle.webp" alt="ODD Phantom Single Bottle" class="carousel-bottle-img" width="1080" height="1350" fetchpriority="high" style="aspect-ratio: 4 / 5;">
+              <img src="assets/images/Phantom Single bottle.webp" alt="ODD Phantom Single Bottle"
+                class="carousel-bottle-img" width="1080" height="1350" fetchpriority="high"
+                style="aspect-ratio: 4 / 5;">
             </div>
             <div class="slide-notes">Oud &middot; Incense &middot; Benzoin</div>
-            <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">PHANTOM</h3>
+            <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">PHANTOM
+            </h3>
             <p class="slide-tagline">"Unseen. Unforgotten. Undeniable."</p>
             <div class="slide-actions">
               <button class="btn btn-sm btn-primary btn-water-float" onclick="addToCart('phantom')">Add To Cart</button>
-              <button class="btn btn-sm btn-outline btn-water-float" onclick="openQuickView('phantom')">Discover &rarr;</button>
+              <button class="btn btn-sm btn-outline btn-water-float" onclick="openQuickView('phantom')">Discover
+                &rarr;</button>
             </div>
           </div>
 
           <!-- Slide 1: Lucid -->
           <div class="carousel-slide next" onclick="selectShowcaseSlide(1)">
             <div class="slide-image-box lucid-slide-box">
-              <img src="assets/images/Lucid single bottle.webp" alt="ODD Lucid Single Bottle" class="carousel-bottle-img" width="1080" height="1350" loading="lazy" decoding="async" style="aspect-ratio: 4 / 5;">
+              <img src="assets/images/Lucid single bottle.webp" alt="ODD Lucid Single Bottle"
+                class="carousel-bottle-img" width="1080" height="1350" loading="lazy" decoding="async"
+                style="aspect-ratio: 4 / 5;">
             </div>
             <div class="slide-notes">Vanilla &middot; Birch &middot; Black pepper</div>
-            <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">LUCID</h3>
+            <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">LUCID
+            </h3>
             <p class="slide-tagline">"Clear Mind. Sharp Presence."</p>
             <div class="slide-actions">
               <button class="btn btn-sm btn-primary btn-water-float" onclick="addToCart('lucid')">Add To Cart</button>
-              <button class="btn btn-sm btn-outline btn-water-float" onclick="openQuickView('lucid')">Discover &rarr;</button>
+              <button class="btn btn-sm btn-outline btn-water-float" onclick="openQuickView('lucid')">Discover
+                &rarr;</button>
             </div>
           </div>
 
           <!-- Slide 2: First Move -->
           <div class="carousel-slide" onclick="selectShowcaseSlide(2)">
             <div class="slide-image-box move-slide-box">
-              <img src="assets/images/First Move single bottle.webp" alt="ODD First Move Single Bottle" class="carousel-bottle-img" width="1080" height="1350" loading="lazy" decoding="async" style="aspect-ratio: 4 / 5;">
+              <img src="assets/images/First Move single bottle.webp" alt="ODD First Move Single Bottle"
+                class="carousel-bottle-img" width="1080" height="1350" loading="lazy" decoding="async"
+                style="aspect-ratio: 4 / 5;">
             </div>
             <div class="slide-notes">Bergamot &middot; Ginger &middot; Amber</div>
-            <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">FIRST MOVE</h3>
+            <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">FIRST
+              MOVE</h3>
             <p class="slide-tagline">"Start First. Stay Ahead."</p>
             <div class="slide-actions">
-              <button class="btn btn-sm btn-primary btn-water-float" onclick="addToCart('first-move')">Add To Cart</button>
-              <button class="btn btn-sm btn-outline btn-water-float" onclick="openQuickView('first-move')">Discover &rarr;</button>
+              <button class="btn btn-sm btn-primary btn-water-float" onclick="addToCart('first-move')">Add To
+                Cart</button>
+              <button class="btn btn-sm btn-outline btn-water-float" onclick="openQuickView('first-move')">Discover
+                &rarr;</button>
             </div>
           </div>
 
           <!-- Slide 3: The Trio Gift Hamper -->
           <div class="carousel-slide" onclick="selectShowcaseSlide(3)">
             <div class="slide-image-box hamper-slide-box">
-              <img src="assets/images/Trio Gift Hamper.webp" alt="ODD Trio Gift Hamper Box" class="carousel-bottle-img" width="1080" height="1080" loading="lazy" decoding="async" style="aspect-ratio: 1 / 1;">
+              <img src="assets/images/Trio Gift Hamper.webp" alt="ODD Trio Gift Hamper Box" class="carousel-bottle-img"
+                width="1080" height="1080" loading="lazy" decoding="async" style="aspect-ratio: 1 / 1;">
             </div>
             <div class="slide-notes">Phantom &middot; Lucid &middot; First Move</div>
-            <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">THE TRIO HAMPER</h3>
+            <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">THE
+              TRIO HAMPER</h3>
             <p class="slide-tagline">"The Complete Trio. Ready to Gift."</p>
             <div class="slide-actions">
               <button class="btn btn-sm btn-primary btn-water-float" onclick="addToCart('hamper')">Add To Cart</button>
-              <button class="btn btn-sm btn-outline btn-water-float" onclick="openQuickView('hamper')">Discover &rarr;</button>
+              <button class="btn btn-sm btn-outline btn-water-float" onclick="openQuickView('hamper')">Discover
+                &rarr;</button>
             </div>
           </div>
         </div>
       </div>
-    
-      <div class="carousel-dots" style="display: flex; justify-content: center; align-items: center; gap: 0.6rem; margin-top: 1.5rem; z-index: 10; position: relative;">
-        <span class="carousel-dot active" onclick="selectShowcaseSlide(0)" aria-label="Slide 1" style="width: 10px; height: 10px; border-radius: 50%; background: var(--brand-orange); cursor: pointer; transition: all 0.3s;"></span>
-        <span class="carousel-dot" onclick="selectShowcaseSlide(1)" aria-label="Slide 2" style="width: 10px; height: 10px; border-radius: 50%; background: #ccc; cursor: pointer; transition: all 0.3s;"></span>
-        <span class="carousel-dot" onclick="selectShowcaseSlide(2)" aria-label="Slide 3" style="width: 10px; height: 10px; border-radius: 50%; background: #ccc; cursor: pointer; transition: all 0.3s;"></span>
-        <span class="carousel-dot" onclick="selectShowcaseSlide(3)" aria-label="Slide 4" style="width: 10px; height: 10px; border-radius: 50%; background: #ccc; cursor: pointer; transition: all 0.3s;"></span>
+
+      <div class="carousel-dots"
+        style="display: flex; justify-content: center; align-items: center; gap: 0.6rem; margin-top: 1.5rem; z-index: 10; position: relative;">
+        <span class="carousel-dot active" onclick="selectShowcaseSlide(0)" aria-label="Slide 1"
+          style="width: 10px; height: 10px; border-radius: 50%; background: var(--brand-orange); cursor: pointer; transition: all 0.3s;"></span>
+        <span class="carousel-dot" onclick="selectShowcaseSlide(1)" aria-label="Slide 2"
+          style="width: 10px; height: 10px; border-radius: 50%; background: #ccc; cursor: pointer; transition: all 0.3s;"></span>
+        <span class="carousel-dot" onclick="selectShowcaseSlide(2)" aria-label="Slide 3"
+          style="width: 10px; height: 10px; border-radius: 50%; background: #ccc; cursor: pointer; transition: all 0.3s;"></span>
+        <span class="carousel-dot" onclick="selectShowcaseSlide(3)" aria-label="Slide 4"
+          style="width: 10px; height: 10px; border-radius: 50%; background: #ccc; cursor: pointer; transition: all 0.3s;"></span>
       </div>
     </section>
 
@@ -345,7 +389,7 @@
     <section class="premium-stats-section">
       <div class="container">
         <div class="stats-grid">
-          
+
           <div class="stat-col">
             <div class="stat-num">20&ndash;25%</div>
             <p class="stat-desc">perfume oil. Most everyday sprays are 5&ndash;15%.</p>
@@ -375,25 +419,48 @@
       <div class="container">
         <!-- Header -->
         <div style="text-align: center; margin-bottom: 3rem;">
-          <span style="font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--brand-orange);">COMPARE</span>
-          <h2 style="font-family: var(--font-serif); font-size: clamp(2rem, 5vw, 3rem); color: #fff; font-weight: 400; margin: 0.5rem 0 0.8rem;">How they're different</h2>
-          <p style="color: #666; font-size: 0.9rem; font-family: var(--font-mono); letter-spacing: 0.08em;">Quantified scales based on formulation testing.</p>
+          <span
+            style="font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--brand-orange);">COMPARE</span>
+          <h2
+            style="font-family: var(--font-serif); font-size: clamp(2rem, 5vw, 3rem); color: #fff; font-weight: 400; margin: 0.5rem 0 0.8rem;">
+            How they're different</h2>
+          <p style="color: #666; font-size: 0.9rem; font-family: var(--font-mono); letter-spacing: 0.08em;">Quantified
+            scales based on formulation testing.</p>
         </div>
 
         <!-- Premium Card Grid -->
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; position: relative;">
 
           <!-- PHANTOM CARD -->
-          <div class="compare-card" style="background: #1a1008; border: 1px solid rgba(232,107,50,0.2); border-radius: 16px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem;">
+          <div class="compare-card"
+            style="background: #1a1008; border: 1px solid rgba(232,107,50,0.2); border-radius: 16px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem;">
             <div style="text-align: center; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
-              <img src="assets/images/Phantom Single bottle.webp" alt="Phantom" width="120" height="120" style="height: 120px; width: 120px; aspect-ratio: 1 / 1; object-fit: contain; margin: 0 auto 1rem; display: block;">
-              <h3 class="compare-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">Phantom</h3>
+              <img src="assets/images/Phantom Single bottle.webp" alt="Phantom" width="120" height="120"
+                style="height: 120px; width: 120px; aspect-ratio: 1 / 1; object-fit: contain; margin: 0 auto 1rem; display: block;">
+              <h3 class="compare-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">
+                Phantom</h3>
             </div>
             <div class="compare-metrics">
-              <div class="compare-row"><span class="compare-label">Intensity</span><div class="compare-bar"><div style="width:100%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">5</span></div>
-              <div class="compare-row"><span class="compare-label">Warmth</span><div class="compare-bar"><div style="width:100%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">5</span></div>
-              <div class="compare-row"><span class="compare-label">Freshness</span><div class="compare-bar"><div style="width:20%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">1</span></div>
-              <div class="compare-row"><span class="compare-label">Sweetness</span><div class="compare-bar"><div style="width:60%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">3</span></div>
+              <div class="compare-row"><span class="compare-label">Intensity</span>
+                <div class="compare-bar">
+                  <div style="width:100%; background:var(--brand-orange); height:100%; border-radius:3px;"></div>
+                </div><span class="compare-val">5</span>
+              </div>
+              <div class="compare-row"><span class="compare-label">Warmth</span>
+                <div class="compare-bar">
+                  <div style="width:100%; background:var(--brand-orange); height:100%; border-radius:3px;"></div>
+                </div><span class="compare-val">5</span>
+              </div>
+              <div class="compare-row"><span class="compare-label">Freshness</span>
+                <div class="compare-bar">
+                  <div style="width:40%; background:var(--brand-orange); height:100%; border-radius:3px;"></div>
+                </div><span class="compare-val">2</span>
+              </div>
+              <div class="compare-row"><span class="compare-label">Sweetness</span>
+                <div class="compare-bar">
+                  <div style="width:60%; background:var(--brand-orange); height:100%; border-radius:3px;"></div>
+                </div><span class="compare-val">3</span>
+              </div>
             </div>
             <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.2rem;">
               <div class="compare-section-label">Key Notes</div>
@@ -405,16 +472,35 @@
           </div>
 
           <!-- LUCID CARD -->
-          <div class="compare-card compare-card-featured" style="background: #0a1a12; border: 1px solid rgba(232,107,50,0.5); border-radius: 16px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; position: relative;">
+          <div class="compare-card compare-card-featured"
+            style="background: #0a1a12; border: 1px solid rgba(232,107,50,0.5); border-radius: 16px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; position: relative;">
             <div style="text-align: center; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
-              <img src="assets/images/Lucid single bottle.webp" alt="Lucid" width="120" height="120" style="height: 120px; width: 120px; aspect-ratio: 1 / 1; object-fit: contain; margin: 0 auto 1rem; display: block;">
-              <h3 class="compare-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">Lucid</h3>
+              <img src="assets/images/Lucid single bottle.webp" alt="Lucid" width="120" height="120"
+                style="height: 120px; width: 120px; aspect-ratio: 1 / 1; object-fit: contain; margin: 0 auto 1rem; display: block;">
+              <h3 class="compare-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">
+                Lucid</h3>
             </div>
             <div class="compare-metrics">
-              <div class="compare-row"><span class="compare-label">Intensity</span><div class="compare-bar"><div style="width:80%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">4</span></div>
-              <div class="compare-row"><span class="compare-label">Warmth</span><div class="compare-bar"><div style="width:40%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">2</span></div>
-              <div class="compare-row"><span class="compare-label">Freshness</span><div class="compare-bar"><div style="width:80%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">4</span></div>
-              <div class="compare-row"><span class="compare-label">Sweetness</span><div class="compare-bar"><div style="width:60%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">3</span></div>
+              <div class="compare-row"><span class="compare-label">Intensity</span>
+                <div class="compare-bar">
+                  <div style="width:80%; background:var(--brand-orange); height:100%; border-radius:3px;"></div>
+                </div><span class="compare-val">4</span>
+              </div>
+              <div class="compare-row"><span class="compare-label">Warmth</span>
+                <div class="compare-bar">
+                  <div style="width:40%; background:var(--brand-orange); height:100%; border-radius:3px;"></div>
+                </div><span class="compare-val">2</span>
+              </div>
+              <div class="compare-row"><span class="compare-label">Freshness</span>
+                <div class="compare-bar">
+                  <div style="width:80%; background:var(--brand-orange); height:100%; border-radius:3px;"></div>
+                </div><span class="compare-val">4</span>
+              </div>
+              <div class="compare-row"><span class="compare-label">Sweetness</span>
+                <div class="compare-bar">
+                  <div style="width:40%; background:var(--brand-orange); height:100%; border-radius:3px;"></div>
+                </div><span class="compare-val">2</span>
+              </div>
             </div>
             <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.2rem;">
               <div class="compare-section-label">Key Notes</div>
@@ -426,16 +512,35 @@
           </div>
 
           <!-- FIRST MOVE CARD -->
-          <div class="compare-card" style="background: #140d10; border: 1px solid rgba(232,107,50,0.2); border-radius: 16px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem;">
+          <div class="compare-card"
+            style="background: #140d10; border: 1px solid rgba(232,107,50,0.2); border-radius: 16px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem;">
             <div style="text-align: center; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
-              <img src="assets/images/First Move single bottle.webp" alt="First Move" width="120" height="120" style="height: 120px; width: 120px; aspect-ratio: 1 / 1; object-fit: contain; margin: 0 auto 1rem; display: block;">
-              <h3 class="compare-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">First Move</h3>
+              <img src="assets/images/First Move single bottle.webp" alt="First Move" width="120" height="120"
+                style="height: 120px; width: 120px; aspect-ratio: 1 / 1; object-fit: contain; margin: 0 auto 1rem; display: block;">
+              <h3 class="compare-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">
+                First Move</h3>
             </div>
             <div class="compare-metrics">
-              <div class="compare-row"><span class="compare-label">Intensity</span><div class="compare-bar"><div style="width:60%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">3</span></div>
-              <div class="compare-row"><span class="compare-label">Warmth</span><div class="compare-bar"><div style="width:40%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">2</span></div>
-              <div class="compare-row"><span class="compare-label">Freshness</span><div class="compare-bar"><div style="width:100%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">5</span></div>
-              <div class="compare-row"><span class="compare-label">Sweetness</span><div class="compare-bar"><div style="width:20%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">1</span></div>
+              <div class="compare-row"><span class="compare-label">Intensity</span>
+                <div class="compare-bar">
+                  <div style="width:60%; background:var(--brand-orange); height:100%; border-radius:3px;"></div>
+                </div><span class="compare-val">3</span>
+              </div>
+              <div class="compare-row"><span class="compare-label">Warmth</span>
+                <div class="compare-bar">
+                  <div style="width:40%; background:var(--brand-orange); height:100%; border-radius:3px;"></div>
+                </div><span class="compare-val">2</span>
+              </div>
+              <div class="compare-row"><span class="compare-label">Freshness</span>
+                <div class="compare-bar">
+                  <div style="width:60%; background:var(--brand-orange); height:100%; border-radius:3px;"></div>
+                </div><span class="compare-val">3</span>
+              </div>
+              <div class="compare-row"><span class="compare-label">Sweetness</span>
+                <div class="compare-bar">
+                  <div style="width:60%; background:var(--brand-orange); height:100%; border-radius:3px;"></div>
+                </div><span class="compare-val">3</span>
+              </div>
             </div>
             <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.2rem;">
               <div class="compare-section-label">Key Notes</div>
@@ -450,31 +555,39 @@
       </div>
     </section>
 
-        <!-- Mini Game: Spot the odd one (media_1791442536982.png) -->
-    
+    <!-- Mini Game: Spot the odd one (media_1791442536982.png) -->
+
 
     <!-- Proof Points -->
-        <!-- Our Story Section (How ODD Started) -->
+    <!-- Our Story Section (How ODD Started) -->
     <section class="story-section-landing" id="story">
       <div class="container">
         <div class="story-landing-grid">
           <div class="story-landing-visual">
             <div class="story-img-frame">
-              <img src="assets/images/BGphoto1.webp" alt="ODD Perfume Story" width="1280" height="720" loading="lazy" style="aspect-ratio: 16 / 9; height: auto;">
+              <img src="assets/images/BGphoto1.webp" alt="ODD Perfume Story" width="1280" height="720" loading="lazy"
+                style="aspect-ratio: 16 / 9; height: auto;">
               <div class="story-badge-loc">CRAFTED IN INDIA</div>
             </div>
           </div>
           <div class="story-landing-content">
             <span class="story-pretitle"><span class="orange-dot-sm"></span> HOW ODD STARTED</span>
-            <h2 class="story-title">Normal dulls the senses.<br><span class="orange-italic">We wanted something real.</span></h2>
+            <h2 class="story-title">Normal dulls the senses.<br><span class="orange-italic">We wanted something
+                real.</span></h2>
             <div class="story-body-text">
-              <p>ODD was born out of frustration with everyday fragrance options. You either had synthetic deodorants that faded in 20 minutes, or hyper-inflated designer perfumes imported at 4x cost with watered-down wear.</p>
-              <p>We set up shop with a simple rule: <strong>Focus on high perfume oil concentration (20&ndash;25% Eau De Parfum)</strong> and remove all unnecessary fluff. No celebrity endorsements, no gilded caps that end up in the trash.</p>
-              <p>Just three perfected everyday perfumes designed to make an unshakeable impression from morning standup to late dinners.</p>
+              <p>ODD was born out of frustration with everyday fragrance options. You either had synthetic deodorants
+                that faded in 20 minutes, or hyper-inflated designer perfumes imported at 4x cost with watered-down
+                wear.</p>
+              <p>We set up shop with a simple rule: <strong>Focus on high perfume oil concentration (20&ndash;25% Eau De
+                  Parfum)</strong> and remove all unnecessary fluff. No celebrity endorsements, no gilded caps that end
+                up in the trash.</p>
+              <p>Just three perfected everyday perfumes designed to make an unshakeable impression from morning standup
+                to late dinners.</p>
             </div>
             <div class="story-signature-row">
               <span class="story-signature">&mdash; The ODD Team</span>
-              <a href="shop.html" class="btn-pill-orange liquid-btn btn-water-float">Shop The Three <span>&rarr;</span></a>
+              <a href="shop.html" class="btn-pill-orange liquid-btn btn-water-float">Shop The Three
+                <span>&rarr;</span></a>
             </div>
           </div>
         </div>
@@ -483,7 +596,7 @@
   </main>
 
   <!-- Global Footer -->
-    <!-- Global Footer (media_1791442638385.png) -->
+  <!-- Global Footer (media_1791442638385.png) -->
   <footer class="site-footer-luxury">
     <div class="container">
       <!-- Top WhatsApp Community Section -->
@@ -493,12 +606,16 @@
             <span class="orange-dot-lg"></span>
             <h2 class="footer-signup-title">The ODD Community.</h2>
           </div>
-          <p class="footer-signup-sub">Direct access, secret drops, private batch launches, and member perks on WhatsApp.</p>
+          <p class="footer-signup-sub">Direct access, secret drops, private batch launches, and member perks on
+            WhatsApp.</p>
         </div>
         <div class="footer-community-action">
-          <a href="https://chat.whatsapp.com/ODDCommunity" target="_blank" rel="noopener noreferrer" class="footer-whatsapp-btn btn-water-float" aria-label="Join the ODD Community on WhatsApp">
-            <svg class="footer-whatsapp-icon" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
-              <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2M12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.67 12.05 3.67M9.53 7.33C9.33 7.33 9 7.4 8.73 7.69C8.46 7.98 7.7 8.7 7.7 10.15C7.7 11.6 8.76 13 8.91 13.2C9.06 13.4 10.97 16.34 13.88 17.6C16.31 18.65 16.8 18.43 17.33 18.39C17.86 18.34 19.05 17.68 19.3 16.98C19.55 16.28 19.55 15.68 19.47 15.56C19.4 15.43 19.2 15.36 18.9 15.21C18.6 15.06 17.13 14.34 16.85 14.24C16.58 14.14 16.38 14.09 16.18 14.39C15.98 14.68 15.41 15.36 15.24 15.56C15.06 15.75 14.89 15.78 14.59 15.63C14.29 15.48 13.33 15.17 12.2 14.16C11.32 13.37 10.73 12.4 10.55 12.1C10.38 11.81 10.53 11.65 10.68 11.5C10.82 11.37 10.99 11.15 11.14 10.98C11.29 10.8 11.34 10.68 11.44 10.48C11.54 10.28 11.49 10.11 11.41 9.96C11.34 9.81 10.73 8.32 10.48 7.72C10.23 7.13 9.99 7.21 9.8 7.21L9.53 7.33Z"/>
+          <a href="https://chat.whatsapp.com/ODDCommunity" target="_blank" rel="noopener noreferrer"
+            class="footer-whatsapp-btn btn-water-float" aria-label="Join the ODD Community on WhatsApp">
+            <svg class="footer-whatsapp-icon" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"
+              aria-hidden="true">
+              <path
+                d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2M12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.67 12.05 3.67M9.53 7.33C9.33 7.33 9 7.4 8.73 7.69C8.46 7.98 7.7 8.7 7.7 10.15C7.7 11.6 8.76 13 8.91 13.2C9.06 13.4 10.97 16.34 13.88 17.6C16.31 18.65 16.8 18.43 17.33 18.39C17.86 18.34 19.05 17.68 19.3 16.98C19.55 16.28 19.55 15.68 19.47 15.56C19.4 15.43 19.2 15.36 18.9 15.21C18.6 15.06 17.13 14.34 16.85 14.24C16.58 14.14 16.38 14.09 16.18 14.39C15.98 14.68 15.41 15.36 15.24 15.56C15.06 15.75 14.89 15.78 14.59 15.63C14.29 15.48 13.33 15.17 12.2 14.16C11.32 13.37 10.73 12.4 10.55 12.1C10.38 11.81 10.53 11.65 10.68 11.5C10.82 11.37 10.99 11.15 11.14 10.98C11.29 10.8 11.34 10.68 11.44 10.48C11.54 10.28 11.49 10.11 11.41 9.96C11.34 9.81 10.73 8.32 10.48 7.72C10.23 7.13 9.99 7.21 9.8 7.21L9.53 7.33Z" />
             </svg>
             <span>Join WhatsApp Community</span>
           </a>
@@ -541,14 +658,21 @@
           <div class="footer-col-title">Say Hi</div>
           <a href="contact.html" class="footer-contact-link">hello@oddperfume.com</a>
           <p class="footer-contact-hours">Mon&mdash;Sat &middot; 10am&mdash;7pm IST</p>
-          <div class="footer-social-icons-row" style="display:flex; align-items:center; gap:0.65rem; margin-top:0.75rem;">
-            <a href="https://wa.me/919930458591" target="_blank" rel="noopener noreferrer" class="footer-social-icon-btn" aria-label="WhatsApp" title="Chat on WhatsApp (+91 99304 58591)" style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; border:1px solid #2e323d; background:rgba(255,255,255,0.05); color:#CCCCCC; text-decoration:none;">
+          <div class="footer-social-icons-row"
+            style="display:flex; align-items:center; gap:0.65rem; margin-top:0.75rem;">
+            <a href="https://wa.me/919930458591" target="_blank" rel="noopener noreferrer"
+              class="footer-social-icon-btn" aria-label="WhatsApp" title="Chat on WhatsApp (+91 99304 58591)"
+              style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; border:1px solid #2e323d; background:rgba(255,255,255,0.05); color:#CCCCCC; text-decoration:none;">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="#CCCCCC" style="display:block; color:#CCCCCC;">
-                <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.15C10.56 20.15 9.11 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.8 13.47 3.8 11.91C3.8 7.37 7.5 3.67 12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.05 20.15ZM16.57 14.42C16.32 14.29 15.1 13.69 14.87 13.61C14.65 13.52 14.48 13.48 14.32 13.73C14.15 13.98 13.67 14.54 13.52 14.71C13.38 14.88 13.23 14.9 12.98 14.77C12.73 14.65 11.93 14.38 10.98 13.54C10.24 12.88 9.74 12.07 9.6 11.82C9.45 11.57 9.58 11.44 9.71 11.31C9.82 11.2 9.96 11.02 10.08 10.87C10.21 10.73 10.25 10.63 10.33 10.46C10.41 10.3 10.37 10.15 10.31 10.02C10.25 9.9 9.76 8.7 9.56 8.2C9.36 7.72 9.16 7.78 9.01 7.77H8.54C8.38 7.77 8.11 7.83 7.88 8.08C7.65 8.33 7.02 8.92 7.02 10.13C7.02 11.34 7.9 12.5 8.02 12.67C8.15 12.83 9.75 15.3 12.2 16.36C12.78 16.61 13.24 16.76 13.59 16.87C14.18 17.06 14.72 17.03 15.15 16.97C15.63 16.9 16.62 16.37 16.83 15.79C17.03 15.21 17.03 14.71 16.97 14.6C16.91 14.5 16.74 14.44 16.57 14.42Z"/>
+                <path
+                  d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.15C10.56 20.15 9.11 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.8 13.47 3.8 11.91C3.8 7.37 7.5 3.67 12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.05 20.15ZM16.57 14.42C16.32 14.29 15.1 13.69 14.87 13.61C14.65 13.52 14.48 13.48 14.32 13.73C14.15 13.98 13.67 14.54 13.52 14.71C13.38 14.88 13.23 14.9 12.98 14.77C12.73 14.65 11.93 14.38 10.98 13.54C10.24 12.88 9.74 12.07 9.6 11.82C9.45 11.57 9.58 11.44 9.71 11.31C9.82 11.2 9.96 11.02 10.08 10.87C10.21 10.73 10.25 10.63 10.33 10.46C10.41 10.3 10.37 10.15 10.31 10.02C10.25 9.9 9.76 8.7 9.56 8.2C9.36 7.72 9.16 7.78 9.01 7.77H8.54C8.38 7.77 8.11 7.83 7.88 8.08C7.65 8.33 7.02 8.92 7.02 10.13C7.02 11.34 7.9 12.5 8.02 12.67C8.15 12.83 9.75 15.3 12.2 16.36C12.78 16.61 13.24 16.76 13.59 16.87C14.18 17.06 14.72 17.03 15.15 16.97C15.63 16.9 16.62 16.37 16.83 15.79C17.03 15.21 17.03 14.71 16.97 14.6C16.91 14.5 16.74 14.44 16.57 14.42Z" />
               </svg>
             </a>
-            <a href="https://www.instagram.com/oddperfumeofficial/" target="_blank" rel="noopener noreferrer" class="footer-social-icon-btn" aria-label="Instagram" title="Follow on Instagram (@oddperfumeofficial)" style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; border:1px solid #2e323d; background:rgba(255,255,255,0.05); color:#CCCCCC; text-decoration:none;">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#CCCCCC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; color:#CCCCCC;">
+            <a href="https://www.instagram.com/oddperfumeofficial/" target="_blank" rel="noopener noreferrer"
+              class="footer-social-icon-btn" aria-label="Instagram" title="Follow on Instagram (@oddperfumeofficial)"
+              style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; border:1px solid #2e323d; background:rgba(255,255,255,0.05); color:#CCCCCC; text-decoration:none;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#CCCCCC" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" style="display:block; color:#CCCCCC;">
                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                 <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
                 <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
@@ -600,7 +724,9 @@
     <div class="quick-view-card">
       <button class="quick-view-close-btn" onclick="closeQuickView()">&times;</button>
       <div class="quick-view-visual">
-        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E" id="qv-img" alt="ODD Perfume" class="quick-view-bottle-img" width="1024" height="1024" style="aspect-ratio: 1 / 1;">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E"
+          id="qv-img" alt="ODD Perfume" class="quick-view-bottle-img" width="1024" height="1024"
+          style="aspect-ratio: 1 / 1;">
       </div>
       <div class="quick-view-details">
         <span class="qv-brand">ODD PARFUMS</span>
@@ -636,22 +762,28 @@
     </div>
     <div class="free-shipping-banner">
       <span>Free Express Shipping Unlocked Across India</span>
-      <div class="shipping-progress"><div class="fill" style="width: 100%;"></div></div>
+      <div class="shipping-progress">
+        <div class="fill" style="width: 100%;"></div>
+      </div>
     </div>
     <div class="cart-items-list" id="cart-items"></div>
     <div class="cart-footer" id="cart-footer" style="display: none;">
       <div class="coupon-box">
-        <input type="text" id="cart-coupon-input" name="coupon_code" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;" autocomplete="off">
+        <input type="text" id="cart-coupon-input" name="coupon_code" placeholder="Promo code (e.g. LAUNCH20)"
+          style="text-transform: uppercase;" autocomplete="off">
         <button type="button" class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
       </div>
       <div class="coupon-applied-tag" id="coupon-tag-applied" style="display: none;">
         <span>Code <strong id="applied-code-name">LAUNCH20</strong> applied</span>
-        <button type="button" onclick="removeCartCoupon()" class="remove-coupon" aria-label="Remove coupon">&times;</button>
+        <button type="button" onclick="removeCartCoupon()" class="remove-coupon"
+          aria-label="Remove coupon">&times;</button>
       </div>
       <div class="cart-totals">
         <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹ 0</span></div>
-        <div class="total-row" id="cart-discount-row" style="display:none; color:var(--brand-orange);"><span>Discount:</span><span id="cart-discount">-₹0</span></div>
-        <div class="total-row" id="cart-shipping-row"><span>Shipping:</span><span id="cart-shipping-fee">₹50</span></div>
+        <div class="total-row" id="cart-discount-row" style="display:none; color:var(--brand-orange);">
+          <span>Discount:</span><span id="cart-discount">-₹0</span></div>
+        <div class="total-row" id="cart-shipping-row"><span>Shipping:</span><span id="cart-shipping-fee">₹50</span>
+        </div>
         <div class="total-row grand-total"><span>Total:</span><span id="cart-total">₹ 0</span></div>
       </div>
       <a href="checkout.html" class="btn btn-primary btn-lg full-width btn-water-float">Proceed to Checkout</a>
@@ -662,8 +794,13 @@
   <div class="search-modal-backdrop" id="search-modal" onclick="if(event.target===this) closeSearchModal()">
     <div class="search-modal-card">
       <div class="search-modal-header">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="text" id="search-modal-input" name="search_query" class="search-modal-input" placeholder="Search by name, notes, or occasion..." oninput="handleSearchInput(this.value)" autocomplete="off">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="search-modal-input" name="search_query" class="search-modal-input"
+          placeholder="Search by name, notes, or occasion..." oninput="handleSearchInput(this.value)"
+          autocomplete="off">
         <button class="search-modal-close" onclick="closeSearchModal()">&times;</button>
       </div>
       <div class="search-modal-results" id="search-modal-results"></div>
@@ -673,10 +810,5 @@
   <script src="assets/js/global.js?v=7.6" defer></script>
   <script src="assets/js/home.js?v=7.6" defer></script>
 </body>
+
 </html>
-
-
-
-
-
-
