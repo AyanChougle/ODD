@@ -4,6 +4,10 @@
 
 Options -Indexes -MultiViews
 
+# Force UTF-8 encoding universally for all documents, styles, scripts, and API payloads
+AddDefaultCharset UTF-8
+AddCharset UTF-8 .html .css .js .json .php
+
 # ----------------------------------------------------------------------------
 # 1. MIME TYPES
 # ----------------------------------------------------------------------------
@@ -57,14 +61,14 @@ Options -Indexes -MultiViews
   ExpiresByType application/javascript "access plus 1 year"
   ExpiresByType application/x-javascript "access plus 1 year"
 
-  # Images and Video (1 year)
-  ExpiresByType image/webp "access plus 1 year"
-  ExpiresByType image/png "access plus 1 year"
-  ExpiresByType image/jpeg "access plus 1 year"
-  ExpiresByType image/gif "access plus 1 year"
-  ExpiresByType image/svg+xml "access plus 1 year"
-  ExpiresByType image/x-icon "access plus 1 year"
-  ExpiresByType video/mp4 "access plus 1 year"
+  # Images and Video (1 hour to ensure fresh visual updates on mobile devices)
+  ExpiresByType image/webp "access plus 1 hour"
+  ExpiresByType image/png "access plus 1 hour"
+  ExpiresByType image/jpeg "access plus 1 hour"
+  ExpiresByType image/gif "access plus 1 hour"
+  ExpiresByType image/svg+xml "access plus 1 hour"
+  ExpiresByType image/x-icon "access plus 1 day"
+  ExpiresByType video/mp4 "access plus 1 day"
 
   # Fonts (1 year)
   ExpiresByType font/ttf "access plus 1 year"
@@ -84,9 +88,9 @@ Options -Indexes -MultiViews
   Header set X-Frame-Options "SAMEORIGIN"
   Header set Referrer-Policy "strict-origin-when-cross-origin"
 
-  # Static Assets Cache-Control
+  # Static Assets Cache-Control (Must revalidate so image & media updates refresh on all devices)
   <FilesMatch "\.(ico|jpe?g|png|gif|webp|svg|mp4|webm)$">
-    Header set Cache-Control "max-age=31536000, public, immutable"
+    Header set Cache-Control "max-age=3600, public, must-revalidate"
   </FilesMatch>
 
   <FilesMatch "\.(css|js)$">
