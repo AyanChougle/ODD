@@ -1044,7 +1044,7 @@ function handleSearchInput(query) {
   resultsContainer.innerHTML = matches.map(product => {
     const stock = getProductAvailability(product.id).stock;
     const detailLink = product.id === 'first-move' ? 'products-odd-first-move.html' : `products-odd-${product.id}.html`;
-    return `<article class="search-result-row"><a class="search-result-visual" href="${detailLink}"><img src="assets/images/${product.bottleImage}" alt="ODD ${product.name}"></a><div class="search-result-copy"><a href="${detailLink}" class="search-result-name">${product.name}</a><p>${product.notes}</p><span class="search-stock ${stock > 0 ? 'in-stock' : 'out-stock'}"><i></i>${stock > 0 ? 'In stock' : 'Currently unavailable'}</span></div><div class="search-result-action"><strong>₹${product.price.toLocaleString('en-IN')}</strong><button type="button" class="search-add-btn" data-search-add="${product.id}" ${stock <= 0 ? 'disabled' : ''}>${stock > 0 ? 'Add to Cart' : 'Out of stock'}</button></div></article>`;
+    return `<article class="search-result-row"><a class="search-result-visual" href="${detailLink}"><img src="assets/images/${product.bottleImage}" alt="ODD ${product.name}" width="60" height="60" style="aspect-ratio: 1 / 1;"></a><div class="search-result-copy"><a href="${detailLink}" class="search-result-name">${product.name}</a><p>${product.notes}</p><span class="search-stock ${stock > 0 ? 'in-stock' : 'out-stock'}"><i></i>${stock > 0 ? 'In stock' : 'Currently unavailable'}</span></div><div class="search-result-action"><strong>₹${product.price.toLocaleString('en-IN')}</strong><button type="button" class="search-add-btn" data-search-add="${product.id}" ${stock <= 0 ? 'disabled' : ''}>${stock > 0 ? 'Add to Cart' : 'Out of stock'}</button></div></article>`;
   }).join('');
   resultsContainer.querySelectorAll('[data-search-add]').forEach(button => button.addEventListener('click', () => { closeSearchModal(); addToCart(button.dataset.searchAdd); }));
 }
@@ -1227,16 +1227,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener('storage', (e) => {
   if (e.key === 'odd_admin_inventory' || e.key === 'odd_orders' || e.key === 'odd_admin_coupons' || e.key === 'odd_admin_shipping' || e.key === 'odd_coupons') {
-    refreshStoreState();
+    try {
+      const adminInv = readStorageJSON('odd_admin_inventory', null);
+      if (adminInv && typeof adminInv === 'object') {
+        const skuMap = { 'ODD-PH-001': 'phantom', 'ODD-LC-003': 'lucid', 'ODD-FM-002': 'first-move', 'ODD-HM-004': 'hamper' };
+        Object.entries(adminInv).forEach(([key, item]) => {
+          const pid = skuMap[key] || key;
+          if (PRODUCTS[pid] && item && item.price) {
+            PRODUCTS[pid].price = Number(item.price);
+            if (item.originalPrice != null && Number(item.originalPrice) > Number(item.price)) {
+              PRODUCTS[pid].originalPrice = Number(item.originalPrice);
+            }
+          }
+          if (STORE_INVENTORY[pid] && item) {
+            if (item.stock != null) STORE_INVENTORY[pid].stock = Math.max(0, Number(item.stock));
+            if (item.price != null && Number(item.price) > 0) STORE_INVENTORY[pid].price = Number(item.price);
+          }
+        });
+      }
+    } catch (_) {}
+    syncAllPriceElementsUI();
+    updateCartUI();
     syncStockStatusUI();
+    if (typeof renderCheckoutSummary === 'function') renderCheckoutSummary();
   }
   if (e.key === 'odd_coupon' || e.key === 'odd_coupon_code' || e.key === 'odd_coupon_discount' || e.key === 'odd_coupon_meta') {
     appliedCoupon = normalizeCouponCode(localStorage.getItem('odd_coupon') || localStorage.getItem('odd_coupon_code'));
     updateCartUI();
+    if (typeof renderCheckoutSummary === 'function') renderCheckoutSummary();
   }
   if (e.key === 'odd_cart') {
     cartState = readStorageJSON('odd_cart', []).filter(item => item && PRODUCTS[item.id] && Number.isInteger(Number(item.qty)) && Number(item.qty) > 0).map(item => ({ id: item.id, qty: Number(item.qty) }));
     updateCartUI();
+    if (typeof renderCheckoutSummary === 'function') renderCheckoutSummary();
   }
 });
 

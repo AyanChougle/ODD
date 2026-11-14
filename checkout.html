@@ -3,10 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Checkout — ODD Perfume</title>
   <meta name="description" content="Complete your order. Fast delivery & 100% secure payments via Razorpay or Cash on Delivery (COD).">
-  <link rel="stylesheet" href="assets/css/global.css?v=7.0">
-  <link rel="stylesheet" href="assets/css/policy.css?v=7.0">
+  <link rel="stylesheet" href="assets/css/global.css?v=7.2">
+  <link rel="stylesheet" href="assets/css/policy.css?v=7.2">
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
@@ -83,7 +91,7 @@
 
               <h3 style="font-family:var(--font-serif); margin:2rem 0 1.5rem;">2. Select Payment Method</h3>
               <label class="payment-select-card" style="cursor:pointer; display:flex; gap:1rem; align-items:flex-start; margin-bottom:0.8rem; border:1px solid var(--border-color); border-radius:8px; padding:1rem; background:#fff;">
-                <input type="radio" name="payment" value="razorpay" checked style="margin-top:0.25rem;">
+                <input type="radio" id="payment-razorpay" name="payment" value="razorpay" checked style="margin-top:0.25rem;">
                 <div>
                   <strong style="display:block; font-size:0.95rem;">Online Payment via Razorpay</strong>
                   <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">Instant checkout with UPI (Google Pay, PhonePe, Paytm), Credit/Debit Cards, NetBanking, and Wallets.</p>
@@ -91,7 +99,7 @@
               </label>
 
               <label class="payment-select-card" style="cursor:pointer; display:flex; gap:1rem; align-items:flex-start; margin-bottom:0.8rem; border:1px solid var(--border-color); border-radius:8px; padding:1rem; background:#fff;">
-                <input type="radio" name="payment" value="cod" style="margin-top:0.25rem;">
+                <input type="radio" id="payment-cod" name="payment" value="cod" style="margin-top:0.25rem;">
                 <div>
                   <strong style="display:block; font-size:0.95rem;">Cash on Delivery (COD)</strong>
                   <p style="font-size:0.8rem; color:var(--text-muted); margin:0.2rem 0 0;">Pay courier in cash or UPI when your fragrance package arrives at your door.</p>
@@ -108,7 +116,7 @@
             <!-- Promo Code Input -->
             <div class="checkout-promo-box" style="margin: 1.25rem 0; padding: 1rem 0; border-top: 1px dashed var(--border-color); border-bottom: 1px dashed var(--border-color);">
               <div class="checkout-promo-row" style="display:flex; gap:0.5rem;">
-                <input type="text" id="chk-coupon-input" placeholder="Promo code (e.g. LAUNCH20)" style="flex:1; min-width:0; padding:0.6rem 0.8rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.82rem; font-family:var(--font-mono); text-transform:uppercase;">
+                <input type="text" id="chk-coupon-input" name="coupon_code" placeholder="Promo code (e.g. LAUNCH20)" style="flex:1; min-width:0; padding:0.6rem 0.8rem; border:1px solid var(--border-color); border-radius:4px; font-size:0.82rem; font-family:var(--font-mono); text-transform:uppercase;">
                 <button type="button" class="btn btn-sm btn-dark" onclick="applyCheckoutCoupon()" style="flex-shrink:0; white-space:nowrap;">Apply</button>
               </div>
               <div id="chk-coupon-applied-badge" style="display:none; align-items:center; justify-content:space-between; background:rgba(232,107,50,0.08); border:1px solid rgba(232,107,50,0.3); border-radius:4px; padding:0.45rem 0.8rem; margin-top:0.6rem; font-size:0.8rem; font-family:var(--font-mono);">
@@ -273,8 +281,8 @@
     </div>
   </div>
 
-  <script src="assets/js/global.js?v=7.0"></script>
-  <script src="assets/js/checkout.js?v=7.0"></script>
+  <script src="assets/js/global.js?v=7.2"></script>
+  <script src="assets/js/checkout.js?v=7.2"></script>
 
   <!-- Global Mobile Navigation Drawer -->
   <div class="mobile-nav-drawer" id="mobile-nav">

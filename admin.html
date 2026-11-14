@@ -4,9 +4,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>ODD Admin & Inventory Management Portal</title>
-  <link rel="stylesheet" href="assets/css/global.css?v=7.0">
-  <link rel="stylesheet" href="assets/css/admin.css?v=7.0">
+  <link rel="stylesheet" href="assets/css/global.css?v=7.2">
+  <link rel="stylesheet" href="assets/css/admin.css?v=7.2">
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="assets/js/html5-qrcode.min.js"></script>
   <script>
@@ -544,7 +552,7 @@
               <strong>Product Barcode</strong> in Receive (+1) / Dispatch (−1) mode.
             </div>
             <form id="barcode-scan-form">
-              <input type="text" id="barcode-scan-input" class="admin-input scanner-input"
+              <input name="barcode_scan_input"  type="text" id="barcode-scan-input" class="admin-input scanner-input"
                 placeholder="Point scanner here — or type SKU / Order ID and press Enter" autofocus>
             </form>
           </div>
@@ -583,42 +591,42 @@
                 </h4>
                 <div style="background:#0E1015; border:1px solid var(--admin-border); border-radius:6px; padding:1rem;">
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                    <label style="cursor:pointer;"><input type="checkbox" id="chk-fm" checked> <strong id="lbl-fm">ODD
+                    <label style="cursor:pointer;"><input name="chk_fm"  type="checkbox" id="chk-fm" checked> <strong id="lbl-fm">ODD
                         FIRST MOVE</strong> <span
                         style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-FM-002)</span></label>
                     <div style="display:flex; align-items:center; gap:0.4rem;">
                       <span style="font-size:0.75rem; color:var(--admin-text-muted);">Prints:</span>
-                      <input type="number" id="copies-fm" value="5" min="1" max="5000"
+                      <input name="copies_fm"  type="number" id="copies-fm" value="5" min="1" max="5000"
                         style="width:80px; text-align:right;" class="admin-input">
                     </div>
                   </div>
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                    <label style="cursor:pointer;"><input type="checkbox" id="chk-lc" checked> <strong id="lbl-lc">ODD
+                    <label style="cursor:pointer;"><input name="chk_lc"  type="checkbox" id="chk-lc" checked> <strong id="lbl-lc">ODD
                         LUCID</strong> <span
                         style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-LC-003)</span></label>
                     <div style="display:flex; align-items:center; gap:0.4rem;">
                       <span style="font-size:0.75rem; color:var(--admin-text-muted);">Prints:</span>
-                      <input type="number" id="copies-lc" value="5" min="1" max="5000"
+                      <input name="copies_lc"  type="number" id="copies-lc" value="5" min="1" max="5000"
                         style="width:80px; text-align:right;" class="admin-input">
                     </div>
                   </div>
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                    <label style="cursor:pointer;"><input type="checkbox" id="chk-ph" checked> <strong id="lbl-ph">ODD
+                    <label style="cursor:pointer;"><input name="chk_ph"  type="checkbox" id="chk-ph" checked> <strong id="lbl-ph">ODD
                         PHANTOM</strong> <span
                         style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-PH-001)</span></label>
                     <div style="display:flex; align-items:center; gap:0.4rem;">
                       <span style="font-size:0.75rem; color:var(--admin-text-muted);">Prints:</span>
-                      <input type="number" id="copies-ph" value="5" min="1" max="5000"
+                      <input name="copies_ph"  type="number" id="copies-ph" value="5" min="1" max="5000"
                         style="width:80px; text-align:right;" class="admin-input">
                     </div>
                   </div>
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                    <label style="cursor:pointer;"><input type="checkbox" id="chk-hm" checked> <strong id="lbl-hm">ODD
+                    <label style="cursor:pointer;"><input name="chk_hm"  type="checkbox" id="chk-hm" checked> <strong id="lbl-hm">ODD
                         TRIO HAMPER</strong> <span
                         style="font-size:0.75rem; color:var(--admin-text-muted);">(ODD-HM-004)</span></label>
                     <div style="display:flex; align-items:center; gap:0.4rem;">
                       <span style="font-size:0.75rem; color:var(--admin-text-muted);">Prints:</span>
-                      <input type="number" id="copies-hm" value="5" min="1" max="5000"
+                      <input name="copies_hm"  type="number" id="copies-hm" value="5" min="1" max="5000"
                         style="width:80px; text-align:right;" class="admin-input">
                     </div>
                   </div>
@@ -643,7 +651,7 @@
                 <div style="background:#0E1015; border:1px solid var(--admin-border); border-radius:6px; padding:1rem;">
                   <div class="admin-form-group" style="margin-bottom:0.9rem;">
                     <label class="admin-label">Preset Label Dimension</label>
-                    <select id="batch-label-preset" class="admin-input" onchange="applyLabelPreset(this.value)">
+                    <select name="batch_label_preset"  id="batch-label-preset" class="admin-input" onchange="applyLabelPreset(this.value)">
                       <option value="50x25" selected>50 × 25 mm (Standard Perfume Bottle Label - Recommended)</option>
                       <option value="60x25">60 × 25 mm (Retail Perfume Box Label - 3 Columns)</option>
                       <option value="70x25">70 × 25 mm (Classic Packaging Label - 3 Columns)</option>
@@ -657,17 +665,17 @@
                   <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.8rem;">
                     <div class="admin-form-group" style="margin:0;">
                       <label class="admin-label">Width (mm)</label>
-                      <input type="number" id="batch-label-width" class="admin-input" value="50" min="15" max="250"
+                      <input name="batch_label_width"  type="number" id="batch-label-width" class="admin-input" value="50" min="15" max="250"
                         step="1" oninput="onCustomDimensionInput()">
                     </div>
                     <div class="admin-form-group" style="margin:0;">
                       <label class="admin-label">Height (mm)</label>
-                      <input type="number" id="batch-label-height" class="admin-input" value="25" min="10" max="200"
+                      <input name="batch_label_height"  type="number" id="batch-label-height" class="admin-input" value="25" min="10" max="200"
                         step="1" oninput="onCustomDimensionInput()">
                     </div>
                     <div class="admin-form-group" style="margin:0;">
                       <label class="admin-label">Sheet Grid</label>
-                      <select id="batch-label-cols" class="admin-input">
+                      <select name="batch_label_cols"  id="batch-label-cols" class="admin-input">
                         <option value="3" selected>3 Columns (Recommended)</option>
                         <option value="2">2 Columns (Wide)</option>
                         <option value="4">4 Columns (Compact)</option>
@@ -677,14 +685,14 @@
                   </div>
                   <div class="admin-form-group" style="margin-top:0.85rem; margin-bottom:0.5rem;">
                     <label class="admin-label">Code Format &amp; Symbology</label>
-                    <select id="batch-code-format" class="admin-input">
+                    <select name="batch_code_format"  id="batch-code-format" class="admin-input">
                       <option value="barcode" selected>1D Barcode (Code 128 - Crisp High-Density Vectors with Text Below)</option>
                     </select>
                   </div>
                   <div class="admin-form-group" style="margin:0.5rem 0 0; display:flex; align-items:center;">
                     <label
                       style="display:flex; align-items:center; gap:0.5rem; font-size:0.8rem; cursor:pointer; color:var(--admin-text-muted);">
-                      <input type="checkbox" id="batch-print-border"> Print Border Outline (Default: Off for clean
+                      <input name="batch_print_border"  type="checkbox" id="batch-print-border"> Print Border Outline (Default: Off for clean
                       borderless stickers)
                     </label>
                   </div>
@@ -698,7 +706,7 @@
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
                 <div class="admin-form-group">
                   <label class="admin-label">Lot &amp; Control No.</label>
-                  <input type="text" id="batch-lot-no" class="admin-input" value="01" placeholder="e.g. 01">
+                  <input name="batch_lot_no"  type="text" id="batch-lot-no" class="admin-input" value="01" placeholder="e.g. 01">
                 </div>
                 <div class="admin-form-group">
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
@@ -710,7 +718,7 @@
                         style="font-size:0.65rem; padding:1px 6px;" title="Auto resume from DB count">Auto (DB)</button>
                     </div>
                   </div>
-                  <input type="number" id="batch-start-serial" class="admin-input" value="1" min="1" max="999999"
+                  <input name="batch_start_serial"  type="number" id="batch-start-serial" class="admin-input" value="1" min="1" max="999999"
                     placeholder="e.g. 1 (starts at 01)">
                   <small
                     style="color:var(--admin-text-muted); font-size:0.72rem; display:block; margin-top:2px;">Sequence
@@ -718,16 +726,16 @@
                 </div>
                 <div class="admin-form-group">
                   <label class="admin-label">Manufacturing Date</label>
-                  <input type="date" id="batch-mfg-date" class="admin-input">
+                  <input name="batch_mfg_date"  type="date" id="batch-mfg-date" class="admin-input">
                 </div>
                 <div class="admin-form-group">
                   <label class="admin-label">Shelf Life (Months)</label>
-                  <input type="number" id="batch-shelf-life" class="admin-input" placeholder="e.g. 36" min="1"
+                  <input name="batch_shelf_life"  type="number" id="batch-shelf-life" class="admin-input" placeholder="e.g. 36" min="1"
                     max="120">
                 </div>
                 <div class="admin-form-group" style="grid-column: span 2;">
                   <label class="admin-label">Retail MRP (₹)</label>
-                  <input type="number" id="batch-mrp" class="admin-input" placeholder="e.g. 1599" min="1">
+                  <input name="batch_mrp"  type="number" id="batch-mrp" class="admin-input" placeholder="e.g. 1599" min="1">
                 </div>
               </div>
               <button class="admin-btn admin-btn-primary full-width" data-generate-barcode
@@ -753,11 +761,11 @@
             </div>
           </div>
           <form id="staff-create-form" class="staff-create-form">
-            <div class="admin-form-group"><label class="admin-label" for="staff-name">Full name</label><input
+            <div class="admin-form-group"><label class="admin-label" for="staff-name">Full name</label><input name="staff_name" 
                 id="staff-name" class="admin-input" required minlength="2" autocomplete="name"></div>
-            <div class="admin-form-group"><label class="admin-label" for="staff-email">Work email</label><input
+            <div class="admin-form-group"><label class="admin-label" for="staff-email">Work email</label><input name="staff_email" 
                 id="staff-email" class="admin-input" type="email" required autocomplete="off"></div>
-            <div class="admin-form-group"><label class="admin-label" for="staff-role">Role</label><select
+            <div class="admin-form-group"><label class="admin-label" for="staff-role">Role</label><select name="staff_role" 
                 id="staff-role" class="admin-input">
                 <option value="warehouse">Warehouse</option>
                 <option value="orders">Orders</option>
@@ -766,7 +774,7 @@
                 <option value="admin">Administrator</option>
               </select></div>
             <div class="admin-form-group"><label class="admin-label" for="staff-password">Temporary password (12+
-                chars)</label><input id="staff-password" class="admin-input" type="password" minlength="12"
+                chars)</label><input name="staff_password"  id="staff-password" class="admin-input" type="password" minlength="12"
                 autocomplete="new-password" required></div>
             <button type="submit" class="admin-btn admin-btn-primary">Create account</button>
           </form>
@@ -800,14 +808,14 @@
           <form id="shipping-settings-form" onsubmit="saveShippingSettings(event)" style="max-width:680px;">
             <div class="admin-form-group">
               <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; cursor:pointer;">
-                <input type="checkbox" id="shipping-enabled-check" checked> Enable Shipping Charge Calculation
+                <input name="shipping_enabled_check"  type="checkbox" id="shipping-enabled-check" checked> Enable Shipping Charge Calculation
               </label>
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.2rem;">
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Standard Shipping Fee (₹)</label>
-                <input type="number" id="shipping-standard-rate" class="admin-input" value="50" min="0" max="1000"
+                <input name="shipping_standard_rate"  type="number" id="shipping-standard-rate" class="admin-input" value="50" min="0" max="1000"
                   step="1" required>
                 <small style="color:var(--admin-text-muted); font-size:0.75rem;">Flat fee added to customer orders
                   (default: ₹50).</small>
@@ -815,7 +823,7 @@
 
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Free Shipping Threshold (₹)</label>
-                <input type="number" id="shipping-free-threshold" class="admin-input" value="0" min="0" max="10000"
+                <input name="shipping_free_threshold"  type="number" id="shipping-free-threshold" class="admin-input" value="0" min="0" max="10000"
                   step="50">
                 <small style="color:var(--admin-text-muted); font-size:0.75rem;">Set to 0 to always charge shipping, or
                   e.g. 1500 for orders above ₹1,500.</small>
@@ -825,7 +833,7 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.5rem;">
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Express Delivery Fee (₹)</label>
-                <input type="number" id="shipping-express-rate" class="admin-input" value="120" min="0" max="2000"
+                <input name="shipping_express_rate"  type="number" id="shipping-express-rate" class="admin-input" value="120" min="0" max="2000"
                   step="5">
                 <small style="color:var(--admin-text-muted); font-size:0.75rem;">Optional express courier speed
                   surcharge.</small>
@@ -833,7 +841,7 @@
 
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Delivery Timeline Label</label>
-                <input type="text" id="shipping-timeline-text" class="admin-input"
+                <input name="shipping_timeline_text"  type="text" id="shipping-timeline-text" class="admin-input"
                   value="3–5 Business Days Across India">
                 <small style="color:var(--admin-text-muted); font-size:0.75rem;">Shown on checkout summary and product
                   pages.</small>
@@ -864,7 +872,7 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.2rem;">
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Shiprocket Account / API Email</label>
-                <input type="email" id="shiprocket-email" class="admin-input" placeholder="oddperfumesocial@gmail.com"
+                <input name="shiprocket_email"  type="email" id="shiprocket-email" class="admin-input" placeholder="oddperfumesocial@gmail.com"
                   required autocomplete="off">
                 <small style="color:var(--admin-text-muted); font-size:0.75rem;">Account email or dedicated API user
                   from Shiprocket dashboard.</small>
@@ -873,7 +881,7 @@
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Shiprocket Password / API Key</label>
                 <div style="display:flex; gap:0.5rem;">
-                  <input type="password" id="shiprocket-password" class="admin-input" placeholder="••••••••••••••••"
+                  <input name="shiprocket_password"  type="password" id="shiprocket-password" class="admin-input" placeholder="••••••••••••••••"
                     required autocomplete="off" style="font-family:monospace; letter-spacing:0.04em;">
                   <button type="button" class="admin-btn"
                     onclick="toggleShiprocketKeyVisibility(event)"
@@ -887,14 +895,14 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.2rem;">
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Pickup Location Name</label>
-                <input type="text" id="shiprocket-pickup-location" class="admin-input" placeholder="warehouse"
+                <input name="shiprocket_pickup_location"  type="text" id="shiprocket-pickup-location" class="admin-input" placeholder="warehouse"
                   value="warehouse" required>
                 <small style="color:var(--admin-text-muted); font-size:0.75rem;">Registered Pickup Location nickname in your Shiprocket account (e.g. <code>warehouse</code>). Must match exactly and status must be Active.</small>
               </div>
 
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Default Carrier Partner</label>
-                <select id="shiprocket-carrier" class="admin-input">
+                <select name="shiprocket_carrier"  id="shiprocket-carrier" class="admin-input">
                   <option value="automatic" selected>Cheapest / Best Available Carrier (Automatic)</option>
                   <option value="delhivery">Delhivery Logistics (Surface / Air)</option>
                   <option value="bluedart">Blue Dart Express (Air / Priority)</option>
@@ -912,7 +920,7 @@
             <div class="admin-form-group" style="margin-top:0.4rem; margin-bottom:1rem;">
               <label
                 style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; font-weight:600; cursor:pointer;">
-                <input type="checkbox" id="shiprocket-auto-dispatch"> Auto-book Shiprocket courier shipment &amp;
+                <input name="shiprocket_auto_dispatch"  type="checkbox" id="shiprocket-auto-dispatch"> Auto-book Shiprocket courier shipment &amp;
                 generate AWB on new customer orders
               </label>
               <small style="color:var(--admin-text-muted); font-size:0.75rem; margin-left:1.5rem; display:block;">When
@@ -926,19 +934,19 @@
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">Sender / Brand Name</label>
-                  <input type="text" id="shiprocket-origin-name" class="admin-input"
+                  <input name="shiprocket_origin_name"  type="text" id="shiprocket-origin-name" class="admin-input"
                     placeholder="ODD Perfume Fulfillment" value="ODD Perfume Fulfillment" required>
                 </div>
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">Dispatch Contact Phone</label>
-                  <input type="text" id="shiprocket-origin-phone" class="admin-input" placeholder="+919876543210"
+                  <input name="shiprocket_origin_phone"  type="text" id="shiprocket-origin-phone" class="admin-input" placeholder="+919876543210"
                     value="+919876543210" required>
                 </div>
               </div>
 
               <div class="admin-form-group" style="margin-bottom:1rem;">
                 <label class="admin-label">Warehouse Address Line</label>
-                <input type="text" id="shiprocket-origin-street" class="admin-input"
+                <input name="shiprocket_origin_street"  type="text" id="shiprocket-origin-street" class="admin-input"
                   placeholder="Plot 42, Perfume Studio, Industrial Area"
                   value="Plot 42, Perfume Studio, Industrial Area" required>
               </div>
@@ -946,17 +954,17 @@
               <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem;">
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">City</label>
-                  <input type="text" id="shiprocket-origin-city" class="admin-input" placeholder="City" value=""
+                  <input name="shiprocket_origin_city"  type="text" id="shiprocket-origin-city" class="admin-input" placeholder="City" value=""
                     required>
                 </div>
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">State Code (e.g. MH, DL, KA)</label>
-                  <input type="text" id="shiprocket-origin-state" class="admin-input" placeholder="MH" value="MH"
+                  <input name="shiprocket_origin_state"  type="text" id="shiprocket-origin-state" class="admin-input" placeholder="MH" value="MH"
                     required maxlength="4" style="text-transform:uppercase;">
                 </div>
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">Postal PIN Code</label>
-                  <input type="text" id="shiprocket-origin-postal" class="admin-input" placeholder="400001"
+                  <input name="shiprocket_origin_postal"  type="text" id="shiprocket-origin-postal" class="admin-input" placeholder="400001"
                     value="400001" required pattern="[0-9]{6}">
                 </div>
               </div>
@@ -1003,17 +1011,17 @@
           <form style="max-width:650px;">
             <div class="admin-form-group">
               <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; cursor:pointer;">
-                <input type="checkbox" id="banner-active-check" checked> Enable top announcement banner
+                <input name="banner_active_check"  type="checkbox" id="banner-active-check" checked> Enable top announcement banner
               </label>
             </div>
             <div class="admin-form-group">
               <label class="admin-label">Banner Text</label>
-              <input type="text" id="banner-text-input" class="admin-input"
+              <input name="banner_text_input"  type="text" id="banner-text-input" class="admin-input"
                 value="WE'RE LIVE. Take 20% OFF your first order with code LAUNCH20">
             </div>
             <div class="admin-form-group">
               <label class="admin-label">Highlight Promo Code in Banner</label>
-              <input type="text" id="banner-code-input" class="admin-input" value="LAUNCH20"
+              <input name="banner_code_input"  type="text" id="banner-code-input" class="admin-input" value="LAUNCH20"
                 style="text-transform:uppercase;">
             </div>
             <button type="submit" class="admin-btn admin-btn-primary">Save Banner Settings</button>
@@ -1034,17 +1042,17 @@
             style="display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:1rem; align-items:flex-end; margin-bottom:2rem; background:rgba(255,255,255,0.03); padding:1.2rem; border-radius:8px;">
             <div class="admin-form-group" style="margin:0;">
               <label class="admin-label">New Coupon Code</label>
-              <input type="text" id="new-coupon-code" class="admin-input" placeholder="e.g. SUMMER25"
+              <input name="new_coupon_code"  type="text" id="new-coupon-code" class="admin-input" placeholder="e.g. SUMMER25"
                 style="text-transform:uppercase;" required>
             </div>
             <div class="admin-form-group" style="margin:0;">
               <label class="admin-label">Discount %</label>
-              <input type="number" id="new-coupon-discount" class="admin-input" min="1" max="90" placeholder="25"
+              <input name="new_coupon_discount"  type="number" id="new-coupon-discount" class="admin-input" min="1" max="90" placeholder="25"
                 required>
             </div>
             <div class="admin-form-group" style="margin:0;">
               <label class="admin-label">Status</label>
-              <select id="new-coupon-status" class="admin-input" style="background:#111; color:#fff;">
+              <select name="new_coupon_status"  id="new-coupon-status" class="admin-input" style="background:#111; color:#fff;">
                 <option value="true">Active</option>
                 <option value="false">Inactive</option>
               </select>
@@ -1117,14 +1125,14 @@
           <form id="razorpay-settings-form" onsubmit="saveRazorpaySettings(event)" style="max-width:720px;">
             <div class="admin-form-group">
               <label style="display:flex; align-items:center; gap:0.5rem; font-weight:600; cursor:pointer;">
-                <input type="checkbox" id="rzp-enabled-check" checked> Enable Razorpay Payment Method at Checkout
+                <input name="rzp_enabled_check"  type="checkbox" id="rzp-enabled-check" checked> Enable Razorpay Payment Method at Checkout
               </label>
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.2rem;">
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Environment Mode</label>
-                <select id="rzp-env-select" class="admin-input" style="background:#111; color:#10B981; font-weight:700;">
+                <select name="rzp_env_select"  id="rzp-env-select" class="admin-input" style="background:#111; color:#10B981; font-weight:700;">
                   <option value="live" selected>Live (Production Gateway)</option>
                 </select>
                 <small style="color:var(--admin-text-muted); font-size:0.75rem;">Production mode processes real authentic customer payments directly to your Razorpay merchant account.</small>
@@ -1132,7 +1140,7 @@
 
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Razorpay Key ID</label>
-                <input type="text" id="rzp-key-id" class="admin-input" placeholder="rzp_live_••••••••••••" required>
+                <input name="rzp_key_id"  type="text" id="rzp-key-id" class="admin-input" placeholder="rzp_live_••••••••••••" required>
                 <small style="color:var(--admin-text-muted); font-size:0.75rem;">Live Public Key from Razorpay Dashboard
                   &gt; API Keys.</small>
               </div>
@@ -1142,7 +1150,7 @@
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Razorpay Key Secret / Pass</label>
                 <div style="display:flex; gap:0.5rem;">
-                  <input type="password" id="rzp-key-secret" class="admin-input" placeholder="••••••••••••••••"
+                  <input name="rzp_key_secret"  type="password" id="rzp-key-secret" class="admin-input" placeholder="••••••••••••••••"
                     autocomplete="off" style="font-family:monospace; letter-spacing:0.04em;">
                   <button type="button" class="admin-btn" id="rzp-secret-toggle-btn" onclick="toggleSecretVisibility(event)"
                     style="white-space:nowrap; padding:0 0.8rem;">Show</button>
@@ -1153,7 +1161,7 @@
 
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Store Brand Name (Razorpay Header)</label>
-                <input type="text" id="rzp-brand-name" class="admin-input" value="ODD Perfume">
+                <input name="rzp_brand_name"  type="text" id="rzp-brand-name" class="admin-input" value="ODD Perfume">
                 <small style="color:var(--admin-text-muted); font-size:0.75rem;">Brand title displayed on the Razorpay
                   checkout modal.</small>
               </div>
@@ -1162,7 +1170,7 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.5rem;">
               <div class="admin-form-group" style="margin:0;">
                 <label class="admin-label">Theme Color</label>
-                <input type="text" id="rzp-theme-color" class="admin-input" value="#E86B32">
+                <input name="rzp_theme_color"  type="text" id="rzp-theme-color" class="admin-input" value="#E86B32">
               </div>
 
               <div class="admin-form-group" style="margin:0;">
@@ -1243,13 +1251,13 @@
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.5rem;">
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">SMTP Host Server</label>
-                  <input type="text" id="smtp-host" class="admin-input" value="smtp.hostinger.com" placeholder="smtp.hostinger.com" required>
+                  <input name="smtp_host"  type="text" id="smtp-host" class="admin-input" value="smtp.hostinger.com" placeholder="smtp.hostinger.com" required>
                   <small style="color:var(--admin-text-muted); font-size:0.75rem;">Default for Hostinger &amp; Titan Mail: smtp.hostinger.com</small>
                 </div>
 
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">SMTP Port</label>
-                  <input type="number" id="smtp-port" class="admin-input" value="465" placeholder="465" required>
+                  <input name="smtp_port"  type="number" id="smtp-port" class="admin-input" value="465" placeholder="465" required>
                   <small style="color:var(--admin-text-muted); font-size:0.75rem;">Standard SSL port: 465 (or TLS 587)</small>
                 </div>
               </div>
@@ -1257,14 +1265,14 @@
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.5rem;">
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">Hostinger Email / Username</label>
-                  <input type="email" id="smtp-user" class="admin-input" value="hello@oddperfume.com" placeholder="hello@oddperfume.com" required>
+                  <input name="smtp_user"  type="email" id="smtp-user" class="admin-input" value="hello@oddperfume.com" placeholder="hello@oddperfume.com" required>
                   <small style="color:var(--admin-text-muted); font-size:0.75rem;">Your full Hostinger webmail address.</small>
                 </div>
 
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">Mailbox Password</label>
                   <div style="display:flex; gap:0.5rem;">
-                    <input type="password" id="smtp-pass" class="admin-input" placeholder="••••••••••••" style="flex:1;">
+                    <input name="smtp_pass"  type="password" id="smtp-pass" class="admin-input" placeholder="••••••••••••" style="flex:1;">
                     <button type="button" class="admin-btn admin-btn-sm" id="btn-toggle-smtp-pass" onclick="toggleSmtpPasswordVisibility()" style="white-space:nowrap; padding:0 0.8rem;">Show</button>
                   </div>
                   <small style="color:var(--admin-text-muted); font-size:0.75rem;">Your Hostinger webmail password for hello@oddperfume.com.</small>
@@ -1274,13 +1282,13 @@
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-bottom:1.5rem;">
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">From Email Address</label>
-                  <input type="email" id="smtp-from-email" class="admin-input" value="hello@oddperfume.com" placeholder="hello@oddperfume.com" required>
+                  <input name="smtp_from_email"  type="email" id="smtp-from-email" class="admin-input" value="hello@oddperfume.com" placeholder="hello@oddperfume.com" required>
                   <small style="color:var(--admin-text-muted); font-size:0.75rem;">Must match your authenticated domain mailbox (@oddperfume.com).</small>
                 </div>
 
                 <div class="admin-form-group" style="margin:0;">
                   <label class="admin-label">From Display Name</label>
-                  <input type="text" id="smtp-from-name" class="admin-input" value="ODD Perfumes Studio" placeholder="ODD Perfumes Studio" required>
+                  <input name="smtp_from_name"  type="text" id="smtp-from-name" class="admin-input" value="ODD Perfumes Studio" placeholder="ODD Perfumes Studio" required>
                   <small style="color:var(--admin-text-muted); font-size:0.75rem;">Brand sender name displayed in recipient inboxes.</small>
                 </div>
               </div>
@@ -1300,7 +1308,7 @@
     </div>
   </main>
 
-  <script src="assets/js/admin.js?v=7.0"></script>
+  <script src="assets/js/admin.js?v=7.2"></script>
 </body>
 
 </html>

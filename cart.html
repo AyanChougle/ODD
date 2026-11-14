@@ -4,10 +4,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Your Cart — ODD Perfume</title>
   <meta name="description" content="Review items in your shopping Cart. Free shipping across India.">
-  <link rel="stylesheet" href="assets/css/global.css?v=7.0">
-  <link rel="stylesheet" href="assets/css/policy.css?v=7.0">
+  <link rel="stylesheet" href="assets/css/global.css?v=7.2">
+  <link rel="stylesheet" href="assets/css/policy.css?v=7.2">
 </head>
 
 <body>
@@ -75,7 +83,7 @@
 
       <div id="cart-page-totals" style="margin-top:2rem; border-top:1px solid var(--border-color); padding-top:1.5rem;">
         <div class="coupon-box" style="margin-bottom:0.85rem;">
-          <input type="text" id="cart-page-coupon-input" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;">
+          <input type="text" id="cart-page-coupon-input" name="coupon_code" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;">
           <button type="button" class="btn btn-sm btn-dark" onclick="applyCartCoupon('page')">Apply</button>
         </div>
         <div class="coupon-applied-tag" id="cart-page-coupon-tag" style="display: none;">
@@ -277,7 +285,7 @@
     </div>
   </div>
 
-  <script src="assets/js/global.js?v=7.0"></script>
+  <script src="assets/js/global.js?v=7.2"></script>
 
   <!-- Global Mobile Navigation Drawer -->
   <div class="mobile-nav-drawer" id="mobile-nav">
