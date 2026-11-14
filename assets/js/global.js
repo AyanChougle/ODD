@@ -117,9 +117,15 @@ try {
     Object.entries(adminInv).forEach(([key, item]) => {
       const pid = skuMap[key] || key;
       if (PRODUCTS[pid] && item && item.price) {
-        PRODUCTS[pid].price = Number(item.price);
-        if (item.originalPrice != null && Number(item.originalPrice) > Number(item.price)) {
-          PRODUCTS[pid].originalPrice = Number(item.originalPrice);
+        const pNum = Number(item.price);
+        // Guard: Do not downgrade authoritative prices with obsolete legacy local cache values
+        if ((pid === 'phantom' && pNum === 1599) || (pid === 'first-move' && pNum === 1599) || (pid === 'hamper' && pNum === 4797)) {
+          // Keep authoritative price
+        } else if (!isNaN(pNum) && pNum > 0) {
+          PRODUCTS[pid].price = pNum;
+          if (item.originalPrice != null && Number(item.originalPrice) > pNum) {
+            PRODUCTS[pid].originalPrice = Number(item.originalPrice);
+          }
         }
       }
     });
@@ -130,10 +136,15 @@ try {
   if (cachedProducts && typeof cachedProducts === 'object') {
     Object.keys(cachedProducts).forEach(pid => {
       if (PRODUCTS[pid] && cachedProducts[pid].price) {
-        PRODUCTS[pid].price = Number(cachedProducts[pid].price);
-        PRODUCTS[pid].originalPrice = (cachedProducts[pid].originalPrice && Number(cachedProducts[pid].originalPrice) > Number(cachedProducts[pid].price))
-          ? Number(cachedProducts[pid].originalPrice)
-          : null;
+        const pNum = Number(cachedProducts[pid].price);
+        if ((pid === 'phantom' && pNum === 1599) || (pid === 'first-move' && pNum === 1599) || (pid === 'hamper' && pNum === 4797)) {
+          // Keep authoritative price
+        } else if (!isNaN(pNum) && pNum > 0) {
+          PRODUCTS[pid].price = pNum;
+          PRODUCTS[pid].originalPrice = (cachedProducts[pid].originalPrice && Number(cachedProducts[pid].originalPrice) > pNum)
+            ? Number(cachedProducts[pid].originalPrice)
+            : null;
+        }
       }
     });
   }
@@ -417,9 +428,23 @@ async function syncInventoryFromApi() {
       });
       try {
         localStorage.setItem('odd_live_products', JSON.stringify(PRODUCTS));
+        const inv = readStorageJSON('odd_admin_inventory', {}) || {};
+        const skuMapInv = { 'phantom': 'ODD-PH-001', 'lucid': 'ODD-LC-003', 'first-move': 'ODD-FM-002', 'hamper': 'ODD-HM-004' };
+        products.forEach(p => {
+          const sku = p.sku || skuMapInv[p.id] || p.id;
+          inv[sku] = {
+            sku: sku,
+            name: p.name,
+            stock: Math.max(0, Number(p.stock)),
+            price: Number(p.price)
+          };
+        });
+        localStorage.setItem('odd_admin_inventory', JSON.stringify(inv));
       } catch (e) {}
       syncAllPriceElementsUI();
       if (typeof syncStockStatusUI === 'function') syncStockStatusUI();
+      if (typeof updateCartUI === 'function') updateCartUI();
+      if (typeof renderCheckoutSummary === 'function') renderCheckoutSummary();
     }
 
     if (shipRes && shipRes.ok) {
@@ -543,6 +568,7 @@ function toggleCartDrawer() {
 }
 
 function getProductAvailability(productId) {
+  const authoritativePrice = PRODUCTS[productId]?.price || STORE_INVENTORY[productId]?.price;
   try {
     const localInv = JSON.parse(localStorage.getItem('odd_admin_inventory'));
     if (localInv && typeof localInv === 'object') {
@@ -550,7 +576,10 @@ function getProductAvailability(productId) {
       const sku = skuMap[productId] || productId;
       if (localInv[sku]) {
         const liveStock = Math.max(0, Number(localInv[sku].stock ?? 0));
-        const livePrice = Math.max(0, Number(localInv[sku].price ?? PRODUCTS[productId]?.price ?? STORE_INVENTORY[productId]?.price ?? 1599));
+        let livePrice = Number(localInv[sku].price);
+        if (!livePrice || (productId === 'phantom' && livePrice === 1599) || (productId === 'first-move' && livePrice === 1599) || (productId === 'hamper' && livePrice === 4797)) {
+          livePrice = authoritativePrice || 1599;
+        }
         if (STORE_INVENTORY[productId]) {
           STORE_INVENTORY[productId].stock = liveStock;
           STORE_INVENTORY[productId].price = livePrice;
@@ -561,8 +590,8 @@ function getProductAvailability(productId) {
   } catch (e) {}
 
   const state = STORE_INVENTORY[productId];
-  if (!state) return { stock: 0, price: PRODUCTS[productId]?.price || 1599 };
-  return { stock: Math.max(0, Number(state.stock) || 0), price: Math.max(0, Number(state.price || PRODUCTS[productId]?.price) || 1599) };
+  if (!state) return { stock: 0, price: authoritativePrice || 1599 };
+  return { stock: Math.max(0, Number(state.stock) || 0), price: Math.max(0, Number(state.price || authoritativePrice) || 1599) };
 }
 
 function addToCart(productId) {
@@ -1341,7 +1370,8 @@ function openQuickView(productId) {
   
   const price = modal.querySelector('.qv-price');
   if (price) {
-    const livePrice = Number(prod.price || 1599);
+    const avail = getProductAvailability(targetId);
+    const livePrice = Number(avail.price || prod.price || 1999);
     const origPrice = (prod.originalPrice != null && Number(prod.originalPrice) > livePrice) ? Number(prod.originalPrice) : null;
     if (origPrice && origPrice > livePrice) {
       const discount = Math.round((origPrice - livePrice) / origPrice * 100);
