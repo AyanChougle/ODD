@@ -24,7 +24,7 @@ const PRODUCTS = {
     name: 'Phantom',
     fullName: 'ODD Phantom',
     tagline: 'Unseen. Unforgotten. Undeniable.',
-    price: 1599,
+    price: 1999,
     originalPrice: null,
     notes: 'Cambodian Oud · Saffron · Smoky Birch',
     bottleImage: 'Phantom Single bottle.webp',
@@ -62,7 +62,7 @@ const PRODUCTS = {
     name: 'First Move',
     fullName: 'ODD First Move',
     tagline: 'Make your presence felt instantly.',
-    price: 1599,
+    price: 1899,
     originalPrice: null,
     notes: 'Juicy Pineapple · Smoky Cedar · Oakmoss Musk',
     bottleImage: 'First Move single bottle.webp',
@@ -153,9 +153,9 @@ let ACTIVE_COUPONS = (function hydrateInitialCoupons() {
 let STORE_STATE_FROM_SERVER = false;
 let COUPONS_SYNCED_FROM_SERVER = false;
 let STORE_INVENTORY = {
-  phantom: { sku: 'ODD-PH-001', stock: 0, price: PRODUCTS['phantom']?.price || 1599 },
+  phantom: { sku: 'ODD-PH-001', stock: 0, price: PRODUCTS['phantom']?.price || 1999 },
   lucid: { sku: 'ODD-LC-003', stock: 0, price: PRODUCTS['lucid']?.price || 1599 },
-  'first-move': { sku: 'ODD-FM-002', stock: 0, price: PRODUCTS['first-move']?.price || 1599 },
+  'first-move': { sku: 'ODD-FM-002', stock: 0, price: PRODUCTS['first-move']?.price || 1899 },
   hamper: { sku: 'ODD-HM-004', stock: 0, price: PRODUCTS['hamper']?.price || 4999 }
 };
 
@@ -550,7 +550,7 @@ function getProductAvailability(productId) {
       const sku = skuMap[productId] || productId;
       if (localInv[sku]) {
         const liveStock = Math.max(0, Number(localInv[sku].stock ?? 0));
-        const livePrice = Math.max(0, Number(localInv[sku].price ?? PRODUCTS[productId]?.price ?? 899));
+        const livePrice = Math.max(0, Number(localInv[sku].price ?? PRODUCTS[productId]?.price ?? STORE_INVENTORY[productId]?.price ?? 1599));
         if (STORE_INVENTORY[productId]) {
           STORE_INVENTORY[productId].stock = liveStock;
           STORE_INVENTORY[productId].price = livePrice;
@@ -561,8 +561,8 @@ function getProductAvailability(productId) {
   } catch (e) {}
 
   const state = STORE_INVENTORY[productId];
-  if (!state) return { stock: 0, price: PRODUCTS[productId]?.price || 0 };
-  return { stock: Math.max(0, Number(state.stock) || 0), price: Math.max(0, Number(state.price) || 0) };
+  if (!state) return { stock: 0, price: PRODUCTS[productId]?.price || 1599 };
+  return { stock: Math.max(0, Number(state.stock) || 0), price: Math.max(0, Number(state.price || PRODUCTS[productId]?.price) || 1599) };
 }
 
 function addToCart(productId) {
@@ -798,7 +798,7 @@ function renderCartPage() {
       const qty = Math.min(25, Number(item.qty)); const lineTotal = price * qty; subtotal += lineTotal;
       const out = stock <= 0 || qty > stock; if (out) unavailable = true;
       return `<article class="cart-page-line${out ? ' is-unavailable' : ''}">
-        <div class="cart-page-product-image"><img src="assets/images/${product.bottleImage}" alt="ODD ${product.name}" loading="lazy"></div>
+        <div class="cart-page-product-image"><img src="assets/images/${product.bottleImage}" alt="ODD ${product.name}" width="80" height="80" style="aspect-ratio: 1 / 1;" loading="lazy"></div>
         <div class="cart-page-product-copy"><a href="${item.id === 'first-move' ? 'products-odd-first-move.html' : `products-odd-${item.id}.html`}">${product.name}</a><span>${item.id === 'hamper' ? '3 × 100 ml' : '100 ml'} · ₹${price.toLocaleString('en-IN')} each</span>
           <div class="cart-page-qty"><button type="button" data-cart-page-qty="-1" data-product-id="${item.id}" aria-label="Remove one ${product.name}">−</button><span>Qty ${qty}</span><button type="button" data-cart-page-qty="1" data-product-id="${item.id}" aria-label="Add one ${product.name}" ${out || qty >= stock ? 'disabled' : ''}>+</button><button type="button" class="cart-page-remove" data-cart-page-remove="${item.id}">Remove</button></div>
           ${out ? `<small class="cart-page-stock-warning">${stock <= 0 ? 'Currently out of stock. Remove this item to continue.' : `Only ${stock} available. Reduce the quantity to continue.`}</small>` : ''}</div>
