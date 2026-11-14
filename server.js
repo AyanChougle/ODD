@@ -250,6 +250,19 @@ function initDatabase() {
       ip_address TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS product_reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id TEXT NOT NULL,
+      reviewer_name TEXT NOT NULL,
+      customer_email TEXT DEFAULT NULL,
+      customer_id TEXT DEFAULT NULL,
+      rating INTEGER NOT NULL DEFAULT 5,
+      wear_occasion TEXT DEFAULT '',
+      comment TEXT NOT NULL,
+      is_verified INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   try {
@@ -1224,7 +1237,7 @@ const server = http.createServer(async (req, res) => {
           const cleanPhone = phone.replace(/[^0-9]/g, '');
           order = db.prepare("SELECT * FROM orders WHERE id = ? AND replace(replace(customer_phone, '+91', ''), ' ', '') LIKE ?").get(orderId, `%${cleanPhone.slice(-10)}%`);
         } else if (orderId && getStaffSession(req)) {
-          order = db.prepare('SELECT id, status, subtotal, discount_amount, coupon_code, shipping_fee, total_amount, created_at FROM orders WHERE id = ?').get(orderId);
+          order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
         }
 
         if (!order) {
@@ -1235,6 +1248,18 @@ const server = http.createServer(async (req, res) => {
 
         return sendJson(res, 200, {
           id: order.id,
+          customer: order.customer_name || 'Customer',
+          customer_name: order.customer_name || 'Customer',
+          email: order.customer_email || '',
+          customer_email: order.customer_email || '',
+          phone: order.customer_phone || '',
+          customer_phone: order.customer_phone || '',
+          address: order.shipping_address || '',
+          shipping_address: order.shipping_address || '',
+          paymentMethod: order.payment_method,
+          payment_method: order.payment_method,
+          paymentStatus: order.payment_status,
+          payment_status: order.payment_status,
           status: order.status,
           subtotal: order.subtotal,
           discount: order.discount_amount,
@@ -2757,6 +2782,73 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 200, {
           success: true,
           message: 'Thank you for subscribing to ODD Fragrance Notes.'
+        });
+      }
+
+      // --- 14. Product Reviews & Customer Feedback (/api/reviews) ---
+      if (pathname === '/api/reviews' && method === 'GET') {
+        const productId = String(urlObj.searchParams.get('product') || '').trim().toLowerCase();
+        let reviews;
+        if (productId) {
+          reviews = db.prepare(`
+            SELECT id, product_id as productId, reviewer_name as name, rating, wear_occasion as occasion, comment, created_at as createdAt, is_verified as isVerified
+            FROM product_reviews
+            WHERE product_id = ?
+            ORDER BY datetime(created_at) DESC, id DESC
+            LIMIT 100
+          `).all(productId);
+        } else {
+          reviews = db.prepare(`
+            SELECT id, product_id as productId, reviewer_name as name, rating, wear_occasion as occasion, comment, created_at as createdAt, is_verified as isVerified
+            FROM product_reviews
+            ORDER BY datetime(created_at) DESC, id DESC
+            LIMIT 200
+          `).all();
+        }
+        return sendJson(res, 200, { reviews });
+      }
+
+      if (pathname === '/api/reviews' && method === 'POST') {
+        const body = await parseJsonBody(req);
+        const productId = String(body.productId || body.product_id || '').trim().toLowerCase();
+        const name = String(body.name || '').trim();
+        const occasion = String(body.occasion || '').trim();
+        const comment = String(body.comment || '').trim();
+        const rating = Math.max(1, Math.min(5, Math.round(Number(body.rating) || 5)));
+
+        if (!['phantom', 'lucid', 'first-move', 'hamper'].includes(productId)) {
+          return sendJson(res, 400, { error: 'Please select a valid product.' });
+        }
+        if (!name || name.length > 64) {
+          return sendJson(res, 400, { error: 'Please enter your name (max 64 characters).' });
+        }
+        if (!comment || comment.length > 600) {
+          return sendJson(res, 400, { error: 'Please write a short feedback comment (max 600 characters).' });
+        }
+
+        const session = getCustomerSession(req);
+        const isVerified = session ? 1 : (body.isVerified ? 1 : 0);
+        const customerEmail = session ? session.email : (body.email || null);
+        const customerId = session ? session.user_id : (body.customerId || null);
+
+        const info = db.prepare(`
+          INSERT INTO product_reviews (product_id, reviewer_name, customer_email, customer_id, rating, wear_occasion, comment, is_verified, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        `).run(productId, name, customerEmail, customerId, rating, occasion.slice(0, 64), comment, isVerified);
+
+        const newId = info.lastInsertRowid;
+        return sendJson(res, 201, {
+          success: true,
+          review: {
+            id: newId,
+            productId,
+            name,
+            rating,
+            occasion: occasion.slice(0, 64),
+            comment,
+            isVerified: Boolean(isVerified),
+            createdAt: new Date().toISOString()
+          }
         });
       }
 

@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateShowcaseCarousel();
   initShowcaseSwipe();
   initHeroLaunchCountdown();
+  initHeroInteractiveCard();
 
   // Background video autoplay guarantee
   const heroVideo = document.getElementById('hero-bg-video');
@@ -243,5 +244,100 @@ function initHeroLaunchCountdown() {
   setInterval(tick, 1000);
 }
 
+// --- Editorial Launch Console Engine ---
+// 3D Perspective Tilt & Specular Light Engine
+function initHeroInteractiveCard() {
+  const card = document.getElementById('hero-launch-interactive-card');
+  const glow = document.getElementById('hero-card-glow');
+  if (!card) return;
+
+  const handleMouseMove = (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -5;
+    const rotateY = ((x - centerX) / centerX) * 5;
+
+    card.style.transform = `perspective(1000px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) translateY(-3px)`;
+    if (glow) {
+      glow.style.opacity = '1';
+      glow.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(230, 92, 43, 0.22) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%)`;
+    }
+  };
+
+  const handleMouseLeave = () => {
+    card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0)';
+    if (glow) {
+      glow.style.opacity = '0';
+    }
+  };
+
+  card.addEventListener('mousemove', handleMouseMove);
+  card.addEventListener('mouseleave', handleMouseLeave);
+}
+
+// Minimal Drop Alert Toggle & Subscription
+function toggleHeroVipForm() {
+  const drawer = document.getElementById('hero-vip-drawer');
+  if (!drawer) return;
+  const isOpen = drawer.classList.contains('open');
+  drawer.classList.toggle('open', !isOpen);
+  drawer.setAttribute('aria-hidden', isOpen ? 'true' : 'false');
+  if (!isOpen) {
+    const input = document.getElementById('hero-vip-email');
+    if (input) setTimeout(() => input.focus(), 120);
+  }
+}
+
+async function handleHeroVipSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const emailInput = document.getElementById('hero-vip-email');
+  const btn = document.getElementById('hero-vip-btn');
+  const msgEl = document.getElementById('hero-vip-msg');
+  if (!emailInput || !msgEl) return;
+
+  const email = emailInput.value.trim();
+  if (!email || !email.includes('@')) {
+    msgEl.textContent = 'Please enter a valid email address.';
+    msgEl.className = 'hero-vip-feedback error';
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '...';
+  }
+
+  try {
+    const res = await fetch('/api/newsletter/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, source: 'hero_launch_card' })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      msgEl.textContent = 'Access reserved. We will alert you at midnight.';
+      msgEl.className = 'hero-vip-feedback success';
+      emailInput.value = '';
+    } else {
+      msgEl.textContent = data.error || 'Access confirmed. You are on the first-access list.';
+      msgEl.className = 'hero-vip-feedback success';
+    }
+  } catch (err) {
+    msgEl.textContent = 'Registered. You will receive private drop access.';
+    msgEl.className = 'hero-vip-feedback success';
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Notify Me';
+    }
+  }
+}
+
+// Global Exports
 window.rotateShowcase = rotateShowcase;
 window.selectShowcaseSlide = selectShowcaseSlide;
+window.toggleHeroVipForm = toggleHeroVipForm;
+window.handleHeroVipSubmit = handleHeroVipSubmit;

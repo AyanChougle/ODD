@@ -142,39 +142,70 @@
           </div>
         </div>
 
-        <!-- Right: Floating Launch Date Card -->
-        <div class="hero-floating-pick-wrapper">
-          <a href="index.html#showcase" class="hero-pick-card hero-launch-card">
-            <div class="hero-pick-badge">
-              <span class="orange-dot-sm"></span> <span id="launch-status-label">LAUNCHING ON 27TH NOV</span>
-            </div>
-            <div class="hero-launch-body">
-              <span class="hero-pick-category">First Edition &middot; Limited Batch</span>
-              <h4 class="hero-launch-date">27 Nov 2026</h4>
-              <p class="hero-launch-sub">Phantom, Lucid &amp; First Move arrive this November.</p>
-              <div class="hero-launch-countdown" aria-label="Launch countdown">
-                <div class="launch-unit"><strong id="launch-days">--</strong><span>Days</span></div>
-                <span class="launch-sep">:</span>
-                <div class="launch-unit"><strong id="launch-hours">--</strong><span>Hrs</span></div>
-                <span class="launch-sep">:</span>
-                <div class="launch-unit"><strong id="launch-mins">--</strong><span>Min</span></div>
-                <span class="launch-sep">:</span>
-                <div class="launch-unit"><strong id="launch-secs">--</strong><span>Sec</span></div>
-              </div>
-              <div class="hero-pick-price-row hero-launch-footer">
-                <span class="hero-launch-edition">Three Signature Scents</span>
-                <span class="hero-pick-cta">Explore Drop &rarr;</span>
-              </div>
-            </div>
-          </a>
+        <!-- Right: Editorial Luxury Launch Slab -->
+        <div class="hero-floating-pick-wrapper" id="hero-floating-console">
+          <div class="hero-pick-card hero-launch-card hero-launch-slab" id="hero-launch-interactive-card" role="region" aria-label="Official Launch Drop">
+            <!-- Subtle Specular Spotlight Layer -->
+            <div class="hero-card-glow-overlay" id="hero-card-glow" aria-hidden="true"></div>
 
-          <!-- Subtle Trust Strip -->
-          <div class="hero-trust-pill">
-            <span>20&ndash;25% Oil</span>
-            <span class="hero-trust-dot"></span>
-            <span>Lasts 8&ndash;10 hrs</span>
-            <span class="hero-trust-dot"></span>
-            <span>Pan-India Shipping</span>
+            <!-- Top Eyebrow Row -->
+            <div class="hero-slab-header">
+              <div class="hero-slab-status">
+                <span class="slab-pulse-dot"></span>
+                <span id="launch-status-label" class="slab-status-text">LAUNCHING 27 NOV 2026</span>
+              </div>
+              <span class="hero-slab-batch">FIRST EDITION</span>
+            </div>
+
+            <!-- Editorial Headline & Subtitle -->
+            <h3 class="hero-slab-title">Three perfumes.<br><em>One midnight arrival.</em></h3>
+            <p class="hero-slab-sub">Phantom, Lucid &amp; First Move.</p>
+
+            <!-- Hairline Divider -->
+            <div class="hero-slab-divider"></div>
+
+            <!-- Architectural Typographic Countdown (Pure sculptural numbers, no boxes) -->
+            <div class="hero-launch-countdown" aria-label="Launch countdown">
+              <div class="launch-unit">
+                <strong id="launch-days">--</strong>
+                <span>Days</span>
+              </div>
+              <div class="launch-unit">
+                <strong id="launch-hours">--</strong>
+                <span>Hours</span>
+              </div>
+              <div class="launch-unit">
+                <strong id="launch-mins">--</strong>
+                <span>Minutes</span>
+              </div>
+              <div class="launch-unit launch-unit--seconds">
+                <strong id="launch-secs">--</strong>
+                <span>Seconds</span>
+              </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="hero-slab-footer">
+              <button type="button" class="slab-alert-trigger" id="hero-vip-toggle" onclick="toggleHeroVipForm()">
+                <span class="slab-alert-dot"></span>
+                <span>Get Drop Alert</span>
+              </button>
+              <a href="index.html#showcase" class="slab-explore-anchor">
+                <span>Explore Drop</span>
+                <span class="slab-arrow">&darr;</span>
+              </a>
+            </div>
+
+            <!-- Clean Inline Alert Drawer -->
+            <div class="hero-vip-drawer" id="hero-vip-drawer" aria-hidden="true">
+              <form class="hero-vip-form" id="hero-vip-form" onsubmit="handleHeroVipSubmit(event)">
+                <div class="slab-vip-input-row">
+                  <input type="email" id="hero-vip-email" class="slab-vip-input" placeholder="Enter your email" required autocomplete="email">
+                  <button type="submit" class="slab-vip-submit" id="hero-vip-btn">Notify Me</button>
+                </div>
+                <div class="hero-vip-feedback" id="hero-vip-msg" aria-live="polite"></div>
+              </form>
+            </div>
           </div>
         </div>
       </div>
@@ -236,13 +267,13 @@
       </div>
 
       <div class="carousel-viewport">
-                <div class="carousel-track">
+        <div class="carousel-track">
           <!-- Slide 0: Phantom -->
           <div class="carousel-slide active" onclick="selectShowcaseSlide(0)">
             <div class="slide-image-box phantom-slide-box">
               <img src="assets/images/Phantom Single bottle.webp" alt="ODD Phantom Single Bottle" class="carousel-bottle-img" width="400" height="400">
             </div>
-            <div class="slide-notes">Oud &middot; Saffron &middot; Amberwood</div>
+            <div class="slide-notes">Cambodian Oud &middot; Saffron &middot; Smoky Birch</div>
             <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">PHANTOM</h3>
             <p class="slide-tagline">"Unseen. Unforgotten. Undeniable."</p>
             <div class="slide-actions">
@@ -256,7 +287,7 @@
             <div class="slide-image-box lucid-slide-box">
               <img src="assets/images/Lucid single bottle.webp" alt="ODD Lucid Single Bottle" class="carousel-bottle-img" width="400" height="400" loading="lazy">
             </div>
-            <div class="slide-notes">Bergamot &middot; Patchouli &middot; Blackcurrant</div>
+            <div class="slide-notes">Calabrian Bergamot &middot; Black Tea &middot; White Cedar</div>
             <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">LUCID</h3>
             <p class="slide-tagline">"Clear Mind. Sharp Presence."</p>
             <div class="slide-actions">
@@ -266,13 +297,11 @@
           </div>
 
           <!-- Slide 2: First Move -->
-          <div class="carousel-slide prev" onclick="selectShowcaseSlide(2)">
+          <div class="carousel-slide" onclick="selectShowcaseSlide(2)">
             <div class="slide-image-box move-slide-box">
               <img src="assets/images/First Move single bottle.webp" alt="ODD First Move Single Bottle" class="carousel-bottle-img" width="400" height="400" loading="lazy">
             </div>
-        
-
-            <div class="slide-notes">Citrus &middot; Black Tea &middot; Smoky Musk</div>
+            <div class="slide-notes">Juicy Pineapple &middot; Smoky Cedar &middot; Oakmoss Musk</div>
             <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">FIRST MOVE</h3>
             <p class="slide-tagline">"Start First. Stay Ahead."</p>
             <div class="slide-actions">
@@ -284,7 +313,7 @@
           <!-- Slide 3: The Trio Gift Hamper -->
           <div class="carousel-slide" onclick="selectShowcaseSlide(3)">
             <div class="slide-image-box hamper-slide-box">
-              <img src="assets/images/Trio Gift Hamper.webp" alt="ODD Trio Gift Hamper Box" class="carousel-bottle-img" width="400" height="400" loading="lazy">
+              <img src="assets/images/Trio Gift Hamper Box.webp" alt="ODD Trio Gift Hamper Box" class="carousel-bottle-img" width="400" height="400" loading="lazy">
             </div>
             <div class="slide-notes">Phantom &middot; Lucid &middot; First Move</div>
             <h3 class="slide-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">THE TRIO HAMPER</h3>
@@ -305,16 +334,6 @@
       </div>
     </section>
 
-        <!-- When to Wear What (Time Slider) -->
-    
-
-    <!-- From Our Shoots Gallery -->
-    
-
-    <!-- Brand Beliefs -->
-    
-
-    
     <!-- Premium Stats Section -->
     <section class="premium-stats-section">
       <div class="container">
@@ -362,7 +381,6 @@
             <div style="text-align: center; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
               <img src="assets/images/Phantom Single bottle.webp" alt="Phantom" width="120" height="120" loading="lazy" style="height: 120px; width: 120px; object-fit: contain; margin: 0 auto 1rem; display: block;">
               <h3 class="compare-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">Phantom</h3>
-              
             </div>
             <div class="compare-metrics">
               <div class="compare-row"><span class="compare-label">Intensity</span><div class="compare-bar"><div style="width:100%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">5</span></div>
@@ -372,7 +390,7 @@
             </div>
             <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.2rem;">
               <div class="compare-section-label">Key Notes</div>
-              <div class="compare-notes">Oud &middot; Saffron &middot; Amberwood</div>
+              <div class="compare-notes">Cambodian Oud &middot; Saffron &middot; Smoky Birch</div>
               <div class="compare-section-label">Best For</div>
               <div class="compare-best-for">Late nights, formal dinners</div>
               <a href="products-odd-phantom.html" class="compare-buy-btn">Discover Phantom</a>
@@ -380,12 +398,10 @@
           </div>
 
           <!-- LUCID CARD -->
-          <div class="compare-card compare-card-featured" style="background: #0a1a12; border: 1px solid rgba(232,107,50,0.5); border-radius: 16px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; position: relative; transform: translateY(-12px);">
-            <div style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--brand-orange); color: white; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.3rem 1rem; border-radius: 99px;">Best Seller</div>
+          <div class="compare-card compare-card-featured" style="background: #0a1a12; border: 1px solid rgba(232,107,50,0.5); border-radius: 16px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; position: relative;">
             <div style="text-align: center; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
               <img src="assets/images/Lucid single bottle.webp" alt="Lucid" width="120" height="120" loading="lazy" style="height: 120px; width: 120px; object-fit: contain; margin: 0 auto 1rem; display: block;">
               <h3 class="compare-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">Lucid</h3>
-              
             </div>
             <div class="compare-metrics">
               <div class="compare-row"><span class="compare-label">Intensity</span><div class="compare-bar"><div style="width:40%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">2</span></div>
@@ -395,7 +411,7 @@
             </div>
             <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.2rem;">
               <div class="compare-section-label">Key Notes</div>
-              <div class="compare-notes">Bergamot &middot; Patchouli &middot; Blackcurrant</div>
+              <div class="compare-notes">Calabrian Bergamot &middot; Black Tea &middot; White Cedar</div>
               <div class="compare-section-label">Best For</div>
               <div class="compare-best-for">Daily work, office, heat</div>
               <a href="products-odd-lucid.html" class="compare-buy-btn compare-buy-featured">Discover Lucid</a>
@@ -407,7 +423,6 @@
             <div style="text-align: center; padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
               <img src="assets/images/First Move single bottle.webp" alt="First Move" width="120" height="120" loading="lazy" style="height: 120px; width: 120px; object-fit: contain; margin: 0 auto 1rem; display: block;">
               <h3 class="compare-title" style="font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;">First Move</h3>
-              
             </div>
             <div class="compare-metrics">
               <div class="compare-row"><span class="compare-label">Intensity</span><div class="compare-bar"><div style="width:80%; background:var(--brand-orange); height:100%; border-radius:3px;"></div></div><span class="compare-val">4</span></div>
@@ -417,7 +432,7 @@
             </div>
             <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.2rem;">
               <div class="compare-section-label">Key Notes</div>
-              <div class="compare-notes">Citrus &middot; Black Tea &middot; Smoky Musk</div>
+              <div class="compare-notes">Juicy Pineapple &middot; Smoky Cedar &middot; Oakmoss Musk</div>
               <div class="compare-section-label">Best For</div>
               <div class="compare-best-for">Dates, parties, evening out</div>
               <a href="products-odd-first-move.html" class="compare-buy-btn">Discover First Move</a>

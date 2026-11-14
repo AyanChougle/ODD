@@ -56,14 +56,26 @@ function ensureProductReviewsTable(PDO $pdo): void {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 product_id VARCHAR(64) NOT NULL,
                 reviewer_name VARCHAR(128) NOT NULL,
+                customer_email VARCHAR(128) DEFAULT NULL,
+                customer_id VARCHAR(64) DEFAULT NULL,
                 rating TINYINT UNSIGNED NOT NULL DEFAULT 5,
                 wear_occasion VARCHAR(128) DEFAULT NULL,
                 comment TEXT NOT NULL,
+                is_verified TINYINT UNSIGNED NOT NULL DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_reviews_product (product_id),
                 INDEX idx_reviews_created (created_at)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ');
+        try {
+            $pdo->exec('ALTER TABLE product_reviews ADD COLUMN customer_email VARCHAR(128) DEFAULT NULL');
+        } catch (Throwable $e) {}
+        try {
+            $pdo->exec('ALTER TABLE product_reviews ADD COLUMN customer_id VARCHAR(64) DEFAULT NULL');
+        } catch (Throwable $e) {}
+        try {
+            $pdo->exec('ALTER TABLE product_reviews ADD COLUMN is_verified TINYINT UNSIGNED NOT NULL DEFAULT 0');
+        } catch (Throwable $e) {}
         $ensured = true;
     } catch (Throwable $e) {}
 }
@@ -1031,6 +1043,14 @@ try {
 
         sendJson(200, [
             'id' => $order['id'],
+            'customer' => $order['customer_name'] ?? 'Customer',
+            'customer_name' => $order['customer_name'] ?? 'Customer',
+            'email' => $order['customer_email'] ?? '',
+            'customer_email' => $order['customer_email'] ?? '',
+            'phone' => $order['customer_phone'] ?? '',
+            'customer_phone' => $order['customer_phone'] ?? '',
+            'address' => $order['shipping_address'] ?? '',
+            'shipping_address' => $order['shipping_address'] ?? '',
             'status' => $order['status'],
             'subtotal' => (int)$order['subtotal'],
             'discount' => (int)$order['discount_amount'],
@@ -1638,7 +1658,7 @@ try {
           <div style='max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; border:1px solid #e5e7eb;'>
             <div style='background:#111827; padding:24px; text-align:center;'>
               <h1 style='color:#ffffff; margin:0; font-size:24px; letter-spacing:0.05em;'>ODD<span style='color:#E86B32;'>.</span></h1>
-              <p style='color:#9ca3af; margin:4px 0 0; font-size:12px; text-transform:uppercase; letter-spacing:0.1em;'>Haute Parfumerie &middot; Order Confirmation</p>
+              <p style='color:#9ca3af; margin:4px 0 0; font-size:12px; text-transform:uppercase; letter-spacing:0.1em;'>ODD PERFUMES &middot; CRAFTED IN INDIA &middot; Order Confirmation</p>
             </div>
             <div style='padding:30px;'>
               <h2 style='font-size:18px; margin-top:0;'>Thank you for your order, {$customerName}!</h2>
@@ -1746,7 +1766,7 @@ try {
           <div style='max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; border:1px solid #e5e7eb;'>
             <div style='background:#111827; padding:24px; text-align:center;'>
               <h1 style='color:#ffffff; margin:0; font-size:24px; letter-spacing:0.05em;'>ODD<span style='color:#E86B32;'>.</span></h1>
-              <p style='color:#9ca3af; margin:4px 0 0; font-size:12px; text-transform:uppercase; letter-spacing:0.1em;'>Haute Parfumerie &middot; Shipment Dispatched</p>
+              <p style='color:#9ca3af; margin:4px 0 0; font-size:12px; text-transform:uppercase; letter-spacing:0.1em;'>ODD PERFUMES &middot; CRAFTED IN INDIA &middot; Shipment Dispatched</p>
             </div>
             <div style='padding:30px;'>
               <h2 style='font-size:18px; margin-top:0;'>Your perfume is on the move, {$customerName}!</h2>
@@ -2872,7 +2892,7 @@ HTML;
         }
         if ($productId) {
             $stmt = $pdo->prepare('
-                SELECT id, product_id AS productId, reviewer_name AS name, rating, wear_occasion AS occasion, comment, created_at AS createdAt
+                SELECT id, product_id AS productId, reviewer_name AS name, rating, wear_occasion AS occasion, comment, is_verified AS isVerified, created_at AS createdAt
                 FROM product_reviews
                 WHERE product_id = ?
                 ORDER BY created_at DESC, id DESC
@@ -2882,7 +2902,7 @@ HTML;
             $rows = $stmt->fetchAll();
         } else {
             $rows = $pdo->query('
-                SELECT id, product_id AS productId, reviewer_name AS name, rating, wear_occasion AS occasion, comment, created_at AS createdAt
+                SELECT id, product_id AS productId, reviewer_name AS name, rating, wear_occasion AS occasion, comment, is_verified AS isVerified, created_at AS createdAt
                 FROM product_reviews
                 ORDER BY created_at DESC, id DESC
                 LIMIT 200
@@ -2913,11 +2933,24 @@ HTML;
             $occasion = mb_substr($occasion, 0, 64);
         }
 
-        $stmt = $pdo->prepare('
-            INSERT INTO product_reviews (product_id, reviewer_name, rating, wear_occasion, comment)
-            VALUES (?, ?, ?, ?, ?)
-        ');
-        $stmt->execute([$productId, $name, $rating, $occasion, $comment]);
+        $customer = getActiveCustomer($pdo);
+        $isVerified = $customer ? 1 : (!empty($body['isVerified']) ? 1 : 0);
+        $customerEmail = $customer['email'] ?? (!empty($body['email']) ? trim((string)$body['email']) : null);
+        $customerId = $customer['customer_id'] ?? (!empty($body['customerId']) ? trim((string)$body['customerId']) : null);
+
+        try {
+            $stmt = $pdo->prepare('
+                INSERT INTO product_reviews (product_id, reviewer_name, customer_email, customer_id, rating, wear_occasion, comment, is_verified)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ');
+            $stmt->execute([$productId, $name, $customerEmail, $customerId, $rating, $occasion, $comment, $isVerified]);
+        } catch (Throwable $e) {
+            $stmt = $pdo->prepare('
+                INSERT INTO product_reviews (product_id, reviewer_name, rating, wear_occasion, comment)
+                VALUES (?, ?, ?, ?, ?)
+            ');
+            $stmt->execute([$productId, $name, $rating, $occasion, $comment]);
+        }
         $newId = (int)$pdo->lastInsertId();
 
         sendJson(201, [
@@ -2929,6 +2962,7 @@ HTML;
                 'rating' => $rating,
                 'occasion' => $occasion,
                 'comment' => $comment,
+                'isVerified' => (bool)$isVerified,
                 'createdAt' => gmdate('c'),
             ]
         ]);

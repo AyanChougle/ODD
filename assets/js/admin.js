@@ -2352,10 +2352,10 @@ function handlePrintOrderInvoice(orderId) {
   const items = Array.isArray(order.items) && order.items.length ? order.items : [
     { name: 'ODD Fragrance', sku: 'ODD-PARFUM', qty: 1, price: order.amount || 1599 }
   ];
-  const customerName = order.customer || 'Valued Customer';
-  const customerPhone = order.phone || '';
-  const customerEmail = order.email || '';
-  const customerAddress = order.address || 'Standard Delivery Address';
+  const customerName = order.customer || order.customer_name || 'Valued Customer';
+  const customerPhone = order.phone || order.customer_phone || '';
+  const customerEmail = order.email || order.customer_email || '';
+  const customerAddress = order.address || order.shipping_address || 'Standard Delivery Address';
   const orderDate = order.date ? formatDate(order.date) : new Date().toLocaleDateString('en-IN');
   const subtotal = order.subtotal || order.amount || 1599;
   const discount = order.discount || 0;
@@ -2441,8 +2441,8 @@ function handlePrintOrderInvoice(orderId) {
     <div class="header-row">
       <div>
         <div class="brand-title">ODD<span class="brand-dot">.</span></div>
-        <div class="brand-subtitle">Haute Parfumerie &middot; India</div>
-        <div style="font-size:11px; color:#6b7280; margin-top:4px;">GSTIN: 27AABCO0000A1Z5 &middot; Support: hello@oddperfume.com</div>
+        <div class="brand-subtitle">ODD PERFUMES &middot; CRAFTED IN INDIA</div>
+        <div style="font-size:11px; color:#6b7280; margin-top:4px;">Official Tax Invoice &middot; Support: hello@oddperfume.com</div>
       </div>
       <div class="invoice-badge-box">
         <div class="invoice-title">Tax Invoice</div>
