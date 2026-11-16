@@ -699,7 +699,7 @@
 }
 .compare-card { transition: transform 0.3s ease; }
 .compare-card:hover { transform: translateY(-4px); }
-.compare-card-featured:hover { transform: translateY(-16px); }
+.compare-card-featured:hover { transform: translateY(-4px); }
 @media (max-width: 768px) {
   #comparison > .container > div:last-child { grid-template-columns: 1fr; gap: 1rem; }
   .compare-card-featured { transform: none !important; }
@@ -711,6 +711,7 @@
   display: flex;
   justify-content: center;
   align-items: flex-end;
+  height: 120px;
   min-height: 120px;
   margin-bottom: 1rem;
 }
@@ -719,6 +720,11 @@
 .compare-card img[alt='First Move'] {
   display: block;
   margin: 0 auto;
+  height: 115px;
+  width: auto;
+  max-width: 95px;
+  aspect-ratio: 4 / 5;
+  object-fit: contain;
 }
 @media (max-width: 768px) {
   #comparison > .container > div[style*='grid-template-columns'] {

@@ -1,7 +1,7 @@
 /* Home Page JavaScript Logic */
 
 const showcaseItems = ['phantom', 'lucid', 'first-move', 'hamper'];
-let activeShowcaseIndex = 0;
+let activeShowcaseIndex = 1;
 let suppressSlideClickUntil = 0;
 
 function getShowcaseTotal() {
