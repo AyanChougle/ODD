@@ -1196,7 +1196,11 @@ function syncStockStatusUI() {
     if (typeof currentQvId !== 'undefined' && currentQvId === productId) {
       const add = document.querySelector('.qv-add-btn'); if (add) { add.disabled = out; add.textContent = out ? 'Out of stock' : 'Add to cart'; }
       const buy = document.querySelector('.qv-buy-btn'); if (buy) { buy.disabled = out; buy.textContent = out ? 'Out of stock' : 'Buy now'; }
-      const stockBadge = document.querySelector('.qv-stock-badge'); if (stockBadge) stockBadge.innerHTML = out ? '<span class="qv-stock-dot"></span> Currently out of stock' : '<span class="qv-stock-dot"></span> In stock, ready to ship';
+      const stockBadge = document.querySelector('.qv-stock-badge');
+      if (stockBadge) {
+        stockBadge.classList.toggle('out-of-stock', out);
+        stockBadge.innerHTML = out ? '<span class="qv-stock-dot"></span> Currently out of stock' : '<span class="qv-stock-dot"></span> In stock, ready to ship';
+      }
     }
   });
 }
@@ -1415,6 +1419,21 @@ function openQuickView(productId) {
 
   const qtyEl = document.getElementById('qv-qty');
   if (qtyEl) qtyEl.innerText = '1';
+
+  // Synchronize stock state on modal open
+  const avail = getProductAvailability(targetId);
+  const out = !avail.available || (typeof avail.stock === 'number' && avail.stock <= 0);
+  const addBtn = modal.querySelector('.qv-add-btn');
+  if (addBtn) { addBtn.disabled = out; addBtn.textContent = out ? 'Out of stock' : 'Add to cart'; }
+  const buyBtn = modal.querySelector('.qv-buy-btn');
+  if (buyBtn) { buyBtn.disabled = out; buyBtn.textContent = out ? 'Out of stock' : 'Buy now'; }
+  const stockBadge = modal.querySelector('.qv-stock-badge');
+  if (stockBadge) {
+    stockBadge.classList.toggle('out-of-stock', out);
+    stockBadge.innerHTML = out
+      ? '<span class="qv-stock-dot"></span> Currently out of stock'
+      : '<span class="qv-stock-dot"></span> In stock, ready to ship';
+  }
 
   modal.classList.add('open');
   modal.style.display = 'flex';

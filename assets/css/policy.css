@@ -301,7 +301,7 @@
 }
 
 .policy-block h2 {
-  font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif);
+  font-family: var(--font-serif, 'Doren Perfume Serif', Georgia, serif);
   font-size: 1.55rem;
   font-weight: 500;
   color: #121318;
@@ -421,7 +421,7 @@
 
 .policy-contact-card h3 {
   margin-top: 0;
-  font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif);
+  font-family: var(--font-serif, 'Doren Perfume Serif', Georgia, serif);
   font-size: 1.35rem;
   font-weight: 600;
   color: #121318;

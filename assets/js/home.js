@@ -37,9 +37,13 @@ document.addEventListener('DOMContentLoaded', () => {
 function rotateShowcase(direction) {
   const total = getShowcaseTotal();
   if (direction === 'next') {
-    activeShowcaseIndex = (activeShowcaseIndex + 1) % total;
+    if (activeShowcaseIndex < total - 1) {
+      activeShowcaseIndex++;
+    }
   } else if (direction === 'prev') {
-    activeShowcaseIndex = (activeShowcaseIndex - 1 + total) % total;
+    if (activeShowcaseIndex > 0) {
+      activeShowcaseIndex--;
+    }
   }
   updateShowcaseCarousel();
 }
@@ -49,7 +53,7 @@ function selectShowcaseSlide(index) {
   const parsed = Number(index);
   if (!Number.isFinite(parsed)) return;
   const total = getShowcaseTotal();
-  activeShowcaseIndex = ((parsed % total) + total) % total;
+  activeShowcaseIndex = Math.max(0, Math.min(total - 1, Math.round(parsed)));
   updateShowcaseCarousel();
 }
 
@@ -58,16 +62,16 @@ function updateShowcaseCarousel() {
   if (!slides || slides.length === 0) return;
 
   const total = slides.length;
-  activeShowcaseIndex = ((activeShowcaseIndex % total) + total) % total;
+  activeShowcaseIndex = Math.max(0, Math.min(total - 1, activeShowcaseIndex));
 
   slides.forEach((slide, idx) => {
     slide.classList.remove('active', 'prev', 'next');
 
     if (idx === activeShowcaseIndex) {
       slide.classList.add('active');
-    } else if (idx === (activeShowcaseIndex - 1 + total) % total) {
+    } else if (idx === activeShowcaseIndex - 1) {
       slide.classList.add('prev');
-    } else if (idx === (activeShowcaseIndex + 1) % total) {
+    } else if (idx === activeShowcaseIndex + 1) {
       slide.classList.add('next');
     }
   });

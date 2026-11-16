@@ -248,11 +248,15 @@ svg {
     --border-dark: #2A2A2A;
 
     /* Fonts */
-    --font-brand: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;
-    --font-name: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', serif;
+    /* 3-Fonts Design System:
+       1. Primary Luxury Serif (Logo & Headings): Doren Perfume Serif
+       2. Clean Geometric Sans (Body & UI): DM Sans
+       3. Monospace Accent (Kickers, Accords & Tech): IBM Plex Mono */
+    --font-serif: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', Georgia, serif;
+    --font-brand: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', Georgia, serif;
+    --font-name: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', Georgia, serif;
     --font-script: 'Doren Perfume Script', cursive;
-    --font-serif: 'Cormorant Garamond', 'Cormorant', Georgia, serif;
-    --font-sans: 'DM Sans', sans-serif;
+    --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'IBM Plex Mono', monospace;
 
     /* Radius */
@@ -1171,6 +1175,14 @@ h1, h2, h3, h4, h5, h6 {
     height: 6px;
     border-radius: 50%;
     background-color: #16a34a;
+}
+
+.qv-stock-badge.out-of-stock {
+    color: #b13d2e !important;
+}
+
+.qv-stock-badge.out-of-stock .qv-stock-dot {
+    background-color: #b13d2e !important;
 }
 
 .qv-actions-row {
@@ -2152,8 +2164,8 @@ html {
 @font-face { font-family: 'DM Sans'; src: url('../fonts/DMSans-MediumItalic.ttf') format('truetype'); font-style: italic; font-weight: 500; font-display: swap; }
 @font-face { font-family: 'DM Sans'; src: url('../fonts/DMSans-BoldItalic.ttf') format('truetype'); font-style: italic; font-weight: 700; font-display: swap; }
 :root {
-  --font-serif: 'Playfair Display', 'DM Serif Display', Georgia, serif;
-  --font-sans: 'DM Sans', 'Nunito Sans', system-ui, sans-serif;
+  --font-serif: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', Georgia, serif;
+  --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 html { text-size-adjust: 100%; -webkit-text-size-adjust: 100%; }
 body { text-rendering: optimizeLegibility; font-synthesis: weight style; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -2357,7 +2369,7 @@ body.drawer-open { overflow:hidden; }
 }
 
 .acc-section-title {
-  font-family: var(--font-serif, 'DM Serif Display', serif);
+  font-family: var(--font-serif, 'Doren Perfume Serif', serif);
   font-size: 1.8rem;
   margin-bottom: 1.5rem;
   color: var(--text-main, #111111);
@@ -2408,7 +2420,7 @@ body.drawer-open { overflow:hidden; }
 .account-empty-orders strong {
   display: block;
   font-size: 1.15rem;
-  font-family: var(--font-serif, 'DM Serif Display', serif);
+  font-family: var(--font-serif, 'Doren Perfume Serif', serif);
   color: var(--text-main);
   margin-bottom: 0.5rem;
   font-weight: 400;
@@ -2585,16 +2597,16 @@ body.drawer-open { overflow:hidden; }
 
 .page-hero .section-title {
   color: #FFFFFF !important;
-  font-family: var(--font-serif, 'DM Serif Display', serif) !important;
+  font-family: var(--font-serif, 'Doren Perfume Serif', 'Doren', Georgia, serif) !important;
   font-size: clamp(2.2rem, 5vw, 3.5rem) !important;
   font-weight: 400 !important;
   margin: 0 !important;
 }
 
-/* All General Headings & Section Titles use Cormorant Garamond */
+/* All General Headings & Section Titles strictly match Logo Typography (Doren Perfume Serif) */
 h1, h2, h3, h4, h5, h6, .section-title, .acc-section-title, .cart-header h3, .page-hero .section-title, .footer-signup-title {
-  font-family: var(--font-serif, 'Cormorant Garamond', serif) !important;
-  font-weight: 500 !important;
+  font-family: var(--font-serif, 'Doren Perfume Serif', 'Doren Perfume', 'Doren', Georgia, serif) !important;
+  font-weight: 400 !important;
 }
 
 /* ==========================================================================
