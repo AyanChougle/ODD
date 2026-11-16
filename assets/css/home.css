@@ -513,8 +513,8 @@
 
 .story-pretitle {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.15em;
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--brand-orange);
   margin-bottom: 0.8rem;
@@ -525,10 +525,11 @@
 
 .story-title {
   font-family: var(--font-serif);
-  font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+  font-size: clamp(2.2rem, 4.2vw, 3.4rem);
   font-weight: 400;
-  line-height: 1.25;
-  margin-bottom: 1.2rem;
+  line-height: 1.18;
+  margin-bottom: 1.4rem;
+  letter-spacing: -0.015em;
 }
 
 .orange-italic {
@@ -537,13 +538,13 @@
 }
 
 .story-body-text {
-  color: var(--text-muted);
-  font-size: 0.95rem;
-  line-height: 1.8;
+  color: #24252a;
+  font-size: 1.08rem;
+  line-height: 1.85;
 }
 
 .story-body-text p {
-  margin-bottom: 1rem;
+  margin-bottom: 1.15rem;
 }
 
 .story-signature-row {
@@ -557,8 +558,9 @@
 
 .story-signature {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #555555;
 }
 
 
@@ -974,10 +976,12 @@
   position: relative;
   z-index: 2;
   width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 2rem;
+  gap: clamp(2rem, 4vw, 4.5rem);
   padding: 0 clamp(1.5rem, 4vw, 3.5rem);
 }
 .hero-content-cinematic {
@@ -1132,13 +1136,13 @@
 
 
 .hero-floating-pick-wrapper {
-  position: absolute;
-  bottom: 2rem;
-  right: clamp(1.5rem, 5vw, 4rem);
+  position: relative;
   z-index: 5;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .hero-pick-card {
   background: rgba(14, 14, 16, 0.84);
@@ -1787,26 +1791,28 @@ html {
 
 .slide-notes {
   font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
-  font-size: 0.78rem !important;
-  letter-spacing: 0.12em !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.15em !important;
   text-transform: uppercase !important;
   color: var(--text-muted, #777777) !important;
-  margin-bottom: 0.4rem !important;
+  margin-bottom: 0.45rem !important;
+  font-weight: 500 !important;
 }
 
 .slide-title {
   font-family: var(--font-serif, 'Doren Perfume Serif', 'Doren', serif) !important;
-  font-size: 1.9rem !important;
+  font-size: clamp(2rem, 3.6vw, 2.5rem) !important;
   font-weight: 400 !important;
-  margin: 0 0 0.2rem !important;
+  margin: 0 0 0.35rem !important;
   color: var(--text-main, #111111) !important;
+  letter-spacing: 0.02em !important;
 }
 
 .slide-tagline {
-  font-size: 0.9rem !important;
-  color: var(--text-muted, #777777) !important;
+  font-size: 1rem !important;
+  color: #444444 !important;
   font-style: italic !important;
-  margin-bottom: 1.2rem !important;
+  margin-bottom: 1.3rem !important;
 }
 
 .slide-actions {
@@ -1817,7 +1823,7 @@ html {
 }
 
 .carousel-dots {
-  display: none !important;
+  display: flex !important;
 }
 
 @media (max-width: 1024px) {
