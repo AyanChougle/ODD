@@ -60,14 +60,34 @@ function updateShowcaseCarousel() {
   const total = slides.length;
   activeShowcaseIndex = ((activeShowcaseIndex % total) + total) % total;
 
+  // Seamless Luxury 4-Item Showcase Map:
+  // Phantom (0) -> prev: First Move (2), next: Lucid (1) [Hamper hidden]
+  // Lucid (1) -> prev: Phantom (0), next: First Move (2) [Hamper hidden]
+  // First Move (2) -> prev: Lucid (1), next: Hamper (3) [Hamper showcased after perfumes]
+  // Hamper (3) -> prev: First Move (2), next: Phantom (0) [Wraps back to start]
+  let prevIdx, nextIdx;
+  if (activeShowcaseIndex === 0) {
+    prevIdx = 2; // First Move on left (all 3 perfumes displayed together)
+    nextIdx = 1; // Lucid on right
+  } else if (activeShowcaseIndex === 1) {
+    prevIdx = 0; // Phantom on left
+    nextIdx = 2; // First Move on right
+  } else if (activeShowcaseIndex === 2) {
+    prevIdx = 1; // Lucid on left
+    nextIdx = 3; // Hamper on right (after perfumes)
+  } else {
+    prevIdx = 2; // First Move on left
+    nextIdx = 0; // Phantom on right
+  }
+
   slides.forEach((slide, idx) => {
     slide.classList.remove('active', 'prev', 'next');
 
     if (idx === activeShowcaseIndex) {
       slide.classList.add('active');
-    } else if (idx === (activeShowcaseIndex - 1 + total) % total) {
+    } else if (idx === prevIdx) {
       slide.classList.add('prev');
-    } else if (idx === (activeShowcaseIndex + 1) % total) {
+    } else if (idx === nextIdx) {
       slide.classList.add('next');
     }
   });

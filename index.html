@@ -21,6 +21,118 @@
   <link rel="stylesheet" href="assets/css/home.css?v=10.0">
 
   <style>
+    /* Strict 3-Font Hierarchy Matching Logo Typography */
+    h1, h2, h3, h4, h5, h6, .section-title, .acc-section-title, .cart-header h3, .page-hero .section-title, .footer-signup-title, .story-title, .slide-title, .hero-slab-title {
+      font-family: 'Doren Perfume Serif', 'Doren Perfume', 'Doren', Georgia, serif !important;
+      font-weight: 400 !important;
+    }
+
+    /* Our Story Section Typography & Readability */
+    .story-title {
+      font-size: clamp(2.2rem, 4.2vw, 3.4rem) !important;
+      line-height: 1.18 !important;
+      margin-bottom: 1.4rem !important;
+      letter-spacing: -0.015em !important;
+    }
+    .story-body-text {
+      color: #24252a !important;
+      font-size: 1.08rem !important;
+      line-height: 1.85 !important;
+    }
+    .story-body-text p {
+      margin-bottom: 1.15rem !important;
+    }
+    .story-pretitle {
+      font-family: var(--font-mono) !important;
+      font-size: 0.8rem !important;
+      letter-spacing: 0.18em !important;
+      text-transform: uppercase !important;
+      color: var(--brand-orange) !important;
+      margin-bottom: 0.8rem !important;
+    }
+    .story-signature {
+      font-family: var(--font-mono) !important;
+      font-size: 0.88rem !important;
+      font-weight: 500 !important;
+      color: #555555 !important;
+    }
+
+    /* Hero Section Integrated Layout (Card anchored cleanly beside headline) */
+    .hero-container-flex {
+      position: relative !important;
+      z-index: 2 !important;
+      width: 100% !important;
+      max-width: 1240px !important;
+      margin: 0 auto !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: clamp(2rem, 4vw, 4.5rem) !important;
+      padding: 0 clamp(1.5rem, 4vw, 3.5rem) !important;
+    }
+    .hero-floating-pick-wrapper {
+      position: relative !important;
+      right: auto !important;
+      bottom: auto !important;
+      z-index: 5 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 1rem !important;
+      margin-left: auto !important;
+      flex-shrink: 0 !important;
+    }
+    .hero-launch-slab {
+      width: 310px !important;
+      max-width: 100% !important;
+      background: rgba(14, 14, 18, 0.68) !important;
+      backdrop-filter: blur(24px) saturate(160%) !important;
+      -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 16px !important;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.05) inset !important;
+      padding: 1.25rem 1.35rem !important;
+    }
+
+    /* Carousel Slide Typography & Square Hamper Image */
+    .carousel-bottle-img {
+      height: 300px !important;
+      max-height: 300px !important;
+      object-fit: contain !important;
+      aspect-ratio: 4 / 5 !important;
+    }
+    .hamper-slide-box .carousel-bottle-img {
+      aspect-ratio: 1 / 1 !important;
+    }
+    .slide-notes {
+      font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
+      font-size: 0.85rem !important;
+      letter-spacing: 0.15em !important;
+      text-transform: uppercase !important;
+      color: var(--text-muted, #777777) !important;
+      margin-bottom: 0.45rem !important;
+      font-weight: 500 !important;
+    }
+    .slide-title {
+      font-size: clamp(2rem, 3.6vw, 2.5rem) !important;
+      margin: 0 0 0.35rem !important;
+      color: var(--text-main, #111111) !important;
+      letter-spacing: 0.02em !important;
+    }
+    .slide-tagline {
+      font-size: 1rem !important;
+      color: #444444 !important;
+      font-style: italic !important;
+      margin-bottom: 1.3rem !important;
+    }
+
+    /* Quick View Out of Stock Badge */
+    .qv-stock-badge.out-of-stock {
+      color: #b13d2e !important;
+    }
+    .qv-stock-badge.out-of-stock .qv-stock-dot {
+      background-color: #b13d2e !important;
+    }
+
     .compare-title {
       font-size: 2rem !important;
       color: #fff !important;
@@ -810,6 +922,14 @@
 
   <script src="assets/js/global.js?v=10.0" defer></script>
   <script src="assets/js/home.js?v=10.0" defer></script>
+  <script>
+    // Failsafe Showcase Carousel guarantee
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof window.updateShowcaseCarousel === 'function') {
+        window.updateShowcaseCarousel();
+      }
+    });
+  </script>
 </body>
 
 </html>
