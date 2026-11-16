@@ -154,9 +154,9 @@ ON DUPLICATE KEY UPDATE `password_hash`=VALUES(`password_hash`), `role`='admin',
 
 -- 10. Seed Authentic Products (Strict Zero-Stock Rule for First Move)
 INSERT INTO `products` (`id`, `sku`, `name`, `price`, `original_price`, `stock`, `active`, `tagline`, `notes`) VALUES
-('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, NULL, 240, 1, 'Unseen. Unforgotten. Dominant.', 'Oud · Amber · Smoky Woods'),
-('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, NULL, 180, 1, 'Clear Mind. Sharp Presence.', 'Citrus · Black Tea · Clean Woods'),
-('first-move', 'ODD-FM-002', 'ODD First Move', 1599, NULL, 0, 1, 'Start First. Stay Ahead.', 'Pineapple · Woods · Smoky Musk')
+('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, NULL, 240, 1, 'Leave a Trace. Never Reveal.', 'Oud · Amber · Smoky Woods'),
+('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, NULL, 180, 1, 'Clarity in Every Move.', 'Citrus · Black Tea · Clean Woods'),
+('first-move', 'ODD-FM-002', 'ODD First Move', 1599, NULL, 0, 1, 'Make the First Impression Count.', 'Pineapple · Woods · Smoky Musk')
 ON DUPLICATE KEY UPDATE 
   `name`=VALUES(`name`), 
   `price`=VALUES(`price`), 
