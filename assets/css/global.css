@@ -1098,19 +1098,22 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .quick-view-visual {
-    background-color: var(--bg-subtle);
+    background-color: #FFFFFF;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem;
+    padding: 1rem;
+    border-radius: 12px 12px 0 0;
+    overflow: hidden;
 }
 
 .quick-view-bottle-img {
     width: 100%;
-    max-width: 320px;
-    max-height: 300px;
+    max-width: 340px;
+    max-height: 320px;
     aspect-ratio: 1 / 1;
-    object-fit: contain;
+    object-fit: cover;
+    border-radius: 8px;
 }
 
 .quick-view-details {

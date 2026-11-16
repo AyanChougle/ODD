@@ -27,7 +27,8 @@ const PRODUCTS = {
     price: 1999,
     originalPrice: null,
     notes: 'Oud · Incense · Benzoin',
-    bottleImage: 'Phantom Single bottle.webp',
+    bottleImage: 'Phantom-lifestyle.webp',
+    carouselImage: 'Phantom Single bottle.webp',
     notesList: ['Oud', 'Incense', 'Benzoin'],
     intensity: '5/5',
     warmth: '5/5',
@@ -46,7 +47,8 @@ const PRODUCTS = {
     price: 1599,
     originalPrice: null,
     notes: 'Vanilla · Birch · Black pepper',
-    bottleImage: 'Lucid single bottle.webp',
+    bottleImage: 'Lucid-lifestyle.webp',
+    carouselImage: 'Lucid single bottle.webp',
     notesList: ['Vanilla', 'Birch', 'Black pepper'],
     intensity: '4/5',
     warmth: '2/5',
@@ -65,7 +67,8 @@ const PRODUCTS = {
     price: 1899,
     originalPrice: null,
     notes: 'Bergamot · Ginger · Amber',
-    bottleImage: 'First Move single bottle.webp',
+    bottleImage: 'First Move-lifestyle.webp',
+    carouselImage: 'First Move single bottle.webp',
     notesList: ['Bergamot', 'Ginger', 'Amber'],
     intensity: '3/5',
     warmth: '2/5',
@@ -84,7 +87,8 @@ const PRODUCTS = {
     price: 4999,
     originalPrice: null,
     notes: 'Phantom · Lucid · First Move (3 × 100ml)',
-    bottleImage: 'Trio Gift Hamper.webp',
+    bottleImage: 'Trio Gift Hamper Box.webp',
+    carouselImage: 'Trio Gift Hamper.webp',
     notesList: ['Phantom 100ml', 'Lucid 100ml', 'First Move 100ml'],
     intensity: 'Full Wardrobe',
     warmth: 'Versatile',
@@ -720,7 +724,7 @@ function updateCartUI() {
     itemsHtml += `
       <div class="cart-item-single${unavailable ? ' cart-item-unavailable' : ''}">
         <div class="cart-item-img">
-          <img src="assets/images/${prod.bottleImage || 'Final-Logo-768x768.png'}?v=8.1" alt="${prod.name} perfume bottle" width="60" height="60" loading="lazy">
+          <img src="assets/images/${prod.bottleImage || 'Final-Logo-768x768.png'}?v=8.2" alt="${prod.name} perfume bottle" width="60" height="60" loading="lazy">
         </div>
         <div class="cart-item-details">
           <h4>${prod.name}</h4>
@@ -834,7 +838,7 @@ function renderCartPage() {
       const qty = Math.min(25, Number(item.qty)); const lineTotal = price * qty; subtotal += lineTotal;
       const out = stock <= 0 || qty > stock; if (out) unavailable = true;
       return `<article class="cart-page-line${out ? ' is-unavailable' : ''}">
-        <div class="cart-page-product-image"><img src="assets/images/${product.bottleImage}?v=8.1" alt="ODD ${product.name}" width="80" height="80" style="aspect-ratio: 1 / 1;" loading="lazy"></div>
+        <div class="cart-page-product-image"><img src="assets/images/${product.bottleImage}?v=8.2" alt="ODD ${product.name}" width="80" height="80" style="aspect-ratio: 1 / 1;" loading="lazy"></div>
         <div class="cart-page-product-copy"><a href="${item.id === 'first-move' ? 'products-odd-first-move.html' : `products-odd-${item.id}.html`}">${product.name}</a><span>${item.id === 'hamper' ? '3 × 100 ml' : '100 ml'} · ₹${price.toLocaleString('en-IN')} each</span>
           <div class="cart-page-qty"><button type="button" data-cart-page-qty="-1" data-product-id="${item.id}" aria-label="Remove one ${product.name}">−</button><span>Qty ${qty}</span><button type="button" data-cart-page-qty="1" data-product-id="${item.id}" aria-label="Add one ${product.name}" ${out || qty >= stock ? 'disabled' : ''}>+</button><button type="button" class="cart-page-remove" data-cart-page-remove="${item.id}">Remove</button></div>
           ${out ? `<small class="cart-page-stock-warning">${stock <= 0 ? 'Currently out of stock. Remove this item to continue.' : `Only ${stock} available. Reduce the quantity to continue.`}</small>` : ''}</div>
@@ -1080,7 +1084,7 @@ function handleSearchInput(query) {
   resultsContainer.innerHTML = matches.map(product => {
     const stock = getProductAvailability(product.id).stock;
     const detailLink = product.id === 'first-move' ? 'products-odd-first-move.html' : `products-odd-${product.id}.html`;
-    return `<article class="search-result-row"><a class="search-result-visual" href="${detailLink}"><img src="assets/images/${product.bottleImage}?v=8.1" alt="ODD ${product.name}" width="60" height="60" style="aspect-ratio: 1 / 1;"></a><div class="search-result-copy"><a href="${detailLink}" class="search-result-name">${product.name}</a><p>${product.notes}</p><span class="search-stock ${stock > 0 ? 'in-stock' : 'out-stock'}"><i></i>${stock > 0 ? 'In stock' : 'Currently unavailable'}</span></div><div class="search-result-action"><strong>₹${product.price.toLocaleString('en-IN')}</strong><button type="button" class="search-add-btn" data-search-add="${product.id}" ${stock <= 0 ? 'disabled' : ''}>${stock > 0 ? 'Add to Cart' : 'Out of stock'}</button></div></article>`;
+    return `<article class="search-result-row"><a class="search-result-visual" href="${detailLink}"><img src="assets/images/${product.bottleImage}?v=8.2" alt="ODD ${product.name}" width="60" height="60" style="aspect-ratio: 1 / 1;"></a><div class="search-result-copy"><a href="${detailLink}" class="search-result-name">${product.name}</a><p>${product.notes}</p><span class="search-stock ${stock > 0 ? 'in-stock' : 'out-stock'}"><i></i>${stock > 0 ? 'In stock' : 'Currently unavailable'}</span></div><div class="search-result-action"><strong>₹${product.price.toLocaleString('en-IN')}</strong><button type="button" class="search-add-btn" data-search-add="${product.id}" ${stock <= 0 ? 'disabled' : ''}>${stock > 0 ? 'Add to Cart' : 'Out of stock'}</button></div></article>`;
   }).join('');
   resultsContainer.querySelectorAll('[data-search-add]').forEach(button => button.addEventListener('click', () => { closeSearchModal(); addToCart(button.dataset.searchAdd); }));
 }
@@ -1372,7 +1376,7 @@ function openQuickView(productId) {
     name: targetId.charAt(0).toUpperCase() + targetId.slice(1),
     price: 899,
     notes: 'Luxury Perfume',
-    bottleImage: targetId === 'lucid' ? 'Lucid single bottle.webp' : targetId === 'first-move' ? 'First Move single bottle.webp' : targetId === 'hamper' ? 'Trio Gift Hamper.webp' : 'Phantom Single bottle.webp'
+    bottleImage: targetId === 'lucid' ? 'Lucid-lifestyle.webp' : targetId === 'first-move' ? 'First Move-lifestyle.webp' : targetId === 'hamper' ? 'Trio Gift Hamper Box.webp' : 'Phantom-lifestyle.webp'
   };
 
   currentQvId = targetId;
@@ -1401,7 +1405,7 @@ function openQuickView(productId) {
   }
 
   const img = modal.querySelector('.quick-view-bottle-img');
-  if (img) img.src = 'assets/images/' + prod.bottleImage + '?v=8.1';
+  if (img) img.src = 'assets/images/' + prod.bottleImage + '?v=8.2';
 
   const brand = modal.querySelector('.qv-brand');
   if (brand) brand.innerText = 'ODD PERFUME · ' + (prod.notes || '');

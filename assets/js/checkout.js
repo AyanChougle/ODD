@@ -662,7 +662,7 @@ async function processPageOrder(e) {
         currency: 'INR',
         name: 'ODD Perfume',
         description: 'Fragrance Order ' + orderId,
-        image: 'assets/images/Phantom Single bottle.webp',
+        image: 'assets/images/Final-Logo-768x768.png?v=8.2',
         ...(rzpServerOrderId ? { order_id: rzpServerOrderId } : {}),
         handler: async function (response) {
           const paymentId = response.razorpay_payment_id || ('pay_' + Math.random().toString(36).substring(2, 12));
