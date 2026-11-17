@@ -70,7 +70,6 @@
   object-fit: contain;
   display: block;
   -webkit-user-drag: none;
-  user-drag: none;
   pointer-events: none;
 }
 
