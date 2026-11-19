@@ -75,6 +75,7 @@
 
 .product-gallery-slide.lifestyle-slide .product-lifestyle-img {
   object-fit: cover;
+  object-position: center bottom !important;
   padding: 0 !important;
 }
 
@@ -645,6 +646,7 @@ main {
   aspect-ratio: 1 / 1;
   padding: 0;
   object-fit: cover;
+  object-position: center bottom !important;
 }
 .product-related-meta {
   display: flex;

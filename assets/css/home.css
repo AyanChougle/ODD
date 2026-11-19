@@ -1879,8 +1879,8 @@ html {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    min-height: 240px !important;
-    padding: 0.8rem 0 !important;
+    min-height: 210px !important;
+    padding: 0.6rem 0 !important;
   }
   .carousel-bottle-img {
     height: 190px !important;
@@ -1895,7 +1895,15 @@ html {
     filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.08)) !important;
   }
   .carousel-track {
-    min-height: 440px !important;
+    min-height: 490px !important;
+  }
+  .carousel-slide.active .slide-actions {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 10 !important;
+    pointer-events: auto !important;
   }
   .carousel-arrow {
     width: 36px !important;
@@ -1923,12 +1931,12 @@ html {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    min-height: 220px !important;
-    padding: 0.5rem 0 !important;
+    min-height: 185px !important;
+    padding: 0.4rem 0 !important;
   }
   .carousel-bottle-img {
-    height: 175px !important;
-    max-height: 175px !important;
+    height: 165px !important;
+    max-height: 165px !important;
     aspect-ratio: 4 / 5 !important;
     filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.05)) !important;
   }
@@ -1939,30 +1947,43 @@ html {
     filter: drop-shadow(0 7px 10px rgba(0, 0, 0, 0.07)) !important;
   }
   .carousel-track {
-    min-height: 410px !important;
+    min-height: 470px !important;
   }
   .slide-title {
-    font-size: 1.55rem !important;
+    font-size: 1.48rem !important;
   }
   .slide-notes {
     font-size: 0.7rem !important;
+    margin-bottom: 0.3rem !important;
   }
   .slide-tagline {
-    font-size: 0.8rem !important;
-    margin-bottom: 0.9rem !important;
+    font-size: 0.82rem !important;
+    margin-bottom: 0.75rem !important;
   }
-  .slide-actions {
+  .carousel-slide.active .slide-actions {
     display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
     justify-content: center !important;
     align-items: center !important;
     flex-wrap: nowrap !important;
-    gap: 0.55rem !important;
+    gap: 0.6rem !important;
+    margin-top: 0.45rem !important;
+    position: relative !important;
+    z-index: 10 !important;
+    pointer-events: auto !important;
   }
   .slide-actions .btn {
-    padding: 0.68rem 1rem !important;
-    font-size: 0.74rem !important;
+    padding: 0.65rem 1.15rem !important;
+    font-size: 0.78rem !important;
     white-space: nowrap !important;
     flex: 0 1 auto !important;
+    min-height: 42px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 9999px !important;
+    touch-action: manipulation !important;
   }
 }
 

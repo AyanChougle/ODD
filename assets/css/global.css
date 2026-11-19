@@ -1117,6 +1117,7 @@ h1, h2, h3, h4, h5, h6 {
     max-height: 320px;
     aspect-ratio: 1 / 1;
     object-fit: cover;
+    object-position: center bottom !important;
     border-radius: 8px;
 }
 
@@ -2230,7 +2231,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .product-detail-section { min-height: 0; padding: 1.8rem 0 2.5rem; }
   .product-detail-grid { grid-template-columns: minmax(0,1fr); gap: 1.5rem; }
   .product-gallery-box { width: 100%; border-radius: 14px; }
-  .product-lifestyle-img { width: 100%; height: auto; max-height: min(64vh, 560px); aspect-ratio: 1 / 1; object-fit: cover; }
+  .product-lifestyle-img { width: 100%; height: auto; max-height: min(64vh, 560px); aspect-ratio: 1 / 1; object-fit: cover; object-position: center bottom !important; }
   .product-info-col { padding: 0 .1rem; }
   .product-detail-title { font-size: clamp(2.55rem, 11vw, 4rem); overflow-wrap: anywhere; }
   .product-detail-price { gap: .55rem; }

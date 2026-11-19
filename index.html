@@ -95,13 +95,85 @@
 
     /* Carousel Slide Typography & Square Hamper Image */
     .carousel-bottle-img {
-      height: 300px !important;
-      max-height: 300px !important;
+      height: 290px;
+      max-height: 290px;
       object-fit: contain !important;
       aspect-ratio: 4 / 5 !important;
     }
     .hamper-slide-box .carousel-bottle-img {
       aspect-ratio: 1 / 1 !important;
+    }
+    .carousel-stock-badge {
+      position: absolute !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      top: 0 !important;
+      white-space: nowrap !important;
+      z-index: 8 !important;
+    }
+    @media (max-width: 768px) {
+      .carousel-track {
+        min-height: 490px !important;
+      }
+      .slide-image-box {
+        min-height: 210px !important;
+        padding: 0.6rem 0 !important;
+      }
+      .carousel-bottle-img {
+        height: 190px !important;
+        max-height: 190px !important;
+      }
+      .carousel-slide.active .slide-actions {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+    }
+    @media (max-width: 480px) {
+      .carousel-track {
+        min-height: 470px !important;
+      }
+      .slide-image-box {
+        min-height: 185px !important;
+        padding: 0.4rem 0 !important;
+      }
+      .carousel-bottle-img {
+        height: 165px !important;
+        max-height: 165px !important;
+      }
+      .slide-title {
+        font-size: 1.48rem !important;
+      }
+      .slide-notes {
+        font-size: 0.7rem !important;
+        margin-bottom: 0.3rem !important;
+      }
+      .slide-tagline {
+        font-size: 0.82rem !important;
+        margin-bottom: 0.75rem !important;
+      }
+      .carousel-slide.active .slide-actions {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        gap: 0.6rem !important;
+        margin-top: 0.45rem !important;
+        position: relative !important;
+        z-index: 10 !important;
+        pointer-events: auto !important;
+      }
+      .slide-actions .btn {
+        padding: 0.65rem 1.15rem !important;
+        font-size: 0.78rem !important;
+        white-space: nowrap !important;
+        min-height: 42px !important;
+        line-height: 1 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 9999px !important;
+        touch-action: manipulation !important;
+      }
     }
     .slide-notes {
       font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;

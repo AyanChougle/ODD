@@ -1694,5 +1694,21 @@ function initProductGallerySwipe() {
 }
 window.initProductGallerySwipe = initProductGallerySwipe;
 
+// Global Resilient Image Extension Fallback (webp <-> jpeg)
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  document.addEventListener('error', function (e) {
+    const target = e.target;
+    if (target && target.tagName === 'IMG' && target.src) {
+      if (/\.webp(\?.*)?$/i.test(target.src) && !target.dataset.triedJpeg) {
+        target.dataset.triedJpeg = '1';
+        target.src = target.src.replace(/\.webp(\?.*)?$/i, '.jpeg$1');
+      } else if (/\.jpeg(\?.*)?$/i.test(target.src) && !target.dataset.triedWebp) {
+        target.dataset.triedWebp = '1';
+        target.src = target.src.replace(/\.jpeg(\?.*)?$/i, '.webp$1');
+      }
+    }
+  }, true);
+}
+
 
 
