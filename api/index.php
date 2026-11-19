@@ -20,7 +20,7 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 
 // Strip prefix e.g. /api
-$route = preg_replace('#^.*?/api/?#', '', $uri);
+$route = $_GET['route'] ?? preg_replace('#^.*?/api/?#', '', $uri);
 $route = trim($route, '/');
 
 // Helpers

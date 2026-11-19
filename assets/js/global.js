@@ -168,10 +168,10 @@ let ACTIVE_COUPONS = (function hydrateInitialCoupons() {
 let STORE_STATE_FROM_SERVER = false;
 let COUPONS_SYNCED_FROM_SERVER = false;
 let STORE_INVENTORY = {
-  phantom: { sku: 'ODD-PH-001', stock: 0, price: PRODUCTS['phantom']?.price || 1999 },
-  lucid: { sku: 'ODD-LC-003', stock: 0, price: PRODUCTS['lucid']?.price || 1599 },
+  phantom: { sku: 'ODD-PH-001', stock: 240, price: PRODUCTS['phantom']?.price || 1999 },
+  lucid: { sku: 'ODD-LC-003', stock: 180, price: PRODUCTS['lucid']?.price || 1599 },
   'first-move': { sku: 'ODD-FM-002', stock: 0, price: PRODUCTS['first-move']?.price || 1899 },
-  hamper: { sku: 'ODD-HM-004', stock: 0, price: PRODUCTS['hamper']?.price || 4999 }
+  hamper: { sku: 'ODD-HM-004', stock: 50, price: PRODUCTS['hamper']?.price || 4999 }
 };
 
 // Immediate hydration of inventory stock from admin cache
@@ -514,11 +514,7 @@ async function syncInventoryFromApi() {
   }
 }
 if (typeof window !== 'undefined') {
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(() => syncInventoryFromApi(), { timeout: 1500 });
-  } else {
-    setTimeout(syncInventoryFromApi, 100);
-  }
+  syncInventoryFromApi();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -527,6 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCountdownTimer();
   updateCartUI();
   if (typeof initScrollReveal === 'function') initScrollReveal();
+  syncInventoryFromApi();
   if (typeof syncStockStatusUI === 'function') syncStockStatusUI();
 });
 
@@ -595,14 +592,16 @@ function getProductAvailability(productId) {
           STORE_INVENTORY[productId].stock = liveStock;
           STORE_INVENTORY[productId].price = livePrice;
         }
-        return { stock: liveStock, price: livePrice };
+        return { stock: liveStock, price: livePrice, available: liveStock > 0 };
       }
     }
   } catch (e) {}
 
   const state = STORE_INVENTORY[productId];
-  if (!state) return { stock: 0, price: authoritativePrice || 1599 };
-  return { stock: Math.max(0, Number(state.stock) || 0), price: Math.max(0, Number(state.price || authoritativePrice) || 1599) };
+  if (!state) return { stock: 0, price: authoritativePrice || 1599, available: false };
+  const s = Math.max(0, Number(state.stock) || 0);
+  const p = Math.max(0, Number(state.price || authoritativePrice) || 1599);
+  return { stock: s, price: p, available: s > 0 };
 }
 
 function addToCart(productId) {
@@ -617,7 +616,7 @@ function addToCart(productId) {
       return;
     }
     if (existing && existing.qty >= stock) {
-      showToast(`Only ${stock} unit(s) of ${prod.name} are available.`);
+      showToast(`Maximum available quantity reached for ${prod.name}.`);
       return;
     }
     prod.price = availability.price;
@@ -646,7 +645,7 @@ function updateCartQty(productId, delta) {
   if (!item) return;
   const nextQty = item.qty + Number(delta);
   const stock = getProductAvailability(productId).stock;
-  if (nextQty > stock) { showToast(stock ? `Only ${stock} unit(s) are available.` : 'This perfume is currently out of stock.'); return; }
+  if (nextQty > stock) { showToast(stock ? `Maximum order limit reached.` : 'This perfume is currently out of stock.'); return; }
   item.qty = nextQty;
   if (item.qty <= 0) cartState = cartState.filter(i => i.id !== productId);
   saveCart(); updateCartUI();
@@ -734,7 +733,7 @@ function updateCartUI() {
             <span>${item.qty}</span>
             <button type="button" aria-label="Add one ${prod.name}" onclick="updateCartQty('${item.id}', 1)" ${unavailable || item.qty >= stock ? 'disabled' : ''}>+</button>
           </div>
-          ${unavailable ? `<small class="cart-item-stock-warning">${stock <= 0 ? 'Out of stock. Remove this item before checkout.' : `Only ${stock} available. Reduce the quantity to continue.`}</small>` : ''}
+          ${unavailable ? `<small class="cart-item-stock-warning">${stock <= 0 ? 'Out of stock. Remove this item before checkout.' : 'Maximum available quantity selected.'}</small>` : ''}
         </div>
         <button type="button" class="cart-item-remove" aria-label="Remove ${prod.name}" onclick="removeFromCart('${item.id}')">&times;</button>
       </div>
@@ -841,7 +840,7 @@ function renderCartPage() {
         <div class="cart-page-product-image"><img src="assets/images/${product.bottleImage}?v=8.3" alt="ODD ${product.name}" width="80" height="80" style="aspect-ratio: 1 / 1;" loading="lazy"></div>
         <div class="cart-page-product-copy"><a href="${item.id === 'first-move' ? 'products-odd-first-move.html' : `products-odd-${item.id}.html`}">${product.name}</a><span>${item.id === 'hamper' ? '3 × 100 ml' : '100 ml'} · ₹${price.toLocaleString('en-IN')} each</span>
           <div class="cart-page-qty"><button type="button" data-cart-page-qty="-1" data-product-id="${item.id}" aria-label="Remove one ${product.name}">−</button><span>Qty ${qty}</span><button type="button" data-cart-page-qty="1" data-product-id="${item.id}" aria-label="Add one ${product.name}" ${out || qty >= stock ? 'disabled' : ''}>+</button><button type="button" class="cart-page-remove" data-cart-page-remove="${item.id}">Remove</button></div>
-          ${out ? `<small class="cart-page-stock-warning">${stock <= 0 ? 'Currently out of stock. Remove this item to continue.' : `Only ${stock} available. Reduce the quantity to continue.`}</small>` : ''}</div>
+          ${out ? `<small class="cart-page-stock-warning">${stock <= 0 ? 'Currently out of stock. Remove this item to continue.' : 'Maximum available quantity selected.'}</small>` : ''}</div>
         <strong class="cart-page-line-total">₹${lineTotal.toLocaleString('en-IN')}</strong>
       </article>`;
     }).join('');
@@ -1199,7 +1198,7 @@ function syncStockStatusUI() {
       const stockBadge = document.querySelector('.qv-stock-badge');
       if (stockBadge) {
         stockBadge.classList.toggle('out-of-stock', out);
-        stockBadge.innerHTML = out ? '<span class="qv-stock-dot"></span> Currently out of stock' : '<span class="qv-stock-dot"></span> In stock, ready to ship';
+        stockBadge.innerHTML = out ? '<span class="qv-stock-dot"></span> Currently out of stock' : '<span class="qv-stock-dot"></span> Available · Ready to ship';
       }
     }
   });
@@ -1422,7 +1421,7 @@ function openQuickView(productId) {
 
   // Synchronize stock state on modal open
   const avail = getProductAvailability(targetId);
-  const out = !avail.available || (typeof avail.stock === 'number' && avail.stock <= 0);
+  const out = Number(avail.stock) <= 0;
   const addBtn = modal.querySelector('.qv-add-btn');
   if (addBtn) { addBtn.disabled = out; addBtn.textContent = out ? 'Out of stock' : 'Add to cart'; }
   const buyBtn = modal.querySelector('.qv-buy-btn');
@@ -1432,7 +1431,7 @@ function openQuickView(productId) {
     stockBadge.classList.toggle('out-of-stock', out);
     stockBadge.innerHTML = out
       ? '<span class="qv-stock-dot"></span> Currently out of stock'
-      : '<span class="qv-stock-dot"></span> In stock, ready to ship';
+      : '<span class="qv-stock-dot"></span> Available · Ready to ship';
   }
 
   modal.classList.add('open');
