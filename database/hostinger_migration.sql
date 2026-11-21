@@ -79,8 +79,11 @@ CREATE TABLE IF NOT EXISTS `customer_addresses` (
   `city` VARCHAR(128) NOT NULL,
   `pincode` VARCHAR(16) NOT NULL,
   `is_default` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_addresses_customer` (`customer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `customer_addresses` ADD COLUMN IF NOT EXISTS `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP;
 
 -- 5B. Customer & Studio Inquiries
 CREATE TABLE IF NOT EXISTS `inquiries` (

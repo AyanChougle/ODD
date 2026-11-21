@@ -737,7 +737,7 @@
 
     tbody.innerHTML = userOrders.map(o => {
       const rawTotal = o.total || o.amount || 0;
-      const amountStr = `&#8377;${Number(rawTotal).toLocaleString('en-IN')}`;
+      const amountStr = `₹${Number(rawTotal).toLocaleString('en-IN')}`;
       const status = o.status || 'Confirmed';
       const dateStr = formatAccountDate(o.date || o.created_at || o.createdAt);
       const itemsList = Array.isArray(o.items) ? o.items.map(it => `${it.name || it.id} (${it.qty})`).join(', ') : 'Fragrance item';
@@ -759,7 +759,7 @@
           </td>
           <td>
             <strong>${accountEscape(amountStr)}</strong>
-            ${o.shipping ? `<small style="display:block; color:var(--text-muted); font-size:0.72rem;">(Includes &#8377;${o.shipping} Shipping)</small>` : ''}
+            ${o.shipping ? `<small style="display:block; color:var(--text-muted); font-size:0.72rem;">(Includes ₹${Number(o.shipping).toLocaleString('en-IN')} Shipping)</small>` : ''}
           </td>
           <td>
             <a href="order-tracking.html?orderId=${encodeURIComponent(o.id)}" class="btn btn-sm btn-outline" style="padding:0.35rem 0.8rem; font-size:0.75rem; text-decoration:none;">Track</a>
@@ -773,7 +773,7 @@
       cardsWrap.style.display = 'flex';
       cardsWrap.innerHTML = userOrders.map(o => {
         const rawTotal = o.total || o.amount || 0;
-        const amountStr = `&#8377;${Number(rawTotal).toLocaleString('en-IN')}`;
+        const amountStr = `₹${Number(rawTotal).toLocaleString('en-IN')}`;
         const status = o.status || 'Confirmed';
         const dateStr = formatAccountDate(o.date || o.created_at || o.createdAt);
         const itemsList = Array.isArray(o.items) ? o.items.map(it => `${it.name || it.id} &times; ${it.qty}`).join(', ') : 'Fragrance item';

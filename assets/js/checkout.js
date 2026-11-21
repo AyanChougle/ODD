@@ -611,11 +611,13 @@ async function processPageOrder(e) {
 
   // Razorpay Gateway Configuration (loaded dynamically from server)
   let activeRzpKeyId = '';
+  let rzpConfig = { keyId: '', brandName: 'ODD Perfume', themeColor: '#E86B32', simulate: false };
   try {
     const pubRes = await fetch('/api/settings/razorpay-public');
     if (pubRes.ok) {
       const pubData = await pubRes.json();
-      if (pubData.keyId) activeRzpKeyId = pubData.keyId;
+      rzpConfig = Object.assign(rzpConfig, pubData || {});
+      if (pubData && pubData.keyId) activeRzpKeyId = pubData.keyId;
     }
   } catch (e) {}
 
@@ -624,6 +626,7 @@ async function processPageOrder(e) {
 
     if (typeof Razorpay !== 'undefined') {
       let rzpServerOrderId = null;
+      let rzpErrorMsg = '';
       try {
         const orderCreateRes = await fetch('/api/payments/create-order', {
           method: 'POST',
@@ -633,27 +636,33 @@ async function processPageOrder(e) {
             receipt: 'rcpt_' + (orderId || Date.now())
           })
         });
+        const createData = await orderCreateRes.json().catch(() => ({}));
         if (orderCreateRes.ok) {
-          const createData = await orderCreateRes.json();
           if (createData.orderId) {
             rzpServerOrderId = createData.orderId;
           }
           if (createData.keyId) {
             activeRzpKeyId = createData.keyId;
+            rzpConfig.keyId = createData.keyId;
           }
+        } else {
+          rzpErrorMsg = createData.error || '';
         }
       } catch (e) {
         console.warn('Server Razorpay order creation check:', e);
       }
 
       if (!activeRzpKeyId) {
-        alert('Online payment gateway is temporarily initializing. Please select Cash on Delivery (COD) or try again in a moment.');
+        const userNotice = rzpErrorMsg 
+          ? `Online payment notice: ${rzpErrorMsg}. Please select Cash on Delivery (COD) or try again.` 
+          : 'Online payment gateway is temporarily initializing. Please select Cash on Delivery (COD) or try again in a moment.';
+        alert(userNotice);
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = 'Confirm & Place Order';
         }
         _orderInProgress = false;
-      return;
+        return;
       }
 
       const options = {

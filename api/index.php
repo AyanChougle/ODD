@@ -972,25 +972,48 @@ try {
                 }
             } catch (Throwable $e) {}
 
-            try {
-                $pdo->exec("ALTER TABLE orders ADD COLUMN customer_id VARCHAR(64) DEFAULT NULL");
-            } catch (Throwable $e) {}
+            static $hasCustIdCol = null;
+            if ($hasCustIdCol === null) {
+                try {
+                    $chk = $pdo->query("SHOW COLUMNS FROM orders LIKE 'customer_id'")->fetch();
+                    $hasCustIdCol = !empty($chk);
+                } catch (Throwable $e) {
+                    $hasCustIdCol = false;
+                }
+            }
 
             $istNow = date('Y-m-d H:i:s');
-            $pdo->prepare('
-                INSERT INTO orders (
-                    id, tracking_token, customer_id, customer_name, customer_email, customer_phone, shipping_address,
-                    subtotal, discount_amount, coupon_code, shipping_fee, total_amount,
-                    payment_method, payment_status, status, gateway, razorpay_order_id, razorpay_payment_id, stock_deducted,
-                    created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "Confirmed", ?, ?, ?, 1, ?, ?)
-            ')->execute([
-                $orderId, $trackingToken, $targetCustId, $customer, $email, $phone, $address,
-                $subtotal, $discountAmount, $appliedCode, $shippingFee, $totalAmount,
-                $paymentMethod, $isOnline ? 'Pending' : 'Pending', $isOnline ? 'Razorpay Live' : 'Cash on Delivery (COD)',
-                $body['razorpayOrderId'] ?? null, $body['razorpayPaymentId'] ?? null,
-                $istNow, $istNow
-            ]);
+            if ($hasCustIdCol) {
+                $pdo->prepare('
+                    INSERT INTO orders (
+                        id, tracking_token, customer_id, customer_name, customer_email, customer_phone, shipping_address,
+                        subtotal, discount_amount, coupon_code, shipping_fee, total_amount,
+                        payment_method, payment_status, status, gateway, razorpay_order_id, razorpay_payment_id, stock_deducted,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "Confirmed", ?, ?, ?, 1, ?, ?)
+                ')->execute([
+                    $orderId, $trackingToken, $targetCustId, $customer, $email, $phone, $address,
+                    $subtotal, $discountAmount, $appliedCode, $shippingFee, $totalAmount,
+                    $paymentMethod, $isOnline ? 'Pending' : 'Pending', $isOnline ? 'Razorpay Live' : 'Cash on Delivery (COD)',
+                    $body['razorpayOrderId'] ?? null, $body['razorpayPaymentId'] ?? null,
+                    $istNow, $istNow
+                ]);
+            } else {
+                $pdo->prepare('
+                    INSERT INTO orders (
+                        id, tracking_token, customer_name, customer_email, customer_phone, shipping_address,
+                        subtotal, discount_amount, coupon_code, shipping_fee, total_amount,
+                        payment_method, payment_status, status, gateway, razorpay_order_id, razorpay_payment_id, stock_deducted,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "Confirmed", ?, ?, ?, 1, ?, ?)
+                ')->execute([
+                    $orderId, $trackingToken, $customer, $email, $phone, $address,
+                    $subtotal, $discountAmount, $appliedCode, $shippingFee, $totalAmount,
+                    $paymentMethod, $isOnline ? 'Pending' : 'Pending', $isOnline ? 'Razorpay Live' : 'Cash on Delivery (COD)',
+                    $body['razorpayOrderId'] ?? null, $body['razorpayPaymentId'] ?? null,
+                    $istNow, $istNow
+                ]);
+            }
 
             $iStmt = $pdo->prepare('
                 INSERT INTO order_items (order_id, product_id, sku, name, price, quantity, line_total)
@@ -1000,7 +1023,9 @@ try {
                 $iStmt->execute([$orderId, $it['product_id'], $it['sku'], $it['name'], $it['price'], $it['quantity'], $it['line_total']]);
             }
 
-            $pdo->commit();
+            if ($pdo->inTransaction()) {
+                $pdo->commit();
+            }
 
             // Auto-persist shipping address to customer_addresses
             try {
@@ -1021,9 +1046,9 @@ try {
                     $dupChk->execute([$targetCustId, $address]);
                     if ((int)$dupChk->fetchColumn() === 0) {
                         $pdo->prepare('
-                            INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default, created_at)
-                            VALUES (?, "Home", ?, ?, ?, ?, ?, 1, ?)
-                        ')->execute([$targetCustId, $customer, $phone, $address, $addrCity, $addrPin, $istNow]);
+                            INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default)
+                            VALUES (?, "Home", ?, ?, ?, ?, ?, 1)
+                        ')->execute([$targetCustId, $customer, $phone, $address, $addrCity, $addrPin]);
                     }
                 }
             } catch (Throwable $addrEx) {}
@@ -1064,8 +1089,10 @@ try {
             } catch (Throwable $e) {}
 
             sendJson(201, ['success' => true, 'orderId' => $orderId, 'trackingToken' => $trackingToken, 'totalAmount' => $totalAmount, 'status' => 'Confirmed', 'mailDispatched' => $mailDispatched]);
-        } catch (Exception $e) {
-            $pdo->rollBack();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                try { $pdo->rollBack(); } catch (Throwable $rb) {}
+            }
             sendJson(400, ['error' => $e->getMessage()]);
         }
     }
@@ -1618,8 +1645,8 @@ try {
                         if ($custId) {
                             try {
                                 $pdo->prepare('
-                                    INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default, created_at)
-                                    VALUES (?, "Home", ?, ?, ?, ?, ?, 1, NOW())
+                                    INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default)
+                                    VALUES (?, "Home", ?, ?, ?, ?, ?, 1)
                                 ')->execute([$custId, $pName, $pPhone, $pAddress, $pCity, $pPin]);
                             } catch (Throwable $e) {}
                         }
@@ -1683,8 +1710,8 @@ try {
         }
 
         $pdo->prepare('
-            INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ')->execute([$custId, $label, $name, $phone, $street, $city, $pin, $isDefault]);
 
         sendJson(201, ['success' => true, 'message' => 'Delivery address saved to your account!']);
