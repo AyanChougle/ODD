@@ -686,6 +686,18 @@
     ]);
   }
 
+  function formatAccountDate(val) {
+    if (!val) return 'Recent';
+    let str = String(val).trim();
+    if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(str)) {
+      str = str.replace(' ', 'T') + '+05:30';
+    }
+    const d = new Date(str);
+    return Number.isNaN(d.getTime())
+      ? String(val)
+      : d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
+  }
+
   async function renderCustomerOrders(session) {
     const tbody = document.getElementById('account-orders-tbody');
     const cardsWrap = document.getElementById('account-orders-cards');
@@ -698,7 +710,8 @@
     try {
       const email = encodeURIComponent(session.email || '');
       const phone = encodeURIComponent((session.phone || '').trim());
-      const res = await fetch(`/api/customer/orders?email=${email}&phone=${phone}`, {
+      const name = encodeURIComponent((session.name || '').trim());
+      const res = await fetch(`/api/customer/orders?email=${email}&phone=${phone}&name=${name}`, {
         headers: { 'Accept': 'application/json' },
         credentials: 'include'
       });
@@ -726,7 +739,7 @@
       const rawTotal = o.total || o.amount || 0;
       const amountStr = `&#8377;${Number(rawTotal).toLocaleString('en-IN')}`;
       const status = o.status || 'Confirmed';
-      const dateStr = o.date ? new Date(o.date).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : 'Recent';
+      const dateStr = formatAccountDate(o.date || o.created_at || o.createdAt);
       const itemsList = Array.isArray(o.items) ? o.items.map(it => `${it.name || it.id} (${it.qty})`).join(', ') : 'Fragrance item';
       const isPaid = String(o.paymentMethod || '').toLowerCase().includes('razorpay') || o.paymentStatus === 'Paid';
 
@@ -762,7 +775,7 @@
         const rawTotal = o.total || o.amount || 0;
         const amountStr = `&#8377;${Number(rawTotal).toLocaleString('en-IN')}`;
         const status = o.status || 'Confirmed';
-        const dateStr = o.date ? new Date(o.date).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : 'Recent';
+        const dateStr = formatAccountDate(o.date || o.created_at || o.createdAt);
         const itemsList = Array.isArray(o.items) ? o.items.map(it => `${it.name || it.id} &times; ${it.qty}`).join(', ') : 'Fragrance item';
         const isPaid = String(o.paymentMethod || '').toLowerCase().includes('razorpay') || o.paymentStatus === 'Paid';
 
@@ -870,7 +883,10 @@
 
     let addresses = [];
     try {
-      const res = await fetch('/api/customer/addresses', {
+      const email = encodeURIComponent((session.email || '').trim().toLowerCase());
+      const phone = encodeURIComponent((session.phone || '').trim());
+      const name = encodeURIComponent((session.name || '').trim());
+      const res = await fetch(`/api/customer/addresses?email=${email}&phone=${phone}&name=${name}`, {
         headers: { 'Accept': 'application/json' },
         credentials: 'include'
       });
@@ -949,7 +965,12 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          email: session.email,
+          customer_phone: session.phone,
+          customer_name: session.name,
+          ...payload
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to save address.');

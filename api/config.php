@@ -15,6 +15,9 @@ error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
+// Enforce Indian Standard Time (IST / Asia/Kolkata) across all PHP date/time operations
+date_default_timezone_set('Asia/Kolkata');
+
 // Global fatal error shutdown handler ensuring JSON responses
 register_shutdown_function(function() {
     $err = error_get_last();

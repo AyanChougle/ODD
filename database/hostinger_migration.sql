@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS `order_items` (
   INDEX `idx_items_sku` (`sku`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 1B. Ensure orders Table has Tracking and Shiprocket Columns
+-- 1B. Ensure orders Table has Tracking, Customer ID, and Shiprocket Columns
+ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `customer_id` VARCHAR(64) DEFAULT NULL;
 ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `courier_name` VARCHAR(128) DEFAULT NULL;
 ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `tracking_number` VARCHAR(128) DEFAULT NULL;
 ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `tracking_url` VARCHAR(255) DEFAULT NULL;
@@ -28,6 +29,7 @@ ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `label_url` VARCHAR(255) DEFAULT N
 ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `shiprocket_order_id` VARCHAR(64) DEFAULT NULL;
 ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `shiprocket_shipment_id` VARCHAR(64) DEFAULT NULL;
 ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `shiprocket_status` VARCHAR(64) DEFAULT NULL;
+ALTER TABLE `orders` ADD INDEX IF NOT EXISTS `idx_orders_customer_id` (`customer_id`);
 
 -- 2. System Settings (Shipping Rates, Banner Announcement, Gateway Config)
 CREATE TABLE IF NOT EXISTS `settings` (
@@ -181,7 +183,34 @@ INSERT INTO `inventory_movements` (`sku`, `product_id`, `delta`, `stock_after`, 
 ('ODD-LC-003', 'lucid', 180, 180, 'Initial inventory batch receipt from Mumbai laboratory', 'Admin'),
 ('ODD-FM-002', 'first-move', 0, 0, 'Zero stock baseline (production awaiting packaging batch)', 'Admin');
 
--- 12. Seed Baseline Coupons
+-- 12. Coupons and Redemptions Tracking
+CREATE TABLE IF NOT EXISTS `coupons` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `code` VARCHAR(64) NOT NULL UNIQUE,
+  `discount_percent` INT NOT NULL,
+  `min_spend` INT NOT NULL DEFAULT 0,
+  `max_discount` INT NOT NULL DEFAULT 0,
+  `max_uses` INT NOT NULL DEFAULT 0,
+  `used_count` INT NOT NULL DEFAULT 0,
+  `per_user_limit` INT NOT NULL DEFAULT 1,
+  `active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_coupons_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `coupon_usages` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `coupon_code` VARCHAR(64) NOT NULL,
+  `customer_email` VARCHAR(191) NOT NULL,
+  `customer_phone` VARCHAR(32) DEFAULT NULL,
+  `order_id` VARCHAR(64) NOT NULL,
+  `discount_amount` INT NOT NULL DEFAULT 0,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_usage_email` (`customer_email`, `coupon_code`),
+  INDEX `idx_usage_order` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Seed Baseline Coupons
 INSERT INTO `coupons` (`code`, `discount_percent`, `min_spend`, `max_discount`, `max_uses`, `used_count`, `per_user_limit`, `active`) VALUES
 ('LAUNCH20', 20, 0, 500, 500, 0, 1, 1),
 ('ODD10', 10, 0, 300, 1000, 0, 1, 1),
@@ -197,5 +226,28 @@ INSERT INTO `settings` (`key_name`, `value_json`) VALUES
 ('shiprocket', '{\"email\":\"oddperfumesocial@gmail.com\",\"password\":\"Ks^U&iCv5zET!Bse*c4Ubln9y!ZkHw&o\",\"pickupLocation\":\"Primary\",\"carrier\":\"automatic\",\"autoDispatch\":false,\"origin\":{\"name\":\"ODD Perfume Fulfillment\",\"phone\":\"+919876543210\",\"street\":\"Plot 42, Perfume Studio, Industrial Area\",\"city\":\"Mumbai\",\"state\":\"MH\",\"postalCode\":\"400001\",\"country\":\"IN\"}}'),
 ('smtp', '{\"host\":\"smtp.hostinger.com\",\"port\":465,\"encryption\":\"ssl\",\"username\":\"hello@oddperfume.com\",\"password\":\"\",\"fromEmail\":\"hello@oddperfume.com\",\"fromName\":\"ODD Perfumes Studio\"}')
 ON DUPLICATE KEY UPDATE `value_json`=VALUES(`value_json`);
+
+-- 14. Data Backfill & Alignment (Idempotent Maintenance Queries)
+-- A. Auto-link existing orders to registered customer accounts by name or email
+UPDATE `orders` o
+JOIN `customer_accounts` c ON (LOWER(TRIM(o.customer_name)) = LOWER(TRIM(c.name)) OR LOWER(TRIM(o.customer_email)) = LOWER(TRIM(c.email)))
+SET o.customer_id = c.id
+WHERE o.customer_id IS NULL OR o.customer_id = '';
+
+-- B. Populate customer_addresses from past orders if customer_addresses is currently empty
+INSERT IGNORE INTO `customer_addresses` (`customer_id`, `label`, `name`, `phone`, `address_line`, `city`, `pincode`, `is_default`, `created_at`)
+SELECT c.id, 'Home', o.customer_name, o.customer_phone, o.shipping_address, 'Mumbai', '400001', 1, o.created_at
+FROM `orders` o
+JOIN `customer_accounts` c ON (LOWER(TRIM(o.customer_name)) = LOWER(TRIM(c.name)) OR LOWER(TRIM(o.customer_email)) = LOWER(TRIM(c.email)))
+WHERE o.shipping_address IS NOT NULL AND TRIM(o.shipping_address) != '';
+
+-- C. Fix legacy UTC timestamps for early test orders (5 hours 30 mins offset)
+UPDATE `orders`
+SET `created_at` = DATE_ADD(`created_at`, INTERVAL 330 MINUTE)
+WHERE `created_at` < '2026-11-21 10:00:00' AND `id` IN ('ODD-00001', 'ODD-00002');
+
+UPDATE `coupon_usages`
+SET `created_at` = DATE_ADD(`created_at`, INTERVAL 330 MINUTE)
+WHERE `created_at` < '2026-11-21 10:00:00' AND `order_id` IN ('ODD-00001', 'ODD-00002');
 
 SET FOREIGN_KEY_CHECKS = 1;

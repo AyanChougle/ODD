@@ -80,12 +80,23 @@ function formatINR(value) {
   return `₹${Number(value || 0).toLocaleString('en-IN')}`;
 }
 
+function parseDateIST(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  let str = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(str)) {
+    str = str.replace(' ', 'T') + 'Z';
+  }
+  const d = new Date(str);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function formatDate(value) {
   if (!value) return 'Never';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? String(value)
-    : date.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  const date = parseDateIST(value);
+  return date
+    ? date.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })
+    : String(value);
 }
 
 function resolveProductSku(identifier) {
@@ -1813,15 +1824,17 @@ function renderCouponsTable() {
     return;
   }
 
-  tbody.innerHTML = couponsData.map(coupon => `
+  tbody.innerHTML = couponsData.map(coupon => {
+    const isAct = coupon.active === 1 || coupon.active === true || coupon.active === '1' || coupon.active === 'true';
+    return `
     <tr>
       <td><code class="admin-sku">${escapeHtml(coupon.code)}</code></td>
       <td><strong>${coupon.discount}% OFF</strong></td>
-      <td><span class="badge-status ${coupon.active ? 'success' : 'danger'}">${coupon.active ? 'Active' : 'Inactive'}</span></td>
+      <td><span class="badge-status ${isAct ? 'success' : 'danger'}">${isAct ? 'Active' : 'Inactive'}</span></td>
       <td>
         <div class="inventory-action-group">
-          <button class="admin-btn admin-btn-outline admin-btn-sm" data-coupon-toggle="${escapeHtml(coupon.code)}" data-active="${coupon.active}">
-            ${coupon.active ? 'Deactivate' : 'Activate'}
+          <button class="admin-btn admin-btn-outline admin-btn-sm" data-coupon-toggle="${escapeHtml(coupon.code)}" data-active="${isAct ? '1' : '0'}">
+            ${isAct ? 'Deactivate' : 'Activate'}
           </button>
           <button class="admin-btn admin-btn-outline admin-btn-sm" data-coupon-delete="${escapeHtml(coupon.code)}" style="color:#EF4444;">
             Delete
@@ -1829,14 +1842,19 @@ function renderCouponsTable() {
         </div>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   tbody.querySelectorAll('[data-coupon-toggle]').forEach(button => {
     button.addEventListener('click', async () => {
       const code = button.dataset.couponToggle;
-      const active = button.dataset.active !== 'true';
+      const isCurrentlyActive = button.dataset.active === '1';
+      const active = !isCurrentlyActive;
       try {
-        await adminApi(`/api/coupons/${encodeURIComponent(code)}`, { method: 'PATCH', body: { active } });
+        await adminApi(`/api/coupons/${encodeURIComponent(code)}`, {
+          method: 'POST',
+          body: { action: 'toggle', active }
+        });
         await loadCoupons();
         showAdminToast(`Coupon ${code} ${active ? 'activated' : 'deactivated'}.`);
       } catch (error) {
@@ -1850,7 +1868,10 @@ function renderCouponsTable() {
       const code = button.dataset.couponDelete;
       if (!confirm(`Delete coupon code ${code}?`)) return;
       try {
-        await adminApi(`/api/coupons/${encodeURIComponent(code)}`, { method: 'DELETE' });
+        await adminApi(`/api/coupons/${encodeURIComponent(code)}`, {
+          method: 'POST',
+          body: { action: 'delete' }
+        });
         await loadCoupons();
         showAdminToast(`Coupon ${code} deleted.`);
       } catch (error) {

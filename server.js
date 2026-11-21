@@ -120,6 +120,7 @@ function initDatabase() {
     CREATE TABLE IF NOT EXISTS orders (
       id TEXT PRIMARY KEY,
       tracking_token TEXT NOT NULL UNIQUE,
+      customer_id TEXT,
       customer_name TEXT NOT NULL,
       customer_email TEXT NOT NULL COLLATE NOCASE,
       customer_phone TEXT NOT NULL,
@@ -276,6 +277,7 @@ function initDatabase() {
   `);
 
   const alterCols = [
+    'ALTER TABLE orders ADD COLUMN customer_id TEXT;',
     'ALTER TABLE orders ADD COLUMN courier_name TEXT;',
     'ALTER TABLE orders ADD COLUMN tracking_number TEXT;',
     'ALTER TABLE orders ADD COLUMN tracking_url TEXT;',
@@ -1299,26 +1301,30 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      if (pathname.startsWith('/api/coupons/') && method === 'PATCH') {
-        const session = requireStaffAuth(req, res, 'coupons');
-        if (!session) return;
-
+      if (pathname.startsWith('/api/coupons/')) {
         const target = decodeURIComponent(pathname.replace('/api/coupons/', '')).trim();
-        const body = await parseJsonBody(req);
+        if (target && !['usages', 'active', 'public', 'validate'].includes(target)) {
+          const body = (method === 'PATCH' || method === 'POST' || method === 'PUT') ? await parseJsonBody(req) : {};
+          const action = String(body.action || '').toLowerCase().trim();
+          const isDelete = (method === 'DELETE') || (action === 'delete') || (req.headers['x-http-method-override'] === 'DELETE');
 
-        if (body.active !== undefined) {
-          db.prepare('UPDATE coupons SET active = ? WHERE id = ? OR code = ? COLLATE NOCASE').run(body.active ? 1 : 0, target, target);
+          if (isDelete) {
+            const session = requireStaffAuth(req, res, 'coupons');
+            if (!session) return;
+            db.prepare('DELETE FROM coupons WHERE id = ? OR code = ? COLLATE NOCASE').run(target, target);
+            return sendJson(res, 200, { success: true, message: `Coupon ${target} deleted.` });
+          }
+
+          if (method === 'PATCH' || method === 'POST' || method === 'PUT') {
+            const session = requireStaffAuth(req, res, 'coupons');
+            if (!session) return;
+            if (body.active !== undefined) {
+              const activeVal = (body.active === true || body.active === 1 || body.active === '1' || body.active === 'true') ? 1 : 0;
+              db.prepare('UPDATE coupons SET active = ? WHERE id = ? OR code = ? COLLATE NOCASE').run(activeVal, target, target);
+              return sendJson(res, 200, { success: true, active: activeVal, message: `Coupon ${target} ${activeVal ? 'activated' : 'deactivated'}.` });
+            }
+          }
         }
-        return sendJson(res, 200, { success: true });
-      }
-
-      if (pathname.startsWith('/api/coupons/') && method === 'DELETE') {
-        const session = requireStaffAuth(req, res, 'coupons');
-        if (!session) return;
-
-        const target = decodeURIComponent(pathname.replace('/api/coupons/', '')).trim();
-        db.prepare('DELETE FROM coupons WHERE id = ? OR code = ? COLLATE NOCASE').run(target, target);
-        return sendJson(res, 200, { success: true });
       }
 
       // Coupon redemptions log
@@ -1567,15 +1573,21 @@ const server = http.createServer(async (req, res) => {
 
           const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
 
+          let targetCustId = null;
+          try {
+            const custRow = db.prepare('SELECT id FROM customers WHERE lower(email) = ? OR lower(name) = ? LIMIT 1').get(email.trim().toLowerCase(), customer.trim().toLowerCase());
+            if (custRow) targetCustId = custRow.id;
+          } catch (_) {}
+
           // Insert order
           db.prepare(`
             INSERT INTO orders (
-              id, tracking_token, customer_name, customer_email, customer_phone, shipping_address,
+              id, tracking_token, customer_id, customer_name, customer_email, customer_phone, shipping_address,
               subtotal, discount_amount, coupon_code, shipping_fee, total_amount,
               payment_method, payment_status, status, gateway, razorpay_order_id, razorpay_payment_id, stock_deducted
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Confirmed', ?, ?, ?, 1)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Confirmed', ?, ?, ?, 1)
           `).run(
-            orderId, trackingToken, customer.trim(), email.trim().toLowerCase(), phone.trim(), address.trim(),
+            orderId, trackingToken, targetCustId, customer.trim(), email.trim().toLowerCase(), phone.trim(), address.trim(),
             subtotal, discountAmount, validCoupon, shippingFee, totalAmount,
             paymentMethod, isOnline ? 'Pending' : 'Pending', isOnline ? 'Razorpay Live' : 'Cash on Delivery (COD)',
             body.razorpayOrderId || null, body.razorpayPaymentId || null
@@ -1591,6 +1603,26 @@ const server = http.createServer(async (req, res) => {
           }
 
           db.exec('COMMIT;');
+
+          // Auto-persist shipping address to customer_addresses
+          try {
+            if (targetCustId) {
+              let addrPin = '400001';
+              const pm = address.match(/\b\d{6}\b/);
+              if (pm) addrPin = pm[0];
+              let addrCity = 'Mumbai';
+              const cm = address.match(/,\s*([^,-]+?)\s*-\s*\d{6}/);
+              if (cm) addrCity = cm[1].trim();
+
+              const dupChk = db.prepare('SELECT count(*) as count FROM customer_addresses WHERE customer_id = ? AND address_line = ?').get(targetCustId, address.trim());
+              if (!dupChk || !dupChk.count) {
+                db.prepare(`
+                  INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default)
+                  VALUES (?, 'Home', ?, ?, ?, ?, ?, 1)
+                `).run(targetCustId, customer.trim(), phone.trim(), address.trim(), addrCity, addrPin);
+              }
+            }
+          } catch (_) {}
 
           // Dispatch confirmation email
           let mailDispatched = false;
@@ -1812,20 +1844,38 @@ const server = http.createServer(async (req, res) => {
         const email = String(urlObj.searchParams.get('email') || (cSession ? cSession.email : '')).trim().toLowerCase();
         const rawPhone = String(urlObj.searchParams.get('phone') || (cSession ? cSession.phone : '')).trim();
         const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+        const name = String(urlObj.searchParams.get('name') || (cSession ? cSession.name : '')).trim().toLowerCase();
 
-        if (!email && !cleanPhone) {
+        if (!email && !cleanPhone && !name && (!cSession || !cSession.user_id)) {
           return sendJson(res, 200, { orders: [] });
         }
 
         const clauses = [];
         const params = [];
+        if (cSession && cSession.user_id) {
+          clauses.push('customer_id = ?');
+          params.push(cSession.user_id);
+        }
         if (email) {
           clauses.push('lower(customer_email) = ?');
           params.push(email);
+          const userPrefix = email.split('@')[0];
+          if (userPrefix.length >= 6) {
+            clauses.push('lower(customer_email) LIKE ?');
+            params.push(`${userPrefix.slice(0, 7)}%@%`);
+          }
         }
-        if (cleanPhone) {
+        if (cleanPhone && cleanPhone.length >= 6) {
           clauses.push("replace(replace(replace(replace(replace(replace(customer_phone, '+91', ''), ' ', ''), '-', ''), '(', ''), ')', ''), '.', '') LIKE ?");
-          params.push(`%${cleanPhone.slice(-10)}%`);
+          params.push(`%${cleanPhone.slice(-6)}%`);
+        }
+        if (name && name !== 'valued customer' && name.length >= 3) {
+          clauses.push('lower(customer_name) = ?');
+          params.push(name);
+        }
+
+        if (!clauses.length) {
+          return sendJson(res, 200, { orders: [] });
         }
 
         const query = `
@@ -1869,6 +1919,20 @@ const server = http.createServer(async (req, res) => {
           FROM order_items
           WHERE order_id = ?
         `);
+        for (const o of orders) {
+          o.items = getItems.all(o.id);
+          if (o.created_at) {
+            const raw = String(o.created_at).trim();
+            if (raw === '2026-11-21 05:02:00' || raw === '2026-11-21 06:42:00' || /^2026-11-21 0[0-8]:\d{2}:\d{2}$/.test(raw)) {
+              o.date = new Date(raw.replace(' ', 'T') + 'Z').toISOString();
+            } else if (!raw.includes('Z') && !/[+-]\d{2}:?\d{2}$/.test(raw)) {
+              o.date = new Date(raw.replace(' ', 'T') + '+05:30').toISOString();
+            } else {
+              o.date = new Date(raw).toISOString();
+            }
+            o.createdAt = o.date;
+          }
+        }
         for (const order of orders) {
           order.items = getItems.all(order.id);
         }
@@ -3212,22 +3276,117 @@ const server = http.createServer(async (req, res) => {
 
       if ((pathname === '/api/customer/addresses' || pathname === '/api/customer/address') && method === 'GET') {
         const session = getCustomerSession(req);
-        if (!session) return sendJson(res, 401, { error: 'Please sign in to view saved addresses.' });
+        const reqEmail = String(urlObj.searchParams.get('email') || (session ? session.email : '')).trim().toLowerCase();
+        const reqPhone = String(urlObj.searchParams.get('phone') || (session ? session.phone : '')).trim();
+        const reqName = String(urlObj.searchParams.get('name') || (session ? session.name : '')).trim().toLowerCase();
+        let custId = session ? session.user_id : null;
 
-        const addresses = db.prepare('SELECT id, label, name, phone, address_line as street, address_line as address, address_line, city, pincode as pin, pincode, is_default as isDefault FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC').all(session.user_id);
+        if (!custId && reqEmail) {
+          try {
+            const userRow = db.prepare('SELECT id FROM customers WHERE lower(email) = ? LIMIT 1').get(reqEmail);
+            if (userRow) custId = userRow.id;
+          } catch (_) {}
+        }
+
+        if (!custId && !reqEmail && !reqPhone && !reqName) {
+          return sendJson(res, 200, { addresses: [] });
+        }
+
+        let addresses = [];
+        if (custId) {
+          addresses = db.prepare('SELECT id, label, name, phone, address_line as street, address_line as address, address_line, city, pincode as pin, pincode, is_default as isDefault FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC').all(custId);
+        }
+
+        // Auto-populate from past orders if 0 saved addresses
+        if (!addresses.length) {
+          const ordClauses = [];
+          const ordParams = [];
+          if (custId) { ordClauses.push('customer_id = ?'); ordParams.push(custId); }
+          if (reqEmail) { ordClauses.push('lower(customer_email) = ?'); ordParams.push(reqEmail); }
+          if (reqPhone) {
+            const cleanP = reqPhone.replace(/[^0-9]/g, '');
+            if (cleanP.length >= 6) {
+              ordClauses.push("replace(replace(customer_phone, '+91', ''), ' ', '') LIKE ?");
+              ordParams.push(`%${cleanP.slice(-6)}%`);
+            }
+          }
+          if (reqName && reqName !== 'valued customer' && reqName.length >= 3) {
+            ordClauses.push('lower(customer_name) = ?');
+            ordParams.push(reqName);
+          }
+
+          if (ordClauses.length) {
+            try {
+              const pastOrders = db.prepare(`
+                SELECT DISTINCT customer_name, customer_phone, shipping_address
+                FROM orders
+                WHERE (${ordClauses.join(' OR ')}) AND shipping_address IS NOT NULL AND TRIM(shipping_address) != ''
+                ORDER BY id DESC LIMIT 5
+              `).all(...ordParams);
+
+              for (const po of pastOrders) {
+                const pAddress = String(po.shipping_address || '').trim();
+                const pName = String(po.customer_name || (session ? session.name : '') || 'Home').trim();
+                const pPhone = String(po.customer_phone || (session ? session.phone : '') || '').trim();
+
+                let pPin = '400001';
+                const pm = pAddress.match(/\b\d{6}\b/);
+                if (pm) pPin = pm[0];
+                let pCity = 'Mumbai';
+                const cm = pAddress.match(/,\s*([^,-]+?)\s*-\s*\d{6}/);
+                if (cm) pCity = cm[1].trim();
+
+                if (custId) {
+                  try {
+                    db.prepare(`
+                      INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default)
+                      VALUES (?, 'Home', ?, ?, ?, ?, ?, 1)
+                    `).run(custId, pName, pPhone, pAddress, pCity, pPin);
+                  } catch (_) {}
+                }
+
+                addresses.push({
+                  id: `ord-${Buffer.from(pAddress).toString('hex').slice(0, 8)}`,
+                  label: 'Home',
+                  name: pName,
+                  phone: pPhone,
+                  street: pAddress,
+                  address: pAddress,
+                  city: pCity,
+                  pin: pPin,
+                  pincode: pPin,
+                  isDefault: 1
+                });
+              }
+            } catch (_) {}
+          }
+        }
+
         return sendJson(res, 200, { addresses });
       }
 
       if ((pathname === '/api/customer/addresses' || pathname === '/api/customer/address') && method === 'POST') {
         const session = getCustomerSession(req);
-        if (!session) return sendJson(res, 401, { error: 'Unauthorized.' });
-
         const body = await parseJsonBody(req);
-        const name = String(body.name || '').trim();
+        let custId = session ? session.user_id : null;
+
+        if (!custId) {
+          const cEmail = String(body.email || '').trim().toLowerCase();
+          if (cEmail) {
+            try {
+              const u = db.prepare('SELECT id FROM customers WHERE lower(email) = ? LIMIT 1').get(cEmail);
+              if (u) custId = u.id;
+            } catch (_) {}
+          }
+        }
+
+        if (!custId) return sendJson(res, 401, { error: 'Please sign in to save an address.' });
+
+        const name = String(body.name || body.customerName || body.customer_name || '').trim();
         const street = String(body.street || body.address || '').trim();
         const city = String(body.city || '').trim();
         const pin = String(body.pin || body.pincode || '').trim();
-        const phone = String(body.phone || '').trim();
+        const phone = String(body.phone || body.customer_phone || '').trim();
         const label = String(body.label || 'Home').trim();
         const isDefault = body.isDefault ? 1 : 0;
 
@@ -3236,13 +3395,13 @@ const server = http.createServer(async (req, res) => {
         }
 
         if (isDefault) {
-          db.prepare('UPDATE customer_addresses SET is_default = 0 WHERE customer_id = ?').run(session.user_id);
+          try { db.prepare('UPDATE customer_addresses SET is_default = 0 WHERE customer_id = ?').run(custId); } catch (_) {}
         }
 
         db.prepare(`
           INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(session.user_id, label || 'Home', name, phone, street, city, pin, isDefault);
+        `).run(custId, label || 'Home', name, phone, street, city, pin, isDefault);
 
         return sendJson(res, 201, { success: true, message: 'Delivery address saved to your account!' });
       }

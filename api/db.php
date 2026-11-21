@@ -23,6 +23,8 @@ function getDb(): PDO {
         ];
         try {
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+            // Enforce Indian Standard Time (+05:30) for all MySQL session timestamps (NOW(), CURRENT_TIMESTAMP)
+            try { $pdo->exec("SET time_zone = '+05:30'"); } catch (Throwable $tzErr) {}
         } catch (Throwable $e) {
             error_log('Database connection error: ' . $e->getMessage());
             http_response_code(503);

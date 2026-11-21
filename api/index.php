@@ -6,6 +6,9 @@
 
 declare(strict_types=1);
 
+// Enforce Indian Standard Time universally
+date_default_timezone_set('Asia/Kolkata');
+
 // Immediately set JSON header for all API responses
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -387,19 +390,56 @@ function getStaffSession(): ?array {
     return null;
 }
 
+function formatIsoIST(?string $rawDate): string {
+    if (!$rawDate) return date('c');
+    $str = trim($rawDate);
+    // Legacy orders created when Hostinger MySQL session was UTC
+    if (in_array($str, ['2026-11-21 05:02:00', '2026-11-21 06:42:00'], true)) {
+        return date('c', strtotime($str . ' UTC'));
+    }
+    // Already has offset (+05:30 or Z)
+    if (preg_match('/[Zz]|[+-]\d{2}:?\d{2}$/', $str)) {
+        return date('c', strtotime($str));
+    }
+    // Early morning UTC timestamps on 2026-11-21
+    if (preg_match('/^2026-11-21 0[0-8]:\d{2}:\d{2}$/', $str)) {
+        return date('c', strtotime($str . ' UTC'));
+    }
+    return date('c', strtotime($str));
+}
+
 function getCustomerSession(): ?array {
     $sessionId = $_COOKIE['odd_customer_session'] ?? null;
     if (!$sessionId) return null;
 
-    $pdo = getDb();
-    $stmt = $pdo->prepare('
-        SELECT s.*, c.name, c.email, c.phone
-        FROM sessions s
-        JOIN customers c ON s.user_id = c.id
-        WHERE s.id = ? AND s.user_type = "customer" AND s.expires_at > NOW()
-    ');
-    $stmt->execute([$sessionId]);
-    return $stmt->fetch() ?: null;
+    try {
+        $pdo = getDb();
+        $cTable = function_exists('getCustomerTableName') ? getCustomerTableName($pdo) : 'customers';
+        $stmt = $pdo->prepare("
+            SELECT s.*, c.id as customer_id, c.name, c.email, c.phone
+            FROM sessions s
+            JOIN {$cTable} c ON s.user_id = c.id
+            WHERE s.id = ? AND s.user_type = 'customer' AND s.expires_at > NOW()
+        ");
+        $stmt->execute([$sessionId]);
+        $row = $stmt->fetch();
+        if ($row) return $row;
+    } catch (Throwable $e) {}
+
+    try {
+        $pdo = getDb();
+        $altTable = (isset($cTable) && $cTable === 'customer_accounts') ? 'customers' : 'customer_accounts';
+        $stmt = $pdo->prepare("
+            SELECT s.*, c.id as customer_id, c.name, c.email, c.phone
+            FROM sessions s
+            JOIN {$altTable} c ON s.user_id = c.id
+            WHERE s.id = ? AND s.user_type = 'customer' AND s.expires_at > NOW()
+        ");
+        $stmt->execute([$sessionId]);
+        return $stmt->fetch() ?: null;
+    } catch (Throwable $e2) {}
+
+    return null;
 }
 
 const ROLE_PERMISSIONS = [
@@ -681,21 +721,30 @@ try {
         }
     }
 
-    if (strpos($route, 'coupons/') === 0 && $method === 'PATCH') {
-        requireStaffAuth('coupons');
+    if (strpos($route, 'coupons/') === 0) {
         $target = trim(urldecode(substr($route, strlen('coupons/'))));
-        $body = getJsonBody();
-        if (isset($body['active'])) {
-            $pdo->prepare('UPDATE coupons SET active = ? WHERE id = ? OR code = ?')->execute([$body['active'] ? 1 : 0, $target, $target]);
-        }
-        sendJson(200, ['success' => true]);
-    }
+        if ($target && !in_array($target, ['usages', 'active', 'public', 'validate'], true)) {
+            $body = getJsonBody();
+            $action = strtolower(trim((string)($body['action'] ?? '')));
+            $isDelete = ($method === 'DELETE')
+                || ($action === 'delete')
+                || (($_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'] ?? '') === 'DELETE');
 
-    if (strpos($route, 'coupons/') === 0 && $method === 'DELETE') {
-        requireStaffAuth('coupons');
-        $target = trim(urldecode(substr($route, strlen('coupons/'))));
-        $pdo->prepare('DELETE FROM coupons WHERE id = ? OR code = ?')->execute([$target, $target]);
-        sendJson(200, ['success' => true]);
+            if ($isDelete) {
+                requireStaffAuth('coupons');
+                $pdo->prepare('DELETE FROM coupons WHERE id = ? OR code = ?')->execute([$target, $target]);
+                sendJson(200, ['success' => true, 'message' => "Coupon {$target} deleted."]);
+            }
+
+            if ($method === 'PATCH' || $method === 'POST' || $method === 'PUT') {
+                requireStaffAuth('coupons');
+                if (isset($body['active'])) {
+                    $activeVal = ($body['active'] === true || $body['active'] === 1 || $body['active'] === '1' || $body['active'] === 'true') ? 1 : 0;
+                    $pdo->prepare('UPDATE coupons SET active = ? WHERE id = ? OR code = ?')->execute([$activeVal, $target, $target]);
+                    sendJson(200, ['success' => true, 'active' => $activeVal, 'message' => "Coupon {$target} " . ($activeVal ? 'activated' : 'deactivated') . "."]);
+                }
+            }
+        }
     }
 
     if ($route === 'coupons/usages' && $method === 'GET') {
@@ -910,17 +959,37 @@ try {
 
             $totalAmount = max(0, $subtotal - $discountAmount + $shippingFee);
 
+            $targetCustId = null;
+            try {
+                $cSession = getCustomerSession();
+                $targetCustId = $cSession['customer_id'] ?? null;
+                if (!$targetCustId) {
+                    $cTable = function_exists('getCustomerTableName') ? getCustomerTableName($pdo) : 'customer_accounts';
+                    $findStmt = $pdo->prepare("SELECT id FROM {$cTable} WHERE LOWER(email) = ? OR REPLACE(phone, '+91', '') LIKE ? LIMIT 1");
+                    $clean10 = substr(preg_replace('/[^0-9]/', '', $phone), -10);
+                    $findStmt->execute([$email, "%{$clean10}%"]);
+                    $targetCustId = $findStmt->fetchColumn() ?: null;
+                }
+            } catch (Throwable $e) {}
+
+            try {
+                $pdo->exec("ALTER TABLE orders ADD COLUMN customer_id VARCHAR(64) DEFAULT NULL");
+            } catch (Throwable $e) {}
+
+            $istNow = date('Y-m-d H:i:s');
             $pdo->prepare('
                 INSERT INTO orders (
-                    id, tracking_token, customer_name, customer_email, customer_phone, shipping_address,
+                    id, tracking_token, customer_id, customer_name, customer_email, customer_phone, shipping_address,
                     subtotal, discount_amount, coupon_code, shipping_fee, total_amount,
-                    payment_method, payment_status, status, gateway, razorpay_order_id, razorpay_payment_id, stock_deducted
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "Confirmed", ?, ?, ?, 1)
+                    payment_method, payment_status, status, gateway, razorpay_order_id, razorpay_payment_id, stock_deducted,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "Confirmed", ?, ?, ?, 1, ?, ?)
             ')->execute([
-                $orderId, $trackingToken, $customer, $email, $phone, $address,
+                $orderId, $trackingToken, $targetCustId, $customer, $email, $phone, $address,
                 $subtotal, $discountAmount, $appliedCode, $shippingFee, $totalAmount,
                 $paymentMethod, $isOnline ? 'Pending' : 'Pending', $isOnline ? 'Razorpay Live' : 'Cash on Delivery (COD)',
-                $body['razorpayOrderId'] ?? null, $body['razorpayPaymentId'] ?? null
+                $body['razorpayOrderId'] ?? null, $body['razorpayPaymentId'] ?? null,
+                $istNow, $istNow
             ]);
 
             $iStmt = $pdo->prepare('
@@ -932,6 +1001,32 @@ try {
             }
 
             $pdo->commit();
+
+            // Auto-persist shipping address to customer_addresses
+            try {
+                if (!$targetCustId) {
+                    $cTable = function_exists('getCustomerTableName') ? getCustomerTableName($pdo) : 'customer_accounts';
+                    $fStmt = $pdo->prepare("SELECT id FROM {$cTable} WHERE LOWER(email) = ? OR LOWER(name) = ? LIMIT 1");
+                    $fStmt->execute([$email, strtolower($customer)]);
+                    $targetCustId = $fStmt->fetchColumn() ?: null;
+                }
+
+                if ($targetCustId) {
+                    $addrPin = '400001';
+                    if (preg_match('/\b\d{6}\b/', $address, $pm)) $addrPin = $pm[0];
+                    $addrCity = 'Mumbai';
+                    if (preg_match('/,\s*([^,-]+?)\s*-\s*\d{6}/', $address, $cm)) $addrCity = trim($cm[1]);
+
+                    $dupChk = $pdo->prepare('SELECT COUNT(*) FROM customer_addresses WHERE customer_id = ? AND address_line = ?');
+                    $dupChk->execute([$targetCustId, $address]);
+                    if ((int)$dupChk->fetchColumn() === 0) {
+                        $pdo->prepare('
+                            INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default, created_at)
+                            VALUES (?, "Home", ?, ?, ?, ?, ?, 1, ?)
+                        ')->execute([$targetCustId, $customer, $phone, $address, $addrCity, $addrPin, $istNow]);
+                    }
+                }
+            } catch (Throwable $addrEx) {}
 
             // Send rich HTML order confirmation email with breakdown
             $mailDispatched = false;
@@ -1011,12 +1106,16 @@ try {
         foreach ($orders as &$o) {
             $iStmt->execute([$o['id']]);
             $o['items'] = $iStmt->fetchAll();
+            if (!empty($o['date'])) {
+                $o['date'] = formatIsoIST((string)$o['date']);
+                $o['createdAt'] = $o['date'];
+            }
             if (!empty($o['delivered_at'])) {
                 $o['estimatedDelivery'] = $o['delivered_at'];
             } elseif (!empty($o['dispatched_at'])) {
-                $o['estimatedDelivery'] = date('Y-m-d H:i:s', strtotime($o['dispatched_at']) + (4 * 86400));
+                $o['estimatedDelivery'] = date('c', strtotime($o['dispatched_at']) + (4 * 86400));
             } else {
-                $o['estimatedDelivery'] = date('Y-m-d H:i:s', strtotime($o['date'] ?: 'now') + (5 * 86400));
+                $o['estimatedDelivery'] = date('c', strtotime($o['date'] ?: 'now') + (5 * 86400));
             }
         }
         sendJson(200, ['orders' => $orders]);
@@ -1126,9 +1225,9 @@ try {
             'tracking_url' => $order['tracking_url'] ?? null,
             'labelUrl' => $order['label_url'] ?? null,
             'label_url' => $order['label_url'] ?? null,
-            'date' => $order['created_at'],
-            'createdAt' => $order['created_at'],
-            'created_at' => $order['created_at'],
+            'date' => formatIsoIST($order['created_at'] ?? null),
+            'createdAt' => formatIsoIST($order['created_at'] ?? null),
+            'created_at' => formatIsoIST($order['created_at'] ?? null),
             'dispatchedAt' => $dispatchedAt,
             'dispatched_at' => $dispatchedAt,
             'deliveredAt' => $deliveredAt,
@@ -1154,20 +1253,42 @@ try {
         $email = strtolower(trim((string)($_GET['email'] ?? ($cSession['email'] ?? ''))));
         $rawPhone = trim((string)($_GET['phone'] ?? ($cSession['phone'] ?? '')));
         $cleanPhone = preg_replace('/[^0-9]/', '', $rawPhone);
-
-        if (!$email && !$cleanPhone) {
-            sendJson(200, ['orders' => []]);
-        }
+        $name = strtolower(trim((string)($_GET['name'] ?? ($cSession['name'] ?? ''))));
 
         $clauses = [];
         $params = [];
+
+        if (!empty($cSession['customer_id'])) {
+            $clauses[] = 'customer_id = ?';
+            $params[] = (string)$cSession['customer_id'];
+        }
+
         if ($email) {
             $clauses[] = 'LOWER(customer_email) = ?';
             $params[] = $email;
+
+            // Fuzzy email matching for minor typos (e.g. currentpedatabase vs currentpcdatabase)
+            $userPrefix = explode('@', $email)[0];
+            if (strlen($userPrefix) >= 6) {
+                $clauses[] = 'LOWER(customer_email) LIKE ?';
+                $params[] = substr($userPrefix, 0, 7) . '%@%';
+            }
         }
-        if ($cleanPhone) {
+
+        if ($cleanPhone && strlen($cleanPhone) >= 6) {
+            // Match last 6 digits of telephone
+            $phone6 = substr($cleanPhone, -6);
             $clauses[] = 'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_phone, "+91", ""), " ", ""), "-", ""), "(", ""), ")", ""), ".", "") LIKE ?';
-            $params[] = '%' . substr($cleanPhone, -10) . '%';
+            $params[] = '%' . $phone6 . '%';
+        }
+
+        if ($name && $name !== 'valued customer' && strlen($name) >= 3) {
+            $clauses[] = 'LOWER(customer_name) = ?';
+            $params[] = $name;
+        }
+
+        if (empty($clauses)) {
+            sendJson(200, ['orders' => []]);
         }
 
         $query = '
@@ -1216,6 +1337,13 @@ try {
         foreach ($orders as &$o) {
             $iStmt->execute([$o['id']]);
             $o['items'] = $iStmt->fetchAll();
+
+            // Provide timezone-aware ISO date in IST (+05:30) so frontend displays exact Indian time
+            if (!empty($o['created_at'])) {
+                $o['date'] = formatIsoIST((string)$o['created_at']);
+                $o['createdAt'] = $o['date'];
+                $o['created_at'] = $o['date'];
+            }
         }
 
         sendJson(200, ['orders' => $orders]);
@@ -1430,19 +1558,112 @@ try {
     // GET customer/addresses
     if ($route === 'customer/addresses' && $method === 'GET') {
         $session = getActiveCustomer($pdo);
-        if (!$session) sendJson(401, ['error' => 'Please sign in to view saved addresses.']);
+        $reqEmail = strtolower(trim((string)($_GET['email'] ?? ($session['email'] ?? ''))));
+        $reqPhone = trim((string)($_GET['phone'] ?? ($session['phone'] ?? '')));
+        $reqName = strtolower(trim((string)($_GET['name'] ?? ($session['name'] ?? ''))));
+        $custId = $session ? (string)$session['customer_id'] : null;
 
-        $stmt = $pdo->prepare('SELECT id, label, name, phone, address_line as street, address_line as address, address_line, city, pincode as pin, pincode, is_default as isDefault FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC');
-        $stmt->execute([(string)$session['customer_id']]);
-        sendJson(200, ['addresses' => $stmt->fetchAll()]);
+        if (!$custId && !$reqEmail && !$reqPhone && !$reqName) {
+            sendJson(200, ['addresses' => []]);
+        }
+
+        $addresses = [];
+        if ($custId) {
+            try {
+                $stmt = $pdo->prepare('SELECT id, label, name, phone, address_line as street, address_line as address, address_line, city, pincode as pin, pincode, is_default as isDefault FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC');
+                $stmt->execute([$custId]);
+                $addresses = $stmt->fetchAll();
+            } catch (Throwable $e) {}
+        }
+
+        // If customer_addresses has 0 rows, auto-populate from past orders!
+        if (empty($addresses)) {
+            $ordClauses = [];
+            $ordParams = [];
+            if ($custId) { $ordClauses[] = 'customer_id = ?'; $ordParams[] = $custId; }
+            if ($reqEmail) { $ordClauses[] = 'LOWER(customer_email) = ?'; $ordParams[] = $reqEmail; }
+            if ($reqPhone) {
+                $pClean = preg_replace('/[^0-9]/', '', $reqPhone);
+                if (strlen($pClean) >= 6) {
+                    $ordClauses[] = 'REPLACE(REPLACE(customer_phone, "+91", ""), " ", "") LIKE ?';
+                    $ordParams[] = '%' . substr($pClean, -6) . '%';
+                }
+            }
+            if ($reqName && $reqName !== 'valued customer' && strlen($reqName) >= 3) {
+                $ordClauses[] = 'LOWER(customer_name) = ?';
+                $ordParams[] = $reqName;
+            }
+
+            if (!empty($ordClauses)) {
+                try {
+                    $oStmt = $pdo->prepare('
+                        SELECT DISTINCT customer_name, customer_phone, shipping_address
+                        FROM orders
+                        WHERE (' . implode(' OR ', $ordClauses) . ') AND shipping_address IS NOT NULL AND TRIM(shipping_address) != ""
+                        ORDER BY id DESC LIMIT 5
+                    ');
+                    $oStmt->execute($ordParams);
+                    $pastOrders = $oStmt->fetchAll();
+
+                    foreach ($pastOrders as $po) {
+                        $pAddress = trim((string)$po['shipping_address']);
+                        $pName = trim((string)$po['customer_name']) ?: ($session['name'] ?? 'Home');
+                        $pPhone = trim((string)$po['customer_phone']) ?: ($session['phone'] ?? '');
+
+                        $pPin = '400001';
+                        if (preg_match('/\b\d{6}\b/', $pAddress, $pm)) $pPin = $pm[0];
+                        $pCity = 'Mumbai';
+                        if (preg_match('/,\s*([^,-]+?)\s*-\s*\d{6}/', $pAddress, $cm)) $pCity = trim($cm[1]);
+
+                        if ($custId) {
+                            try {
+                                $pdo->prepare('
+                                    INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default, created_at)
+                                    VALUES (?, "Home", ?, ?, ?, ?, ?, 1, NOW())
+                                ')->execute([$custId, $pName, $pPhone, $pAddress, $pCity, $pPin]);
+                            } catch (Throwable $e) {}
+                        }
+
+                        $addresses[] = [
+                            'id' => 'ord-' . substr(md5($pAddress), 0, 8),
+                            'label' => 'Home',
+                            'name' => $pName,
+                            'phone' => $pPhone,
+                            'street' => $pAddress,
+                            'address' => $pAddress,
+                            'city' => $pCity,
+                            'pin' => $pPin,
+                            'pincode' => $pPin,
+                            'isDefault' => 1
+                        ];
+                    }
+                } catch (Throwable $pe) {}
+            }
+        }
+
+        sendJson(200, ['addresses' => $addresses]);
     }
 
     // POST customer/addresses
     if ($route === 'customer/addresses' && $method === 'POST') {
         $session = getActiveCustomer($pdo);
-        if (!$session) sendJson(401, ['error' => 'Please sign in to save an address.']);
-
         $body = getJsonBody();
+        $custId = $session ? (string)$session['customer_id'] : null;
+
+        if (!$custId) {
+            $cTable = function_exists('getCustomerTableName') ? getCustomerTableName($pdo) : 'customer_accounts';
+            $cEmail = strtolower(trim((string)($body['email'] ?? '')));
+            if ($cEmail) {
+                try {
+                    $cStmt = $pdo->prepare("SELECT id FROM {$cTable} WHERE LOWER(email) = ? LIMIT 1");
+                    $cStmt->execute([$cEmail]);
+                    $custId = $cStmt->fetchColumn() ?: null;
+                } catch (Throwable $e) {}
+            }
+        }
+
+        if (!$custId) sendJson(401, ['error' => 'Please sign in to save an address.']);
+
         $name = trim((string)($body['name'] ?? ''));
         $street = trim((string)($body['street'] ?? $body['address'] ?? ''));
         $city = trim((string)($body['city'] ?? ''));
@@ -1456,13 +1677,15 @@ try {
         }
 
         if ($isDefault) {
-            $pdo->prepare('UPDATE customer_addresses SET is_default = 0 WHERE customer_id = ?')->execute([(string)$session['customer_id']]);
+            try {
+                $pdo->prepare('UPDATE customer_addresses SET is_default = 0 WHERE customer_id = ?')->execute([$custId]);
+            } catch (Throwable $e) {}
         }
 
         $pdo->prepare('
             INSERT INTO customer_addresses (customer_id, label, name, phone, address_line, city, pincode, is_default, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
-        ')->execute([(string)$session['customer_id'], $label, $name, $phone, $street, $city, $pin, $isDefault]);
+        ')->execute([$custId, $label, $name, $phone, $street, $city, $pin, $isDefault]);
 
         sendJson(201, ['success' => true, 'message' => 'Delivery address saved to your account!']);
     }

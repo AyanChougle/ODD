@@ -24,11 +24,23 @@ function statusClass(status) {
     : 'pending';
 }
 
+function parseDateIST(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  let str = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(str)) {
+    str = str.replace(' ', 'T') + 'Z';
+  }
+  const d = new Date(str);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function formatMilestoneDate(dateStr) {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '';
+  const d = parseDateIST(dateStr);
+  if (!d) return '';
   return d.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -40,9 +52,10 @@ function formatMilestoneDate(dateStr) {
 
 function formatDayDate(dateStr) {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '';
+  const d = parseDateIST(dateStr);
+  if (!d) return '';
   return d.toLocaleDateString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     weekday: 'short',
     day: 'numeric',
     month: 'short',
