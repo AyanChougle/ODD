@@ -20,6 +20,15 @@ CREATE TABLE IF NOT EXISTS `order_items` (
   INDEX `idx_items_sku` (`sku`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 1B. Ensure orders Table has Tracking and Shiprocket Columns
+ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `courier_name` VARCHAR(128) DEFAULT NULL;
+ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `tracking_number` VARCHAR(128) DEFAULT NULL;
+ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `tracking_url` VARCHAR(255) DEFAULT NULL;
+ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `label_url` VARCHAR(255) DEFAULT NULL;
+ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `shiprocket_order_id` VARCHAR(64) DEFAULT NULL;
+ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `shiprocket_shipment_id` VARCHAR(64) DEFAULT NULL;
+ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `shiprocket_status` VARCHAR(64) DEFAULT NULL;
+
 -- 2. System Settings (Shipping Rates, Banner Announcement, Gateway Config)
 CREATE TABLE IF NOT EXISTS `settings` (
   `key_name` VARCHAR(64) PRIMARY KEY,
@@ -154,14 +163,17 @@ ON DUPLICATE KEY UPDATE `password_hash`=VALUES(`password_hash`), `role`='admin',
 
 -- 10. Seed Authentic Products (Strict Zero-Stock Rule for First Move)
 INSERT INTO `products` (`id`, `sku`, `name`, `price`, `original_price`, `stock`, `active`, `tagline`, `notes`) VALUES
-('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, NULL, 240, 1, 'Leave a Trace. Never Reveal.', 'Oud · Amber · Smoky Woods'),
+('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, NULL, 240, 1, 'Leave a Trace. Never Reveal.', 'Oud · Saffron · Benzoin'),
 ('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, NULL, 180, 1, 'Clarity in Every Move.', 'Citrus · Black Tea · Clean Woods'),
 ('first-move', 'ODD-FM-002', 'ODD First Move', 1599, NULL, 0, 1, 'Make the First Impression Count.', 'Pineapple · Woods · Smoky Musk')
 ON DUPLICATE KEY UPDATE 
   `name`=VALUES(`name`), 
   `price`=VALUES(`price`), 
   `original_price`=VALUES(`original_price`),
-  `stock`=VALUES(`stock`);
+  `stock`=VALUES(`stock`),
+  `notes`=VALUES(`notes`);
+
+UPDATE `products` SET `notes` = 'Oud · Saffron · Benzoin' WHERE `id` = 'phantom';
 
 -- 11. Seed Initial Stock Movement Audit Records
 INSERT INTO `inventory_movements` (`sku`, `product_id`, `delta`, `stock_after`, `reason`, `staff_name`) VALUES

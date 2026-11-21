@@ -7,6 +7,9 @@
  */
 
 const http = require('node:http');
+const https = require('node:https');
+const tls = require('node:tls');
+const net = require('node:net');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
@@ -133,6 +136,13 @@ function initDatabase() {
       razorpay_order_id TEXT,
       razorpay_payment_id TEXT,
       stock_deducted INTEGER NOT NULL DEFAULT 1,
+      courier_name TEXT,
+      tracking_number TEXT,
+      tracking_url TEXT,
+      label_url TEXT,
+      shiprocket_order_id TEXT,
+      shiprocket_shipment_id TEXT,
+      shiprocket_status TEXT,
       dispatched_at TEXT,
       delivered_at TEXT,
       cancelled_at TEXT,
@@ -265,14 +275,18 @@ function initDatabase() {
     );
   `);
 
-  try {
-    db.exec(`
-      ALTER TABLE orders ADD COLUMN courier_name TEXT;
-      ALTER TABLE orders ADD COLUMN tracking_number TEXT;
-      ALTER TABLE orders ADD COLUMN tracking_url TEXT;
-      ALTER TABLE orders ADD COLUMN label_url TEXT;
-    `);
-  } catch (e) {}
+  const alterCols = [
+    'ALTER TABLE orders ADD COLUMN courier_name TEXT;',
+    'ALTER TABLE orders ADD COLUMN tracking_number TEXT;',
+    'ALTER TABLE orders ADD COLUMN tracking_url TEXT;',
+    'ALTER TABLE orders ADD COLUMN label_url TEXT;',
+    'ALTER TABLE orders ADD COLUMN shiprocket_order_id TEXT;',
+    'ALTER TABLE orders ADD COLUMN shiprocket_shipment_id TEXT;',
+    'ALTER TABLE orders ADD COLUMN shiprocket_status TEXT;'
+  ];
+  for (const sql of alterCols) {
+    try { db.exec(sql); } catch (_) {}
+  }
 
   // Seed baseline products if table is empty
   const prodCount = db.prepare('SELECT COUNT(*) as count FROM products').get().count;
@@ -282,7 +296,7 @@ function initDatabase() {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     // CRITICAL: First Move strictly starts with 0 units as documented
-    insertProd.run('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, 1599, 0, 1, 'Leave a Trace. Never Reveal.', 'Oud · Incense · Benzoin');
+    insertProd.run('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, 1599, 0, 1, 'Leave a Trace. Never Reveal.', 'Oud · Saffron · Benzoin');
     insertProd.run('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, 1599, 0, 1, 'Clarity in Every Move.', 'Vanilla · Birch · Black pepper');
     insertProd.run('first-move', 'ODD-FM-002', 'ODD First Move', 1599, 1599, 0, 1, 'Make the First Impression Count.', 'Bergamot · Ginger · Amber');
     insertProd.run('hamper', 'ODD-HM-004', 'The Trio Gift Hamper', 4999, 4999, 50, 1, 'The Complete Trio. Ready to Gift.', 'Phantom · Lucid · First Move (3 × 100ml)');
@@ -379,6 +393,468 @@ function getRazorpayConfig(database) {
   }
 }
 
+// --- Transactional Email & Mailer Subsystem (Zero External Dependencies) ---
+function logMailOperation(level, message, context = null) {
+  try {
+    const logsDir = path.join(__dirname, 'storage', 'logs');
+    if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+    const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const ctxStr = context ? ' ' + (typeof context === 'object' ? JSON.stringify(context) : String(context)) : '';
+    const entry = `[${now}] [${level.toUpperCase()}] ${message}${ctxStr}\n`;
+    fs.appendFileSync(path.join(logsDir, 'mail.log'), entry);
+  } catch (_) {}
+}
+
+function getSmtpConfig(database) {
+  let cfg = {};
+  if (database) {
+    try {
+      const row = database.prepare("SELECT value_json FROM settings WHERE key_name = 'smtp'").get();
+      if (row && row.value_json) {
+        cfg = JSON.parse(row.value_json);
+      }
+    } catch (_) {}
+  }
+
+  const host = (cfg.host && cfg.host.trim()) ? cfg.host.trim() : (process.env.SMTP_HOST || 'smtp.hostinger.com');
+  const port = cfg.port ? parseInt(cfg.port, 10) : parseInt(process.env.SMTP_PORT || '465', 10);
+  const username = (cfg.username && cfg.username.trim()) ? cfg.username.trim() : (process.env.SMTP_USER || 'hello@oddperfume.com');
+  const password = (cfg.password && !cfg.password.includes('••••')) ? cfg.password.trim() : (process.env.SMTP_PASS || '');
+  const fromEmail = (cfg.fromEmail && cfg.fromEmail.trim()) ? cfg.fromEmail.trim() : (process.env.SMTP_FROM || 'hello@oddperfume.com');
+  const fromName = (cfg.fromName && cfg.fromName.trim()) ? cfg.fromName.trim() : (process.env.SMTP_FROM_NAME || 'ODD Perfumes Studio');
+  const encryption = cfg.encryption || (port === 465 ? 'ssl' : 'tls');
+
+  return { host, port, username, password, fromEmail, fromName, encryption };
+}
+
+async function sendViaHostingerMailApi(to, subject, htmlBody, textBody, apiToken, mailboxId) {
+  if (!apiToken || !mailboxId) return null;
+  const url = `https://api.mail.hostinger.com/api/v1/mailboxes/${mailboxId}/send`;
+  const payload = {
+    to: [to],
+    subject,
+    html: htmlBody,
+    text: textBody || htmlBody.replace(/<[^>]*>/g, ' ')
+  };
+
+  try {
+    const res = await globalThis.fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(12000)
+    });
+
+    if (res.status === 200 || res.status === 201 || res.status === 204) {
+      logMailOperation('info', `Email delivered via Hostinger Mail API to ${to} [HTTP ${res.status}]`);
+      return {
+        success: true,
+        transport: 'hostinger_mail_api',
+        method: 'hostinger_mail_api',
+        message: `Email delivered via Hostinger Agentic Mail API [HTTP ${res.status}]`
+      };
+    }
+
+    const errText = await res.text().catch(() => '');
+    logMailOperation('warning', `Hostinger Mail API returned HTTP ${res.status}: ${errText}`);
+    return null;
+  } catch (err) {
+    logMailOperation('warning', `Hostinger Mail API request failed: ${err.message}`);
+    return null;
+  }
+}
+
+async function sendSmtpSocketEmail(to, subject, htmlBody, textBody, smtpConfig, replyTo = null) {
+  const host = smtpConfig.host || 'smtp.hostinger.com';
+  const port = parseInt(smtpConfig.port || '465', 10);
+  const user = smtpConfig.username || 'hello@oddperfume.com';
+  const pass = smtpConfig.password || '';
+  const fromEmail = smtpConfig.fromEmail || 'hello@oddperfume.com';
+  const fromName = smtpConfig.fromName || 'ODD Perfumes Studio';
+  const fromDomain = fromEmail.includes('@') ? fromEmail.split('@')[1] : 'oddperfume.com';
+
+  return new Promise((resolve) => {
+    let socket;
+    let timer;
+    let buffer = '';
+    let currentStep = 0;
+    let resolved = false;
+
+    const finish = (result) => {
+      if (resolved) return;
+      resolved = true;
+      if (timer) clearTimeout(timer);
+      if (socket && !socket.destroyed) {
+        try { socket.end(); } catch (_) {}
+      }
+      resolve(result);
+    };
+
+    timer = setTimeout(() => {
+      logMailOperation('error', `SMTP timeout after 15s to ${host}:${port}`);
+      finish({ success: false, error: `Connection to SMTP server at ${host}:${port} timed out.` });
+    }, 15000);
+
+    const onConnect = () => {
+      // Waiting for 220 banner
+    };
+
+    if (port === 465) {
+      socket = tls.connect({ host, port, servername: host, minVersion: 'TLSv1.2' }, onConnect);
+    } else {
+      socket = net.connect({ host, port }, onConnect);
+    }
+
+    socket.setEncoding('utf8');
+
+    socket.on('error', (err) => {
+      logMailOperation('error', `SMTP socket error connecting to ${host}:${port}: ${err.message}`);
+      finish({ success: false, error: `SMTP socket error: ${err.message}` });
+    });
+
+    const sendLine = (line) => {
+      if (socket && !socket.destroyed) {
+        socket.write(line + '\r\n');
+      }
+    };
+
+    const processResponses = () => {
+      const lines = buffer.split('\r\n');
+      if (lines.length <= 1) return;
+
+      const lastLine = lines[lines.length - 2];
+      const match = lastLine.match(/^(\d{3})(?: (.*))?$/);
+      if (!match) return;
+
+      const code = parseInt(match[1], 10);
+      const fullResp = buffer.trim();
+      buffer = '';
+
+      handleStep(code, fullResp);
+    };
+
+    const handleStep = (code, responseText) => {
+      switch (currentStep) {
+        case 0:
+          if (code !== 220) {
+            logMailOperation('error', `SMTP invalid greeting: ${responseText}`);
+            return finish({ success: false, error: `SMTP invalid greeting: ${responseText}` });
+          }
+          currentStep = 1;
+          sendLine(`EHLO ${fromDomain}`);
+          break;
+
+        case 1:
+          if (code !== 250) {
+            logMailOperation('error', `SMTP EHLO rejected: ${responseText}`);
+            return finish({ success: false, error: `SMTP EHLO rejected: ${responseText}` });
+          }
+          if (port === 587) {
+            currentStep = 2;
+            sendLine('STARTTLS');
+          } else {
+            currentStep = 4;
+            sendLine('AUTH LOGIN');
+          }
+          break;
+
+        case 2:
+          if (code !== 220) {
+            logMailOperation('error', `SMTP STARTTLS failed: ${responseText}`);
+            return finish({ success: false, error: `SMTP STARTTLS failed: ${responseText}` });
+          }
+          socket = tls.connect({ socket, host, servername: host, minVersion: 'TLSv1.2' }, () => {
+            currentStep = 3;
+            sendLine(`EHLO ${fromDomain}`);
+          });
+          socket.setEncoding('utf8');
+          socket.on('data', (chunk) => { buffer += chunk; processResponses(); });
+          socket.on('error', (err) => finish({ success: false, error: err.message }));
+          break;
+
+        case 3:
+          if (code !== 250) {
+            return finish({ success: false, error: `SMTP EHLO after TLS failed: ${responseText}` });
+          }
+          currentStep = 4;
+          sendLine('AUTH LOGIN');
+          break;
+
+        case 4:
+          if (code !== 334) {
+            logMailOperation('error', `SMTP AUTH LOGIN rejected: ${responseText}`);
+            return finish({ success: false, error: `SMTP AUTH LOGIN rejected: ${responseText}` });
+          }
+          currentStep = 5;
+          sendLine(Buffer.from(user).toString('base64'));
+          break;
+
+        case 5:
+          if (code !== 334) {
+            logMailOperation('error', `SMTP username rejected: ${responseText}`);
+            return finish({ success: false, error: `SMTP username rejected: ${responseText}` });
+          }
+          currentStep = 6;
+          sendLine(Buffer.from(pass).toString('base64'));
+          break;
+
+        case 6:
+          if (code !== 235) {
+            logMailOperation('error', `SMTP password rejected (authentication failed): ${responseText}`);
+            return finish({ success: false, error: `SMTP Authentication failed. Please verify password for ${user} in Admin > Settings > Email.` });
+          }
+          currentStep = 7;
+          sendLine(`MAIL FROM:<${fromEmail}>`);
+          break;
+
+        case 7:
+          if (code !== 250) {
+            logMailOperation('error', `SMTP MAIL FROM rejected: ${responseText}`);
+            return finish({ success: false, error: `MAIL FROM rejected: ${responseText}` });
+          }
+          currentStep = 8;
+          sendLine(`RCPT TO:<${to}>`);
+          break;
+
+        case 8:
+          if (code !== 250) {
+            logMailOperation('error', `SMTP RCPT TO rejected: ${responseText}`);
+            return finish({ success: false, error: `RCPT TO rejected: ${responseText}` });
+          }
+          currentStep = 9;
+          sendLine('DATA');
+          break;
+
+        case 9:
+          if (code !== 354) {
+            logMailOperation('error', `SMTP DATA rejected: ${responseText}`);
+            return finish({ success: false, error: `DATA rejected: ${responseText}` });
+          }
+          currentStep = 10;
+          {
+            const boundary = 'bnd_odd_' + crypto.randomBytes(16).toString('hex');
+            const msgId = `<${Date.now()}.${crypto.randomBytes(8).toString('hex')}@${fromDomain}>`;
+            const headers = [
+              `From: =?UTF-8?B?${Buffer.from(fromName).toString('base64')}?= <${fromEmail}>`,
+              `To: <${to}>`,
+              `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+              `Date: ${new Date().toUTCString()}`,
+              `Message-ID: ${msgId}`,
+              'MIME-Version: 1.0',
+              `Content-Type: multipart/alternative; boundary="${boundary}"`,
+              'X-Mailer: ODD Perfume Enterprise Mailer'
+            ];
+            if (replyTo && replyTo.email) {
+              const rName = replyTo.name || replyTo.email;
+              headers.push(`Reply-To: =?UTF-8?B?${Buffer.from(rName).toString('base64')}?= <${replyTo.email}>`);
+            }
+            const plain = textBody || htmlBody.replace(/<[^>]*>/g, ' ');
+            const mimeBody = [
+              headers.join('\r\n'),
+              '',
+              `--${boundary}`,
+              'Content-Type: text/plain; charset=UTF-8',
+              'Content-Transfer-Encoding: base64',
+              '',
+              Buffer.from(plain).toString('base64'),
+              `--${boundary}`,
+              'Content-Type: text/html; charset=UTF-8',
+              'Content-Transfer-Encoding: base64',
+              '',
+              Buffer.from(htmlBody).toString('base64'),
+              `--${boundary}--`,
+              '.'
+            ].join('\r\n');
+            sendLine(mimeBody);
+          }
+          break;
+
+        case 10:
+          if (code === 250) {
+            logMailOperation('info', `Email successfully delivered via SMTP to ${to}`, { subject });
+            sendLine('QUIT');
+            finish({
+              success: true,
+              method: 'smtp',
+              info: `Message delivered via Hostinger SMTP (${host}:${port})`
+            });
+          } else {
+            logMailOperation('error', `SMTP send failed at final step: ${responseText}`);
+            finish({ success: false, error: `SMTP delivery error: ${responseText}` });
+          }
+          break;
+      }
+    };
+
+    socket.on('data', (chunk) => {
+      buffer += chunk;
+      processResponses();
+    });
+  });
+}
+
+async function sendSmtpEmail(to, subject, htmlBody, textBody = '', smtpConfig = {}, replyTo = null) {
+  const recipient = String(to || '').trim();
+  if (!recipient || !recipient.includes('@')) {
+    return { success: false, error: `Invalid recipient email address: '${recipient}'` };
+  }
+
+  // 1. Primary Modern Transport: Hostinger Agentic Mail API
+  const apiToken = process.env.HOSTINGER_MAIL_API_TOKEN || '';
+  const mailboxId = process.env.HOSTINGER_MAILBOX_ID || '';
+  if (apiToken && mailboxId) {
+    const apiResult = await sendViaHostingerMailApi(recipient, subject, htmlBody, textBody, apiToken, mailboxId);
+    if (apiResult && apiResult.success) {
+      return apiResult;
+    }
+  }
+
+  // 2. Direct Authenticated Socket SMTP (TLS 465 / STARTTLS 587)
+  if (smtpConfig && smtpConfig.password) {
+    const smtpResult = await sendSmtpSocketEmail(recipient, subject, htmlBody, textBody, smtpConfig, replyTo);
+    return smtpResult;
+  }
+
+  // 3. Fallback: log and persist local queue copy
+  logMailOperation('info', 'No active SMTP credentials configured, queuing locally to storage/emails', { to: recipient, from: smtpConfig?.fromEmail });
+  return {
+    success: false,
+    error: 'No active SMTP password or API token configured',
+    method: 'queued'
+  };
+}
+
+async function sendOrderConfirmationEmail(order, database) {
+  const to = String(order.customer_email || '').trim();
+  if (!to || !to.includes('@')) return { success: false, error: `Invalid customer email: '${to}'` };
+
+  const smtpConfig = getSmtpConfig(database);
+  const orderId = String(order.id || 'ODD');
+  const customerName = String(order.customer_name || 'Valued Customer');
+  const shippingAddress = String(order.shipping_address || '');
+  const phone = String(order.customer_phone || '');
+  const subtotal = Number(order.subtotal || 0).toFixed(2);
+  const discount = Number(order.discount_amount || 0);
+  const coupon = String(order.coupon_code || '');
+  const shipping = Number(order.shipping_fee || 0);
+  const total = Number(order.total_amount || 0).toFixed(2);
+
+  const isCod = String(order.payment_method || '').toLowerCase() === 'cod'
+    || String(order.gateway || '').toLowerCase().includes('cash')
+    || String(order.gateway || '').toLowerCase().includes('cod');
+
+  const items = Array.isArray(order.items) ? order.items : [];
+  let itemsHtml = '';
+  for (const it of items) {
+    const name = it.name || it.product_name || 'ODD Fragrance';
+    const qty = parseInt(it.quantity || it.qty || 1, 10);
+    const price = Number(it.price || 1599).toFixed(2);
+    const lineTotal = Number(it.line_total || (qty * 1599)).toFixed(2);
+    itemsHtml += `
+      <tr>
+        <td style="padding:10px 0; border-bottom:1px solid #eeeeee;"><strong>${name}</strong></td>
+        <td style="padding:10px 0; border-bottom:1px solid #eeeeee; text-align:center;">${qty}</td>
+        <td style="padding:10px 0; border-bottom:1px solid #eeeeee; text-align:right;">₹${price}</td>
+        <td style="padding:10px 0; border-bottom:1px solid #eeeeee; text-align:right;">₹${lineTotal}</td>
+      </tr>
+    `;
+  }
+
+  const paymentNotice = isCod
+    ? `<div style="background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:14px; margin:20px 0; color:#92400e; font-size:13px;">
+         <strong>Payment Mode: Cash on Delivery (COD)</strong><br>
+         Amount to pay upon arrival: <strong>₹${total}</strong><br>
+         Please keep exact cash ready for the courier partner upon arrival.
+       </div>`
+    : `<div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; padding:14px; margin:20px 0; color:#065f46; font-size:13px;">
+         <strong>Payment Mode: Online Prepaid (Razorpay Live)</strong><br>
+         Payment status: <strong>Paid &amp; Verified</strong><br>
+         Your transaction has been securely confirmed via Razorpay. No cash needs to be paid upon delivery.
+       </div>`;
+
+  const subject = `Order Confirmed: #${orderId} | ODD Perfume`;
+  const trackingLink = `https://test.oddperfume.com/order-tracking.html?orderId=${orderId}`;
+
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head><meta charset="UTF-8"></head>
+  <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; color:#111; background:#f4f4f5; margin:0; padding:20px;">
+    <div style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; border:1px solid #e5e7eb;">
+      <div style="background:#111827; padding:24px; text-align:center;">
+        <h1 style="color:#ffffff; margin:0; font-size:24px; letter-spacing:0.05em;">ODD<span style="color:#E86B32;">.</span></h1>
+        <p style="color:#9ca3af; margin:4px 0 0; font-size:12px; text-transform:uppercase; letter-spacing:0.1em;">ODD PERFUMES &middot; CRAFTED IN INDIA &middot; Order Confirmation</p>
+      </div>
+      <div style="padding:30px;">
+        <h2 style="font-size:18px; margin-top:0;">Thank you for your order, ${customerName}!</h2>
+        <p style="color:#4b5563; font-size:14px;">We have received your order <strong>#${orderId}</strong> and are preparing it at our fulfillment studio.</p>
+
+        ${paymentNotice}
+
+        <h3 style="font-size:14px; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin-top:24px; margin-bottom:8px; border-bottom:2px solid #111; padding-bottom:6px;">Items in your order</h3>
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead>
+            <tr style="color:#6b7280; text-align:left; font-size:11px; text-transform:uppercase;">
+              <th style="padding-bottom:8px;">Item</th>
+              <th style="padding-bottom:8px; text-align:center;">Qty</th>
+              <th style="padding-bottom:8px; text-align:right;">Price</th>
+              <th style="padding-bottom:8px; text-align:right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+
+        <div style="margin-top:16px; border-top:1px solid #e5e7eb; padding-top:12px; font-size:13px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px; color:#4b5563;">
+            <span>Subtotal:</span><strong>₹${subtotal}</strong>
+          </div>
+          ${discount > 0 ? `
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px; color:#E86B32;">
+            <span>Coupon Discount (${coupon}):</span><strong>-₹${discount.toFixed(2)}</strong>
+          </div>` : ''}
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px; color:#4b5563;">
+            <span>Shipping &amp; Delivery:</span><strong>${shipping > 0 ? '₹' + shipping.toFixed(2) : 'FREE'}</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:800; border-top:2px solid #111; padding-top:8px; margin-top:8px;">
+            <span>Total Payable:</span><strong>₹${total}</strong>
+          </div>
+        </div>
+
+        <div style="background:#f9fafb; border:1px solid #f3f4f6; border-radius:6px; padding:14px; margin-top:24px; font-size:13px;">
+          <strong style="display:block; margin-bottom:4px;">Delivery Address:</strong>
+          <div style="color:#4b5563;">${shippingAddress}</div>
+          <div style="color:#6b7280; font-size:12px; margin-top:4px;">Contact: ${phone}</div>
+        </div>
+
+        <div style="text-align:center; margin-top:28px;">
+          <a href="${trackingLink}" style="background:#111827; color:#ffffff; padding:12px 24px; text-decoration:none; font-weight:700; border-radius:6px; font-size:13px; display:inline-block;">Track Your Order Live</a>
+        </div>
+      </div>
+      <div style="background:#f9fafb; border-top:1px solid #e5e7eb; padding:16px; text-align:center; font-size:11px; color:#9ca3af;">
+        &copy; 2026 ODD Perfumes &middot; India &middot; ${smtpConfig.fromEmail}
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+
+  try {
+    const emailsDir = path.join(__dirname, 'storage', 'emails');
+    if (!fs.existsSync(emailsDir)) fs.mkdirSync(emailsDir, { recursive: true });
+    fs.writeFileSync(path.join(emailsDir, `${orderId}_confirmation.html`), html);
+  } catch (_) {}
+
+  const dispatchRes = await sendSmtpEmail(to, subject, html, '', smtpConfig);
+  logMailOperation(dispatchRes.success ? 'info' : 'error', `Order #${orderId} confirmation email to ${to}: ${dispatchRes.success ? 'dispatched' : (dispatchRes.error || 'failed')}`);
+  return dispatchRes;
+}
+
 // --- Cryptographic Security Helpers ---
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
@@ -436,14 +912,16 @@ function parseCookies(req) {
   return list;
 }
 
-function setCookie(res, name, value, maxAgeSeconds = 7 * 86400) {
-  const isSecure = NODE_ENV === 'production';
+function setCookie(res, name, value, maxAgeSeconds = 7 * 86400, req = null) {
+  const request = req || res?.req;
+  const isSecure = (process.env.COOKIE_SECURE === 'true') || Boolean(request && (request.socket?.encrypted || request.headers?.['x-forwarded-proto'] === 'https'));
   const cookieStr = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSeconds}; HttpOnly; SameSite=Lax${isSecure ? '; Secure' : ''}`;
   res.setHeader('Set-Cookie', cookieStr);
 }
 
-function clearCookie(res, name) {
-  const isSecure = NODE_ENV === 'production';
+function clearCookie(res, name, req = null) {
+  const request = req || res?.req;
+  const isSecure = (process.env.COOKIE_SECURE === 'true') || Boolean(request && (request.socket?.encrypted || request.headers?.['x-forwarded-proto'] === 'https'));
   res.setHeader('Set-Cookie', `${name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${isSecure ? '; Secure' : ''}`);
 }
 
@@ -567,9 +1045,15 @@ const MIME_TYPES = {
   '.md': 'text/markdown; charset=utf-8'
 };
 
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return req.socket?.remoteAddress || '127.0.0.1';
+}
+
 // --- HTTP Request Router ---
 const server = http.createServer(async (req, res) => {
-  const clientIp = req.socket.remoteAddress || '127.0.0.1';
+  const clientIp = getClientIp(req);
   const urlObj = new URL(req.url, `http://${req.headers.host || HOST}`);
   const pathname = urlObj.pathname;
   const method = req.method.toUpperCase();
@@ -1108,25 +1592,29 @@ const server = http.createServer(async (req, res) => {
 
           db.exec('COMMIT;');
 
-          // Save confirmation email record to storage/emails
+          // Dispatch confirmation email
+          let mailDispatched = false;
           try {
-            const emailsDir = path.join(__dirname, 'storage', 'emails');
-            if (!fs.existsSync(emailsDir)) fs.mkdirSync(emailsDir, { recursive: true });
-            const emailSummary = `
-              <!DOCTYPE html>
-              <html><body>
-              <h1>ODD Perfumes — Order Confirmation #${orderId}</h1>
-              <p>Customer: ${customer} (${email}, ${phone})</p>
-              <p>Delivery Address: ${address}</p>
-              <p>Subtotal: ₹${subtotal}</p>
-              <p>Discount: -₹${discountAmount} (${validCoupon || 'None'})</p>
-              <p>Shipping: ₹${shippingFee}</p>
-              <p>Total: ₹${totalAmount}</p>
-              <p>Payment: ${isOnline ? 'Online (Razorpay Live)' : 'Cash on Delivery (COD)'}</p>
-              </body></html>
-            `;
-            fs.writeFileSync(path.join(emailsDir, `${orderId}_confirmation.html`), emailSummary);
-          } catch (_) {}
+            const fullOrderData = {
+              id: orderId,
+              customer_name: customer,
+              customer_email: email,
+              customer_phone: phone,
+              shipping_address: address,
+              subtotal,
+              discount_amount: discountAmount,
+              coupon_code: validCoupon,
+              shipping_fee: shippingFee,
+              total_amount: totalAmount,
+              payment_method: paymentMethod,
+              gateway: isOnline ? 'Razorpay Live' : 'Cash on Delivery (COD)',
+              items: orderItemsData
+            };
+            const mailRes = await sendOrderConfirmationEmail(fullOrderData, db);
+            mailDispatched = Boolean(mailRes && mailRes.success);
+          } catch (e) {
+            logMailOperation('error', `Order #${orderId} confirmation dispatch failed: ${e.message}`);
+          }
 
           // Optional Shiprocket Auto-Dispatch
           try {
@@ -1142,7 +1630,8 @@ const server = http.createServer(async (req, res) => {
             trackingToken,
             totalAmount,
             status: 'Confirmed',
-            paymentStatus: isOnline ? 'Pending' : 'Pending'
+            paymentStatus: isOnline ? 'Pending' : 'Pending',
+            mailDispatched
           });
         } catch (err) {
           db.exec('ROLLBACK;');
@@ -1176,6 +1665,7 @@ const server = http.createServer(async (req, res) => {
                  shipping_fee as shipping, total_amount as total, total_amount as amount,
                  payment_method as paymentMethod, payment_method as method, payment_method, payment_status as paymentStatus, payment_status, status, gateway,
                  courier_name as courier, courier_name, tracking_number as trackingNumber, tracking_number, tracking_url as trackingUrl, tracking_url, label_url as labelUrl, label_url,
+                 shiprocket_order_id as shiprocketOrderId, shiprocket_order_id, shiprocket_shipment_id as shiprocketShipmentId, shiprocket_shipment_id, shiprocket_status as shiprocketStatus, shiprocket_status,
                  razorpay_payment_id as razorpayPaymentId, created_at as date, created_at as createdAt,
                  dispatched_at as dispatchedAt, dispatched_at,
                  delivered_at as deliveredAt, delivered_at,
@@ -1334,24 +1824,51 @@ const server = http.createServer(async (req, res) => {
           params.push(email);
         }
         if (cleanPhone) {
-          clauses.push("replace(replace(customer_phone, '+91', ''), ' ', '') LIKE ?");
+          clauses.push("replace(replace(replace(replace(replace(replace(customer_phone, '+91', ''), ' ', ''), '-', ''), '(', ''), ')', ''), '.', '') LIKE ?");
           params.push(`%${cleanPhone.slice(-10)}%`);
         }
 
         const query = `
-          SELECT id, customer_name as customer, customer_email as email, customer_phone as phone,
-                 shipping_address as address, subtotal, discount_amount as discount, coupon_code as coupon,
-                 shipping_fee as shipping, total_amount as total, total_amount as amount,
-                 payment_method as paymentMethod, payment_status as paymentStatus, status,
-                 courier_name as courier, tracking_number as trackingNumber, tracking_url as trackingUrl,
-                 created_at as date, dispatched_at as dispatchedAt, delivered_at as deliveredAt
+          SELECT id, id as orderId, id as order_id,
+                 customer_name as customerName, customer_name as customer, customer_name,
+                 customer_email as customerEmail, customer_email as email, customer_email,
+                 customer_phone as customerPhone, customer_phone as phone, customer_phone,
+                 shipping_address as shippingAddress, shipping_address as address, shipping_address,
+                 subtotal,
+                 discount_amount as discountAmount, discount_amount as discount, discount_amount,
+                 coupon_code as couponCode, coupon_code as coupon, coupon_code,
+                 shipping_fee as shippingFee, shipping_fee as shipping, shipping_fee,
+                 total_amount as totalAmount, total_amount as total, total_amount as amount, total_amount,
+                 payment_method as paymentMethod, payment_method as method, payment_method,
+                 payment_status as paymentStatus, payment_status,
+                 status, gateway,
+                 courier_name as courier, courier_name,
+                 tracking_number as trackingNumber, tracking_number,
+                 tracking_url as trackingUrl, tracking_url,
+                 label_url as labelUrl, label_url,
+                 shiprocket_order_id as shiprocketOrderId, shiprocket_order_id,
+                 shiprocket_shipment_id as shiprocketShipmentId, shiprocket_shipment_id,
+                 shiprocket_status as shiprocketStatus, shiprocket_status,
+                 razorpay_payment_id as razorpayPaymentId, razorpay_payment_id,
+                 created_at as date, created_at as createdAt, created_at,
+                 dispatched_at as dispatchedAt, dispatched_at,
+                 delivered_at as deliveredAt, delivered_at,
+                 cancelled_at as cancelledAt, cancelled_at
           FROM orders
           WHERE (${clauses.join(' OR ')})
           ORDER BY datetime(created_at) DESC
         `;
 
         const orders = db.prepare(query).all(...params);
-        const getItems = db.prepare('SELECT product_id as id, sku, name, price, quantity as qty, line_total FROM order_items WHERE order_id = ?');
+        const getItems = db.prepare(`
+          SELECT product_id as id, product_id, sku,
+                 name as productName, name as product_name, name,
+                 price, price as unitPrice, price as unit_price,
+                 quantity as qty, quantity as units, quantity,
+                 line_total as itemTotal, line_total as item_total, line_total
+          FROM order_items
+          WHERE order_id = ?
+        `);
         for (const order of orders) {
           order.items = getItems.all(order.id);
         }
@@ -1701,8 +2218,8 @@ const server = http.createServer(async (req, res) => {
 
         if (items && items.length > 0) {
           for (const it of items) {
-            const name = it.product_name || 'ODD Perfume';
-            const sku = 'ODD-' + String(name).replace(/[^a-zA-Z0-9]/g, '').substring(0, 10).toUpperCase();
+            const name = it.name || it.product_name || 'ODD Perfume';
+            const sku = it.sku || ('ODD-' + String(name).replace(/[^a-zA-Z0-9]/g, '').substring(0, 10).toUpperCase());
             const units = Math.max(1, Number(it.quantity) || 1);
             const sellingPrice = Number(it.price) || (totalAmount / units);
             orderItems.push({
@@ -1741,6 +2258,9 @@ const server = http.createServer(async (req, res) => {
         if (cleanStreet.length < 5) cleanStreet = destAddress;
         if (cleanStreet.length < 5) cleanStreet = 'Address: ' + destAddress;
         cleanStreet = cleanStreet.substring(0, 100);
+
+        const totalUnits = orderItems.reduce((acc, it) => acc + (Number(it.units) || 1), 0);
+        const parcelWeight = Math.max(0.4, Number((totalUnits * 0.35).toFixed(2)));
 
         const srOrderPayload = JSON.stringify({
           order_id: orderId,
@@ -1781,41 +2301,52 @@ const server = http.createServer(async (req, res) => {
           length: 15,
           breadth: 10,
           height: 8,
-          weight: 0.4
+          weight: parcelWeight
         });
 
         try {
-          const https = require('node:https');
+          let shipmentId = order.shiprocket_shipment_id ? String(order.shiprocket_shipment_id) : null;
+          let srOrderId = order.shiprocket_order_id ? String(order.shiprocket_order_id) : '';
 
-          // Step 1: Create Adhoc Order
-          const createRes = await new Promise((resolve, reject) => {
-            const r = https.request({
-              hostname: 'apiv2.shiprocket.in',
-              path: '/v1/external/orders/create/adhoc',
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(srOrderPayload)
-              },
-              timeout: 15000
-            }, (resp) => {
-              let data = '';
-              resp.on('data', chunk => data += chunk);
-              resp.on('end', () => resolve({ statusCode: resp.statusCode, body: data }));
-            });
-            r.on('error', reject);
-            r.on('timeout', () => { r.destroy(); reject(new Error('Shiprocket order creation timed out')); });
-            r.write(srOrderPayload);
-            r.end();
-          });
-
-          const orderJson = JSON.parse(createRes.body || '{}');
-          const shipmentId = orderJson.shipment_id || null;
+          // Step 1: Create Adhoc Order (if shipment_id not already generated)
           if (!shipmentId) {
-            let err = orderJson.message || 'Failed to create order in Shiprocket.';
-            if (orderJson.errors) err += ' Details: ' + JSON.stringify(orderJson.errors);
-            return { success: false, error: err, raw: orderJson };
+            const createRes = await new Promise((resolve, reject) => {
+              const r = https.request({
+                hostname: 'apiv2.shiprocket.in',
+                path: '/v1/external/orders/create/adhoc',
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                  'Content-Length': Buffer.byteLength(srOrderPayload)
+                },
+                timeout: 15000
+              }, (resp) => {
+                let data = '';
+                resp.on('data', chunk => data += chunk);
+                resp.on('end', () => resolve({ statusCode: resp.statusCode, body: data }));
+              });
+              r.on('error', reject);
+              r.on('timeout', () => { r.destroy(); reject(new Error('Shiprocket order creation timed out')); });
+              r.write(srOrderPayload);
+              r.end();
+            });
+
+            const orderJson = JSON.parse(createRes.body || '{}');
+            shipmentId = orderJson.shipment_id ? String(orderJson.shipment_id) : null;
+            srOrderId = orderJson.order_id ? String(orderJson.order_id) : '';
+            if (!shipmentId) {
+              let err = orderJson.message || 'Failed to create order in Shiprocket.';
+              if (orderJson.errors) err += ' Details: ' + (typeof orderJson.errors === 'string' ? orderJson.errors : JSON.stringify(orderJson.errors));
+              return { success: false, error: err, raw: orderJson };
+            }
+
+            // Immediately persist Shiprocket order ID and shipment ID upon creation
+            db.prepare(`
+              UPDATE orders
+              SET shiprocket_order_id = ?, shiprocket_shipment_id = ?, shiprocket_status = 'AWB_PENDING', updated_at = datetime('now')
+              WHERE id = ?
+            `).run(srOrderId, shipmentId, orderId);
           }
 
           // Step 2: Assign AWB
@@ -1848,8 +2379,31 @@ const server = http.createServer(async (req, res) => {
           const courierName = awbData.courier_name || 'Shiprocket Logistics Partner';
 
           if (!trackingNumber) {
-            const err = awbJson.message || awbJson.response?.data?.error || 'Shiprocket could not assign AWB for this shipment.';
-            return { success: false, error: err, shipment_id: shipmentId, raw: awbJson };
+            const awbError = awbJson.response?.data?.awb_assign_error
+              || awbJson.response?.data?.error
+              || awbJson.message
+              || (awbJson.errors ? (typeof awbJson.errors === 'string' ? awbJson.errors : JSON.stringify(awbJson.errors)) : null)
+              || 'Shiprocket could not assign AWB for this shipment.';
+
+            const isWalletError = /recharge|wallet|insufficient|balance|minimum.*required/i.test(awbError);
+            if (isWalletError) {
+              const descriptiveError = `Shiprocket order created successfully (Order #${srOrderId || orderId}), but AWB generation failed due to insufficient wallet balance: "${awbError}". Please recharge your Shiprocket wallet (minimum balance required in Shiprocket dashboard) and click 'Assign AWB / Retry'.`;
+              return {
+                success: false,
+                wallet_recharge_required: true,
+                shiprocket_order_id: srOrderId,
+                shiprocket_shipment_id: shipmentId,
+                error: descriptiveError,
+                raw: awbJson
+              };
+            }
+            return {
+              success: false,
+              error: awbError,
+              shiprocket_order_id: srOrderId,
+              shiprocket_shipment_id: shipmentId,
+              raw: awbJson
+            };
           }
 
           // Step 3: Generate Label
@@ -1883,7 +2437,7 @@ const server = http.createServer(async (req, res) => {
           // Step 4: Update SQLite Database
           db.prepare(`
             UPDATE orders
-            SET courier_name = ?, tracking_number = ?, tracking_url = ?, label_url = ?, status = 'Dispatched', dispatched_at = datetime('now'), updated_at = datetime('now')
+            SET courier_name = ?, tracking_number = ?, tracking_url = ?, label_url = ?, status = 'Dispatched', shiprocket_status = 'DISPATCHED', dispatched_at = datetime('now'), updated_at = datetime('now')
             WHERE id = ?
           `).run(courierName, trackingNumber, trackUrl, labelUrl, orderId);
 
@@ -1897,6 +2451,8 @@ const server = http.createServer(async (req, res) => {
             tracking_url: trackUrl,
             carrier: courierName,
             courier_name: courierName,
+            shiprocket_order_id: srOrderId,
+            shiprocket_shipment_id: shipmentId,
             message: `Shiprocket label generated with ${courierName}! AWB: ${trackingNumber}`
           };
         } catch (err) {
@@ -2450,36 +3006,45 @@ const server = http.createServer(async (req, res) => {
         const session = requireStaffAuth(req, res, 'admin');
         if (!session) return;
         const body = await parseJsonBody(req);
-        const setting = db.prepare("SELECT value_json FROM settings WHERE key_name = 'smtp'").get();
-        const saved = setting ? JSON.parse(setting.value_json) : {};
-        const host = String(body.host || saved.host || 'smtp.hostinger.com').trim();
-        const port = parseInt(body.port || saved.port || 465, 10);
-        const username = String(body.username || saved.username || 'hello@oddperfume.com').trim();
-        const fromEmail = String(body.fromEmail || saved.fromEmail || 'hello@oddperfume.com').trim();
-        const testTo = String(body.testTo || fromEmail).trim();
+        const baseConfig = getSmtpConfig(db);
+        const effectiveConfig = {
+          host: String(body.host || baseConfig.host || 'smtp.hostinger.com').trim(),
+          port: parseInt(body.port || baseConfig.port || 465, 10),
+          username: String(body.username || baseConfig.username || 'hello@oddperfume.com').trim(),
+          password: (body.password && !body.password.includes('••••')) ? String(body.password).trim() : baseConfig.password,
+          fromEmail: String(body.fromEmail || baseConfig.fromEmail || 'hello@oddperfume.com').trim(),
+          fromName: String(body.fromName || baseConfig.fromName || 'ODD Perfumes Studio').trim(),
+          encryption: body.encryption || baseConfig.encryption || 'ssl'
+        };
+        const testTo = String(body.testTo || effectiveConfig.fromEmail).trim();
+        const testSubject = 'ODD Perfumes SMTP Verification Test (' + new Date().toISOString() + ')';
+        const testHtml = `
+          <div style="font-family:sans-serif; padding:20px; color:#111;">
+            <h2>ODD Perfumes — SMTP Verification Test</h2>
+            <p>This verification message confirms that your SMTP delivery credentials are functioning correctly.</p>
+            <ul>
+              <li><strong>Host:</strong> ${effectiveConfig.host}</li>
+              <li><strong>Port:</strong> ${effectiveConfig.port}</li>
+              <li><strong>User:</strong> ${effectiveConfig.username}</li>
+              <li><strong>Sender:</strong> ${effectiveConfig.fromName} &lt;${effectiveConfig.fromEmail}&gt;</li>
+              <li><strong>Timestamp:</strong> ${new Date().toISOString()}</li>
+            </ul>
+          </div>
+        `;
+        const testPlain = `ODD Perfumes SMTP Verification Test\nHost: ${effectiveConfig.host}\nPort: ${effectiveConfig.port}\nSender: ${effectiveConfig.fromEmail}\nTimestamp: ${new Date().toISOString()}`;
 
-        const tls = require('node:tls');
-        try {
-          await new Promise((resolve, reject) => {
-            const socket = tls.connect({ host, port, servername: host, timeout: 6000 }, () => {
-              socket.once('data', () => {
-                socket.end();
-                resolve();
-              });
-            });
-            socket.on('error', reject);
-            socket.on('timeout', () => { socket.destroy(); reject(new Error('Connection timed out')); });
-          });
+        const testRes = await sendSmtpEmail(testTo, testSubject, testHtml, testPlain, effectiveConfig);
+        if (testRes.success) {
           return sendJson(res, 200, {
             success: true,
-            message: `Hostinger SMTP connection to ${host}:${port} verified successfully. Test message dispatched to ${testTo}.`
-          });
-        } catch (err) {
-          return sendJson(res, 400, {
-            success: false,
-            error: `Could not connect to SMTP server at ${host}:${port} (${err.message}). Please check host, port, and network.`
+            message: `Verification test email successfully dispatched to ${testTo}.`,
+            transport: testRes.transport || testRes.method || 'smtp'
           });
         }
+        return sendJson(res, 400, {
+          success: false,
+          error: testRes.error || `Could not verify SMTP delivery to ${testTo}.`
+        });
       }
 
       if (pathname.startsWith('/api/settings/') && method === 'GET') {
@@ -2582,6 +3147,7 @@ const server = http.createServer(async (req, res) => {
           setCookie(res, 'odd_customer_session', sessionId, 30 * 86400);
 
           return sendJson(res, 201, {
+            success: true,
             authenticated: true,
             customer: { id: custId, name, email, phone },
             csrfToken
@@ -2616,6 +3182,7 @@ const server = http.createServer(async (req, res) => {
         setCookie(res, 'odd_customer_session', sessionId, 30 * 86400);
 
         return sendJson(res, 200, {
+          success: true,
           authenticated: true,
           customer: { id: customer.id, name: customer.name, email: customer.email, phone: customer.phone },
           csrfToken
@@ -2634,7 +3201,7 @@ const server = http.createServer(async (req, res) => {
         const session = getCustomerSession(req);
         if (!session) return sendJson(res, 200, { authenticated: false });
 
-        const addresses = db.prepare('SELECT id, label, name, phone, address_line as address, city, pincode, is_default as isDefault FROM customer_addresses WHERE customer_id = ?').all(session.user_id);
+        const addresses = db.prepare('SELECT id, label, name, phone, address_line as street, address_line as address, city, pincode as pin, pincode, is_default as isDefault FROM customer_addresses WHERE customer_id = ?').all(session.user_id);
         return sendJson(res, 200, {
           authenticated: true,
           customer: { id: session.user_id, name: session.name, email: session.email, phone: session.phone },
@@ -2643,30 +3210,11 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
-      if (pathname === '/api/customer/orders' && method === 'GET') {
-        const session = getCustomerSession(req);
-        if (!session) return sendJson(res, 401, { error: 'Please log in to view orders.' });
-
-        const orders = db.prepare(`
-          SELECT id, total_amount as amount, status, payment_status as paymentStatus, payment_method as paymentMethod, created_at as date
-          FROM orders
-          WHERE customer_email = ?
-          ORDER BY datetime(created_at) DESC
-        `).all(session.email);
-
-        const getItems = db.prepare('SELECT name, price, quantity as qty, line_total FROM order_items WHERE order_id = ?');
-        for (const o of orders) {
-          o.items = getItems.all(o.id);
-        }
-
-        return sendJson(res, 200, { orders });
-      }
-
       if ((pathname === '/api/customer/addresses' || pathname === '/api/customer/address') && method === 'GET') {
         const session = getCustomerSession(req);
         if (!session) return sendJson(res, 401, { error: 'Please sign in to view saved addresses.' });
 
-        const addresses = db.prepare('SELECT id, label, name, phone, address_line as street, city, pincode as pin, is_default as isDefault FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC').all(session.user_id);
+        const addresses = db.prepare('SELECT id, label, name, phone, address_line as street, address_line as address, address_line, city, pincode as pin, pincode, is_default as isDefault FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC').all(session.user_id);
         return sendJson(res, 200, { addresses });
       }
 
@@ -2754,11 +3302,82 @@ const server = http.createServer(async (req, res) => {
         }
 
         console.log(`[CONTACT INQUIRY] ID: ${inquiryId} From: ${name} <${email}> | Subject: ${subject}\nMessage: ${message}`);
+
+        // Local file backup
+        try {
+          const inqDir = path.join(__dirname, 'storage', 'inquiries');
+          if (!fs.existsSync(inqDir)) fs.mkdirSync(inqDir, { recursive: true });
+          const backup = {
+            id: inquiryId,
+            name,
+            email,
+            subject,
+            message,
+            ip,
+            received_at: new Date().toISOString()
+          };
+          fs.writeFileSync(path.join(inqDir, `${Date.now()}_${inquiryId || 'msg'}.json`), JSON.stringify(backup, null, 2));
+        } catch (_) {}
+
+        // Dispatch inquiry notification email
+        const smtpConfig = getSmtpConfig(db);
+        const targetMailbox = smtpConfig.fromEmail || process.env.SMTP_FROM || 'hello@oddperfume.com';
+        const nowIst = new Date().toISOString();
+        const replyUrl = 'mailto:' + encodeURIComponent(email) + '?subject=' + encodeURIComponent('Re: ' + subject);
+        const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset='UTF-8'></head>
+<body style='font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; color:#111; background:#f4f4f5; margin:0; padding:20px;'>
+  <div style='max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; border:1px solid #e5e7eb;'>
+    <div style='background:#111827; padding:20px 24px; text-align:center;'>
+      <h1 style='color:#ffffff; margin:0; font-size:22px; letter-spacing:0.05em;'>ODD<span style='color:#E86B32;'>.</span></h1>
+      <p style='color:#9ca3af; margin:4px 0 0; font-size:11px; text-transform:uppercase; letter-spacing:0.1em;'>Studio Customer Care &middot; New Inquiry</p>
+    </div>
+    <div style='padding:24px 30px;'>
+      <h2 style='font-size:16px; margin-top:0; color:#111827;'>New Customer Message from ${name}</h2>
+      <div style='background:#f9fafb; border:1px solid #f3f4f6; border-radius:6px; padding:14px; margin:16px 0; font-size:13px;'>
+        <div style='margin-bottom:6px;'><strong>Sender:</strong> ${name}</div>
+        <div style='margin-bottom:6px;'><strong>Email:</strong> <a href='mailto:${email}' style='color:#E86B32; text-decoration:none; font-weight:600;'>${email}</a></div>
+        <div style='margin-bottom:6px;'><strong>Subject:</strong> ${subject}</div>
+        <div><strong>Received:</strong> ${nowIst}</div>
+      </div>
+      <h3 style='font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin:20px 0 8px;'>Message Content</h3>
+      <div style='background:#ffffff; border-left:3px solid #E86B32; padding:12px 16px; font-size:14px; line-height:1.6; color:#374151;'>${message.replace(/\n/g, '<br>')}</div>
+      <div style='margin-top:24px; text-align:center;'>
+        <a href='${replyUrl}' style='background:#E86B32; color:#ffffff; padding:10px 22px; text-decoration:none; font-weight:600; border-radius:6px; font-size:13px; display:inline-block;'>Reply to ${name}</a>
+      </div>
+    </div>
+    <div style='background:#f9fafb; border-top:1px solid #e5e7eb; padding:14px; text-align:center; font-size:11px; color:#9ca3af;'>
+      Recorded in ODD Perfumes Studio Database &middot; ${targetMailbox}
+    </div>
+  </div>
+</body>
+</html>
+`;
+        const plainText = `New contact message from oddperfume.com:\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\nTime: ${nowIst}\n\nMessage:\n${message}`;
+
+        let mailDispatched = false;
+        try {
+          const mailResult = await sendSmtpEmail(
+            targetMailbox,
+            `ODD Contact: ${subject} - ${name}`,
+            emailHtml,
+            plainText,
+            smtpConfig,
+            { email, name }
+          );
+          mailDispatched = Boolean(mailResult && mailResult.success);
+          logMailOperation(mailDispatched ? 'info' : 'error', `Contact inquiry #${inquiryId} mail dispatch to ${targetMailbox}: ${mailDispatched ? 'dispatched' : (mailResult?.error || 'failed')}`);
+        } catch (e) {
+          logMailOperation('error', `Contact inquiry #${inquiryId} dispatch exception: ${e.message}`);
+        }
+
         return sendJson(res, 200, {
           success: true,
           inquiryId,
           message: 'Thank you! Your message has been sent to our studio team. We will get back to you shortly.',
-          mailDispatched: true
+          mailDispatched
         });
       }
 

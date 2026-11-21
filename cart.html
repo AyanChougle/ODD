@@ -83,12 +83,14 @@
 
       <div id="cart-page-totals" style="margin-top:2rem; border-top:1px solid var(--border-color); padding-top:1.5rem;">
         <div class="coupon-box" style="margin-bottom:0.85rem;">
-          <input type="text" id="cart-page-coupon-input" name="coupon_code" placeholder="Promo code (e.g. LAUNCH20)" style="text-transform: uppercase;">
+          <input type="text" id="cart-page-coupon-input" name="coupon_code" placeholder="Promo code (e.g. LAUNCH20)"
+            style="text-transform: uppercase;">
           <button type="button" class="btn btn-sm btn-dark" onclick="applyCartCoupon('page')">Apply</button>
         </div>
         <div class="coupon-applied-tag" id="cart-page-coupon-tag" style="display: none;">
           <span>Code <strong id="cart-page-applied-code-name">LAUNCH20</strong> applied</span>
-          <button type="button" onclick="removeCartCoupon()" class="remove-coupon" aria-label="Remove coupon">&times;</button>
+          <button type="button" onclick="removeCartCoupon()" class="remove-coupon"
+            aria-label="Remove coupon">&times;</button>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:1rem; font-weight:600;">
           <span>Subtotal:</span>
@@ -104,7 +106,8 @@
         <div style="display:flex; justify-content:space-between; font-size:1.2rem; font-weight:700; margin-top:.85rem;">
           <span>Total:</span><span id="cart-page-total">₹0</span>
         </div>
-        <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.4rem;">Taxes included. Live shipping calculated above &amp; at checkout.</p>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.4rem;">Taxes included. Live shipping
+          calculated above &amp; at checkout.</p>
 
         <div class="cart-page-actions" style="margin-top:1.5rem; display:flex; gap:1rem;">
           <a id="cart-page-checkout" href="checkout.html" class="btn btn-primary btn-lg full-width">Proceed to
@@ -125,12 +128,16 @@
             <span class="orange-dot-lg"></span>
             <h2 class="footer-signup-title">The ODD Community.</h2>
           </div>
-          <p class="footer-signup-sub">Direct access, secret drops, private batch launches, and member perks on WhatsApp.</p>
+          <p class="footer-signup-sub">Direct access, secret drops, private batch launches, and member perks on
+            WhatsApp.</p>
         </div>
         <div class="footer-community-action">
-          <a href="https://chat.whatsapp.com/ITxQB3v89UKIjIkPQPXPli" target="_blank" rel="noopener noreferrer" class="footer-whatsapp-btn btn-water-float" aria-label="Join the ODD Community on WhatsApp">
-            <svg class="footer-whatsapp-icon" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
-              <path d="M12.031 2c-5.516 0-9.993 4.477-9.993 9.993 0 1.763.458 3.484 1.328 5.002L2 22l5.163-1.353a9.96 9.96 0 0 0 4.868 1.258h.004c5.515 0 9.992-4.477 9.992-9.993A9.94 9.94 0 0 0 19.098 4.93 9.94 9.94 0 0 0 12.031 2zm0 18.286h-.003a8.27 8.27 0 0 1-4.218-1.157l-.302-.18-3.136.823.837-3.057-.197-.314a8.28 8.28 0 0 1-1.267-4.408c0-4.57 3.719-8.289 8.29-8.289a8.24 8.24 0 0 1 5.86 2.428 8.24 8.24 0 0 1 2.426 5.86c0 4.57-3.719 8.29-8.29 8.29zm4.542-6.207c-.249-.125-1.474-.727-1.703-.81-.228-.083-.394-.125-.56.125-.166.249-.643.81-.788.976-.145.166-.29.187-.54.062a6.83 6.83 0 0 1-2.004-1.236 7.53 7.53 0 0 1-1.387-1.727c-.145-.25-.016-.385.109-.509.112-.112.249-.29.374-.436.124-.145.166-.25.249-.415.083-.166.042-.312-.021-.436-.062-.125-.56-1.349-.768-1.849-.203-.487-.41-.421-.56-.429h-.478c-.166 0-.436.062-.664.312-.229.249-.872.852-.872 2.077 0 1.226.893 2.41 1.018 2.577.125.166 1.756 2.682 4.255 3.761.595.257 1.06.41 1.423.525.597.19 1.141.163 1.57.099.479-.072 1.474-.602 1.681-1.184.208-.582.208-1.08.146-1.184-.063-.104-.229-.166-.478-.291z"/>
+          <a href="https://chat.whatsapp.com/ITxQB3v89UKIjIkPQPXPli" target="_blank" rel="noopener noreferrer"
+            class="footer-whatsapp-btn btn-water-float" aria-label="Join the ODD Community on WhatsApp">
+            <svg class="footer-whatsapp-icon" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"
+              aria-hidden="true">
+              <path
+                d="M12.031 2c-5.516 0-9.993 4.477-9.993 9.993 0 1.763.458 3.484 1.328 5.002L2 22l5.163-1.353a9.96 9.96 0 0 0 4.868 1.258h.004c5.515 0 9.992-4.477 9.992-9.993A9.94 9.94 0 0 0 19.098 4.93 9.94 9.94 0 0 0 12.031 2zm0 18.286h-.003a8.27 8.27 0 0 1-4.218-1.157l-.302-.18-3.136.823.837-3.057-.197-.314a8.28 8.28 0 0 1-1.267-4.408c0-4.57 3.719-8.289 8.29-8.289a8.24 8.24 0 0 1 5.86 2.428 8.24 8.24 0 0 1 2.426 5.86c0 4.57-3.719 8.29-8.29 8.29zm4.542-6.207c-.249-.125-1.474-.727-1.703-.81-.228-.083-.394-.125-.56.125-.166.249-.643.81-.788.976-.145.166-.29.187-.54.062a6.83 6.83 0 0 1-2.004-1.236 7.53 7.53 0 0 1-1.387-1.727c-.145-.25-.016-.385.109-.509.112-.112.249-.29.374-.436.124-.145.166-.25.249-.415.083-.166.042-.312-.021-.436-.062-.125-.56-1.349-.768-1.849-.203-.487-.41-.421-.56-.429h-.478c-.166 0-.436.062-.664.312-.229.249-.872.852-.872 2.077 0 1.226.893 2.41 1.018 2.577.125.166 1.756 2.682 4.255 3.761.595.257 1.06.41 1.423.525.597.19 1.141.163 1.57.099.479-.072 1.474-.602 1.681-1.184.208-.582.208-1.08.146-1.184-.063-.104-.229-.166-.478-.291z" />
             </svg>
             <span>Join WhatsApp Community</span>
           </a>
@@ -173,14 +180,21 @@
           <div class="footer-col-title">Say Hi</div>
           <a href="contact.html" class="footer-contact-link">hello@oddperfume.com</a>
           <p class="footer-contact-hours">Mon&mdash;Sat &middot; 10am&mdash;7pm IST</p>
-          <div class="footer-social-icons-row" style="display:flex; align-items:center; gap:0.65rem; margin-top:0.75rem;">
-            <a href="https://wa.me/919930458591" target="_blank" rel="noopener noreferrer" class="footer-social-icon-btn" aria-label="WhatsApp" title="Chat on WhatsApp (+91 99304 58591)" style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; border:1px solid #2e323d; background:rgba(255,255,255,0.05); color:#CCCCCC; text-decoration:none;">
+          <div class="footer-social-icons-row"
+            style="display:flex; align-items:center; gap:0.65rem; margin-top:0.75rem;">
+            <a href="https://wa.me/919930458591" target="_blank" rel="noopener noreferrer"
+              class="footer-social-icon-btn" aria-label="WhatsApp" title="Chat on WhatsApp (+91 99304 58591)"
+              style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; border:1px solid #2e323d; background:rgba(255,255,255,0.05); color:#CCCCCC; text-decoration:none;">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="#CCCCCC" style="display:block; color:#CCCCCC;">
-                <path d="M12.031 2c-5.516 0-9.993 4.477-9.993 9.993 0 1.763.458 3.484 1.328 5.002L2 22l5.163-1.353a9.96 9.96 0 0 0 4.868 1.258h.004c5.515 0 9.992-4.477 9.992-9.993A9.94 9.94 0 0 0 19.098 4.93 9.94 9.94 0 0 0 12.031 2zm0 18.286h-.003a8.27 8.27 0 0 1-4.218-1.157l-.302-.18-3.136.823.837-3.057-.197-.314a8.28 8.28 0 0 1-1.267-4.408c0-4.57 3.719-8.289 8.29-8.289a8.24 8.24 0 0 1 5.86 2.428 8.24 8.24 0 0 1 2.426 5.86c0 4.57-3.719 8.29-8.29 8.29zm4.542-6.207c-.249-.125-1.474-.727-1.703-.81-.228-.083-.394-.125-.56.125-.166.249-.643.81-.788.976-.145.166-.29.187-.54.062a6.83 6.83 0 0 1-2.004-1.236 7.53 7.53 0 0 1-1.387-1.727c-.145-.25-.016-.385.109-.509.112-.112.249-.29.374-.436.124-.145.166-.25.249-.415.083-.166.042-.312-.021-.436-.062-.125-.56-1.349-.768-1.849-.203-.487-.41-.421-.56-.429h-.478c-.166 0-.436.062-.664.312-.229.249-.872.852-.872 2.077 0 1.226.893 2.41 1.018 2.577.125.166 1.756 2.682 4.255 3.761.595.257 1.06.41 1.423.525.597.19 1.141.163 1.57.099.479-.072 1.474-.602 1.681-1.184.208-.582.208-1.08.146-1.184-.063-.104-.229-.166-.478-.291z"/>
+                <path
+                  d="M12.031 2c-5.516 0-9.993 4.477-9.993 9.993 0 1.763.458 3.484 1.328 5.002L2 22l5.163-1.353a9.96 9.96 0 0 0 4.868 1.258h.004c5.515 0 9.992-4.477 9.992-9.993A9.94 9.94 0 0 0 19.098 4.93 9.94 9.94 0 0 0 12.031 2zm0 18.286h-.003a8.27 8.27 0 0 1-4.218-1.157l-.302-.18-3.136.823.837-3.057-.197-.314a8.28 8.28 0 0 1-1.267-4.408c0-4.57 3.719-8.289 8.29-8.289a8.24 8.24 0 0 1 5.86 2.428 8.24 8.24 0 0 1 2.426 5.86c0 4.57-3.719 8.29-8.29 8.29zm4.542-6.207c-.249-.125-1.474-.727-1.703-.81-.228-.083-.394-.125-.56.125-.166.249-.643.81-.788.976-.145.166-.29.187-.54.062a6.83 6.83 0 0 1-2.004-1.236 7.53 7.53 0 0 1-1.387-1.727c-.145-.25-.016-.385.109-.509.112-.112.249-.29.374-.436.124-.145.166-.25.249-.415.083-.166.042-.312-.021-.436-.062-.125-.56-1.349-.768-1.849-.203-.487-.41-.421-.56-.429h-.478c-.166 0-.436.062-.664.312-.229.249-.872.852-.872 2.077 0 1.226.893 2.41 1.018 2.577.125.166 1.756 2.682 4.255 3.761.595.257 1.06.41 1.423.525.597.19 1.141.163 1.57.099.479-.072 1.474-.602 1.681-1.184.208-.582.208-1.08.146-1.184-.063-.104-.229-.166-.478-.291z" />
               </svg>
             </a>
-            <a href="https://www.instagram.com/oddperfumeofficial/" target="_blank" rel="noopener noreferrer" class="footer-social-icon-btn" aria-label="Instagram" title="Follow on Instagram (@oddperfumeofficial)" style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; border:1px solid #2e323d; background:rgba(255,255,255,0.05); color:#CCCCCC; text-decoration:none;">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#CCCCCC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; color:#CCCCCC;">
+            <a href="https://www.instagram.com/oddperfumeofficial/" target="_blank" rel="noopener noreferrer"
+              class="footer-social-icon-btn" aria-label="Instagram" title="Follow on Instagram (@oddperfumeofficial)"
+              style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; border:1px solid #2e323d; background:rgba(255,255,255,0.05); color:#CCCCCC; text-decoration:none;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#CCCCCC" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" style="display:block; color:#CCCCCC;">
                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                 <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
                 <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
@@ -232,7 +246,8 @@
     <div class="quick-view-card">
       <button class="quick-view-close-btn" onclick="closeQuickView()">&times;</button>
       <div class="quick-view-visual">
-        <img src="assets/images/Phantom.webp?v=10.0" id="qv-img" alt="ODD Perfume" class="quick-view-bottle-img" width="1024" height="1024" loading="lazy" style="aspect-ratio: 1 / 1;">
+        <img src="assets/images/Phantom.webp?v=10.0" id="qv-img" alt="ODD Perfume" class="quick-view-bottle-img"
+          width="1024" height="1024" loading="lazy" style="aspect-ratio: 1 / 1;">
       </div>
       <div class="quick-view-details">
         <span class="qv-brand">ODD PARFUMS</span>
@@ -268,17 +283,21 @@
     <div class="cart-items-list" id="cart-items"></div>
     <div class="cart-footer" id="cart-footer" style="display: none;">
       <div class="coupon-box">
-        <input type="text" id="cart-coupon-input" name="coupon_code" placeholder="Promo code (e.g. LAUNCH20)" autocomplete="off" style="text-transform: uppercase;">
+        <input type="text" id="cart-coupon-input" name="coupon_code" placeholder="Promo code (e.g. LAUNCH20)"
+          autocomplete="off" style="text-transform: uppercase;">
         <button type="button" class="btn btn-sm btn-dark" onclick="applyCartCoupon()">Apply</button>
       </div>
       <div class="coupon-applied-tag" id="coupon-tag-applied" style="display: none;">
         <span>Code <strong id="applied-code-name">LAUNCH20</strong> applied</span>
-        <button type="button" onclick="removeCartCoupon()" class="remove-coupon" aria-label="Remove coupon">&times;</button>
+        <button type="button" onclick="removeCartCoupon()" class="remove-coupon"
+          aria-label="Remove coupon">&times;</button>
       </div>
       <div class="cart-totals">
         <div class="total-row"><span>Subtotal:</span><span id="cart-subtotal">₹0</span></div>
-        <div class="total-row" id="cart-discount-row" style="display:none; color:var(--brand-orange);"><span>Discount:</span><span id="cart-discount">-₹0</span></div>
-        <div class="total-row" id="cart-shipping-row"><span>Shipping:</span><span id="cart-shipping-fee">₹50</span></div>
+        <div class="total-row" id="cart-discount-row" style="display:none; color:var(--brand-orange);">
+          <span>Discount:</span><span id="cart-discount">-₹0</span></div>
+        <div class="total-row" id="cart-shipping-row"><span>Shipping:</span><span id="cart-shipping-fee">₹50</span>
+        </div>
         <div class="total-row grand-total"><span>Total:</span><span id="cart-total">₹0</span></div>
       </div>
       <a href="checkout.html" class="btn btn-primary btn-lg full-width btn-water-float">Proceed to Checkout</a>
@@ -323,7 +342,8 @@
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" id="search-modal-input" name="search_query" class="search-modal-input" placeholder="Search by name, notes, or occasion..." autocomplete="off"
+        <input type="text" id="search-modal-input" name="search_query" class="search-modal-input"
+          placeholder="Search by name, notes, or occasion..." autocomplete="off"
           oninput="handleSearchInput(this.value)">
         <button class="search-modal-close" onclick="closeSearchModal()">&times;</button>
       </div>

@@ -5,10 +5,12 @@
 
 -- Products
 INSERT INTO products (id, sku, name, price, original_price, stock, active, tagline, notes) VALUES
-('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, NULL, 240, 1, 'Leave a Trace. Never Reveal.', 'Oud · Amber · Smoky Woods'),
+('phantom', 'ODD-PH-001', 'ODD Phantom', 1599, NULL, 240, 1, 'Leave a Trace. Never Reveal.', 'Oud · Saffron · Benzoin'),
 ('lucid', 'ODD-LC-003', 'ODD Lucid', 1599, NULL, 180, 1, 'Clarity in Every Move.', 'Citrus · Black Tea · Clean Woods'),
 ('first-move', 'ODD-FM-002', 'ODD First Move', 1599, NULL, 0, 1, 'Make the First Impression Count.', 'Pineapple · Woods · Smoky Musk')
-ON DUPLICATE KEY UPDATE name=VALUES(name), price=VALUES(price), original_price=VALUES(original_price);
+ON DUPLICATE KEY UPDATE name=VALUES(name), price=VALUES(price), original_price=VALUES(original_price), notes=VALUES(notes);
+
+UPDATE products SET notes = 'Oud · Saffron · Benzoin' WHERE id = 'phantom';
 
 -- Initial Inventory Movements (Audit Baseline)
 INSERT INTO inventory_movements (sku, product_id, delta, stock_after, reason, staff_name) VALUES

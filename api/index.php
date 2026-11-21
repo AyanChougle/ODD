@@ -235,6 +235,9 @@ function ensureDatabaseSchema(PDO $pdo): void {
                 tracking_number VARCHAR(64) DEFAULT NULL,
                 tracking_url TEXT DEFAULT NULL,
                 label_url TEXT DEFAULT NULL,
+                shiprocket_order_id VARCHAR(64) DEFAULT NULL,
+                shiprocket_shipment_id VARCHAR(64) DEFAULT NULL,
+                shiprocket_status VARCHAR(64) DEFAULT NULL,
                 dispatched_at DATETIME NULL,
                 delivered_at DATETIME NULL,
                 cancelled_at DATETIME NULL,
@@ -246,6 +249,10 @@ function ensureDatabaseSchema(PDO $pdo): void {
                 INDEX idx_orders_created (created_at)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ');
+
+        try { $pdo->exec("ALTER TABLE orders ADD COLUMN shiprocket_order_id VARCHAR(64) DEFAULT NULL"); } catch (Throwable $e) {}
+        try { $pdo->exec("ALTER TABLE orders ADD COLUMN shiprocket_shipment_id VARCHAR(64) DEFAULT NULL"); } catch (Throwable $e) {}
+        try { $pdo->exec("ALTER TABLE orders ADD COLUMN shiprocket_status VARCHAR(64) DEFAULT NULL"); } catch (Throwable $e) {}
 
         // 6. Settings table
         $pdo->exec('
@@ -927,6 +934,7 @@ try {
             $pdo->commit();
 
             // Send rich HTML order confirmation email with breakdown
+            $mailDispatched = false;
             try {
                 $fullOrderData = [
                     'id' => $orderId,
@@ -943,8 +951,13 @@ try {
                     'gateway' => $isOnline ? 'Razorpay Live' : 'Cash on Delivery (COD)',
                     'items' => $itemsData
                 ];
-                sendOrderConfirmationEmail($fullOrderData);
-            } catch (Throwable $e) {}
+                $mailResult = sendOrderConfirmationEmail($fullOrderData, $pdo);
+                $mailDispatched = !empty($mailResult['success']);
+            } catch (Throwable $e) {
+                if (function_exists('logMailOperation')) {
+                    logMailOperation('error', "Order #{$orderId} confirmation email exception: " . $e->getMessage());
+                }
+            }
 
             // Optional Shiprocket Auto-Dispatch on checkout
             try {
@@ -955,7 +968,7 @@ try {
                 }
             } catch (Throwable $e) {}
 
-            sendJson(201, ['success' => true, 'orderId' => $orderId, 'trackingToken' => $trackingToken, 'totalAmount' => $totalAmount, 'status' => 'Confirmed']);
+            sendJson(201, ['success' => true, 'orderId' => $orderId, 'trackingToken' => $trackingToken, 'totalAmount' => $totalAmount, 'status' => 'Confirmed', 'mailDispatched' => $mailDispatched]);
         } catch (Exception $e) {
             $pdo->rollBack();
             sendJson(400, ['error' => $e->getMessage()]);
@@ -986,6 +999,7 @@ try {
                    shipping_fee as shipping, total_amount as total, total_amount as amount,
                    payment_method as paymentMethod, payment_method as method, payment_method, payment_status as paymentStatus, payment_status, status, gateway,
                    courier_name as courier, courier_name, tracking_number as trackingNumber, tracking_number, tracking_url as trackingUrl, tracking_url, label_url as labelUrl, label_url,
+                   shiprocket_order_id as shiprocketOrderId, shiprocket_order_id, shiprocket_shipment_id as shiprocketShipmentId, shiprocket_shipment_id, shiprocket_status as shiprocketStatus, shiprocket_status,
                    razorpay_payment_id as razorpayPaymentId, created_at as date, created_at as createdAt,
                    dispatched_at as dispatchedAt, dispatched_at,
                    delivered_at as deliveredAt, delivered_at,
@@ -1152,17 +1166,36 @@ try {
             $params[] = $email;
         }
         if ($cleanPhone) {
-            $clauses[] = 'REPLACE(REPLACE(customer_phone, "+91", ""), " ", "") LIKE ?';
-            $params[] = '%' . substr($cleanPhone, -10);
+            $clauses[] = 'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_phone, "+91", ""), " ", ""), "-", ""), "(", ""), ")", ""), ".", "") LIKE ?';
+            $params[] = '%' . substr($cleanPhone, -10) . '%';
         }
 
         $query = '
-            SELECT id, customer_name as customer, customer_email as email, customer_phone as phone,
-                   shipping_address as address, subtotal, discount_amount as discount, coupon_code as coupon,
-                   shipping_fee as shipping, total_amount as total, total_amount as amount,
-                   payment_method as paymentMethod, payment_status as paymentStatus, status,
-                   courier_name as courier, tracking_number as trackingNumber, tracking_url as trackingUrl,
-                   created_at as date, dispatched_at as dispatchedAt, delivered_at as deliveredAt
+            SELECT id, id as orderId, id as order_id,
+                   customer_name as customerName, customer_name as customer, customer_name,
+                   customer_email as customerEmail, customer_email as email, customer_email,
+                   customer_phone as customerPhone, customer_phone as phone, customer_phone,
+                   shipping_address as shippingAddress, shipping_address as address, shipping_address,
+                   subtotal,
+                   discount_amount as discountAmount, discount_amount as discount, discount_amount,
+                   coupon_code as couponCode, coupon_code as coupon, coupon_code,
+                   shipping_fee as shippingFee, shipping_fee as shipping, shipping_fee,
+                   total_amount as totalAmount, total_amount as total, total_amount as amount, total_amount,
+                   payment_method as paymentMethod, payment_method as method, payment_method,
+                   payment_status as paymentStatus, payment_status,
+                   status, gateway,
+                   courier_name as courier, courier_name,
+                   tracking_number as trackingNumber, tracking_number,
+                   tracking_url as trackingUrl, tracking_url,
+                   label_url as labelUrl, label_url,
+                   shiprocket_order_id as shiprocketOrderId, shiprocket_order_id,
+                   shiprocket_shipment_id as shiprocketShipmentId, shiprocket_shipment_id,
+                   shiprocket_status as shiprocketStatus, shiprocket_status,
+                   razorpay_payment_id as razorpayPaymentId, razorpay_payment_id,
+                   created_at as date, created_at as createdAt, created_at,
+                   dispatched_at as dispatchedAt, dispatched_at,
+                   delivered_at as deliveredAt, delivered_at,
+                   cancelled_at as cancelledAt, cancelled_at
             FROM orders
             WHERE (' . implode(' OR ', $clauses) . ')
             ORDER BY created_at DESC';
@@ -1171,7 +1204,15 @@ try {
         $stmt->execute($params);
         $orders = $stmt->fetchAll();
 
-        $iStmt = $pdo->prepare('SELECT product_id as id, sku, name, price, quantity as qty, line_total FROM order_items WHERE order_id = ?');
+        $iStmt = $pdo->prepare('
+            SELECT product_id as id, product_id, sku,
+                   name as productName, name as product_name, name,
+                   price, price as unitPrice, price as unit_price,
+                   quantity as qty, quantity as units, quantity,
+                   line_total as itemTotal, line_total as item_total, line_total
+            FROM order_items
+            WHERE order_id = ?
+        ');
         foreach ($orders as &$o) {
             $iStmt->execute([$o['id']]);
             $o['items'] = $iStmt->fetchAll();
@@ -1274,6 +1315,7 @@ try {
 
         sendJson(201, [
             'success' => true,
+            'authenticated' => true,
             'message' => 'Account created successfully! Welcome to ODD Perfume.',
             'customer' => ['id' => $custId, 'name' => $name, 'email' => $email, 'phone' => $phone],
             'csrfToken' => $csrfToken
@@ -1340,6 +1382,7 @@ try {
 
         sendJson(200, [
             'success' => true,
+            'authenticated' => true,
             'message' => 'Signed in successfully!',
             'customer' => ['id' => $custId, 'name' => $customer['name'], 'email' => $customer['email'], 'phone' => $customer['phone'] ?? ''],
             'csrfToken' => $csrfToken
@@ -1366,7 +1409,7 @@ try {
         // Fetch saved addresses from customer_addresses
         $addresses = [];
         try {
-            $aStmt = $pdo->prepare('SELECT id, label, name, phone, address_line as street, city, pincode as pin, is_default as isDefault FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC');
+            $aStmt = $pdo->prepare('SELECT id, label, name, phone, address_line as street, address_line as address, city, pincode as pin, pincode, is_default as isDefault FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC');
             $aStmt->execute([(string)$session['customer_id']]);
             $addresses = $aStmt->fetchAll();
         } catch (Throwable $ae) {}
@@ -1389,7 +1432,7 @@ try {
         $session = getActiveCustomer($pdo);
         if (!$session) sendJson(401, ['error' => 'Please sign in to view saved addresses.']);
 
-        $stmt = $pdo->prepare('SELECT id, label, name, phone, address_line as street, city, pincode as pin, is_default as isDefault FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC');
+        $stmt = $pdo->prepare('SELECT id, label, name, phone, address_line as street, address_line as address, address_line, city, pincode as pin, pincode, is_default as isDefault FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, id DESC');
         $stmt->execute([(string)$session['customer_id']]);
         sendJson(200, ['addresses' => $stmt->fetchAll()]);
     }
@@ -1646,9 +1689,18 @@ try {
         }
     }
 
-    function sendOrderConfirmationEmail(array $order): bool {
+    function sendOrderConfirmationEmail(array $order, ?PDO $pdo = null): array {
+        if ($pdo === null && isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
+            $pdo = $GLOBALS['pdo'];
+        }
+        $smtpConfig = function_exists('getEffectiveSmtpConfig') ? getEffectiveSmtpConfig($pdo) : [];
+        $fromEmail = !empty($smtpConfig['fromEmail']) ? $smtpConfig['fromEmail'] : 'hello@oddperfume.com';
+        $fromName = !empty($smtpConfig['fromName']) ? $smtpConfig['fromName'] : 'ODD Perfume Studio';
+
         $to = $order['customer_email'] ?? '';
-        if (!$to || !filter_var($to, FILTER_VALIDATE_EMAIL)) return false;
+        if (!$to || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            return ['success' => false, 'error' => "Invalid customer email: '{$to}'", 'method' => 'none'];
+        }
 
         $orderId = htmlspecialchars($order['id'] ?? 'ODD');
         $customerName = htmlspecialchars($order['customer_name'] ?? 'Valued Customer');
@@ -1753,7 +1805,7 @@ try {
               </div>
             </div>
             <div style='background:#f9fafb; border-top:1px solid #e5e7eb; padding:16px; text-align:center; font-size:11px; color:#9ca3af;'>
-              &copy; 2026 ODD Perfumes &middot; India &middot; hello@oddperfume.com
+              &copy; 2026 ODD Perfumes &middot; India &middot; {$fromEmail}
             </div>
           </div>
         </body>
@@ -1766,15 +1818,29 @@ try {
 
         $headers = "MIME-Version: 1.0\r\n";
         $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-        $headers .= "From: ODD Perfumes <orders@oddperfume.com>\r\n";
-        $headers .= "Reply-To: hello@oddperfume.com\r\n";
+        $headers .= "From: =?UTF-8?B?" . base64_encode($fromName) . "?= <{$fromEmail}>\r\n";
+        $headers .= "Reply-To: <{$fromEmail}>\r\n";
 
-        $smtpConfig = function_exists('getEffectiveSmtpConfig') ? getEffectiveSmtpConfig() : [];
         if (function_exists('sendSmtpEmail')) {
             $res = sendSmtpEmail($to, $subject, $html, strip_tags($html), $smtpConfig);
-            return !empty($res['success']);
+            if (function_exists('logMailOperation')) {
+                logMailOperation(!empty($res['success']) ? 'info' : 'error', "Order #{$orderId} confirmation email to {$to}: " . (!empty($res['success']) ? 'dispatched' : ($res['error'] ?? 'failed')));
+            }
+            return [
+                'success' => !empty($res['success']),
+                'error' => $res['error'] ?? null,
+                'method' => $res['method'] ?? 'smtp'
+            ];
         }
-        return @mail($to, $subject, $html, $headers, "-f hello@oddperfume.com");
+        $mailOk = @mail($to, $subject, $html, $headers, "-f {$fromEmail}");
+        if (function_exists('logMailOperation')) {
+            logMailOperation($mailOk ? 'info' : 'error', "Order #{$orderId} confirmation email to {$to} via native mail(): " . ($mailOk ? 'success' : 'failed'));
+        }
+        return [
+            'success' => (bool)$mailOk,
+            'error' => $mailOk ? null : 'PHP mail() dispatch failed',
+            'method' => 'mail'
+        ];
     }
 
     function sendDispatchNotificationEmail(array $order, string $awb, string $courier, string $trackingUrl, string $labelUrl): bool {
@@ -2015,6 +2081,12 @@ try {
         }
         $cleanStreet = substr($cleanStreet, 0, 100);
 
+        $totalUnits = 0;
+        foreach ($orderItems as $it) {
+            $totalUnits += (int)($it['units'] ?? 1);
+        }
+        $parcelWeight = max(0.4, round($totalUnits * 0.35, 2));
+
         $srOrderPayload = [
             'order_id' => $orderId,
             'order_date' => $orderDate,
@@ -2054,31 +2126,41 @@ try {
             'length' => 15,
             'breadth' => 10,
             'height' => 8,
-            'weight' => 0.4
+            'weight' => $parcelWeight
         ];
 
-        // 1. Create Adhoc Order in Shiprocket
-        $ch = curl_init('https://apiv2.shiprocket.in/v1/external/orders/create/adhoc');
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "Authorization: Bearer {$token}",
-            "Content-Type: application/json"
-        ]);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($srOrderPayload));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-        $srResp = curl_exec($ch);
-        curl_close($ch);
+        $shipmentId = !empty($order['shiprocket_shipment_id']) ? (string)$order['shiprocket_shipment_id'] : null;
+        $srOrderId = !empty($order['shiprocket_order_id']) ? (string)$order['shiprocket_order_id'] : '';
 
-        $srJson = json_decode((string)$srResp, true);
-        $shipmentId = $srJson['shipment_id'] ?? null;
-
+        // 1. Create Adhoc Order in Shiprocket (if shipment_id not already generated)
         if (!$shipmentId) {
-            $err = $srJson['message'] ?? 'Failed to create order in Shiprocket.';
-            if (!empty($srJson['errors'])) {
-                $err .= ' Details: ' . json_encode($srJson['errors']);
+            $ch = curl_init('https://apiv2.shiprocket.in/v1/external/orders/create/adhoc');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "Authorization: Bearer {$token}",
+                "Content-Type: application/json"
+            ]);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($srOrderPayload));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            $srResp = curl_exec($ch);
+            curl_close($ch);
+
+            $srJson = json_decode((string)$srResp, true);
+            $shipmentId = $srJson['shipment_id'] ?? null;
+            $srOrderId = (string)($srJson['order_id'] ?? '');
+
+            if (!$shipmentId) {
+                $err = $srJson['message'] ?? 'Failed to create order in Shiprocket.';
+                if (!empty($srJson['errors'])) {
+                    $err .= ' Details: ' . json_encode($srJson['errors']);
+                }
+                return ['success' => false, 'error' => $err, 'raw' => $srJson];
             }
-            return ['success' => false, 'error' => $err, 'raw' => $srJson];
+
+            // Immediately persist Shiprocket order ID and shipment ID upon creation
+            $pdo->prepare('UPDATE orders SET shiprocket_order_id = ?, shiprocket_shipment_id = ?, shiprocket_status = "AWB_PENDING", updated_at = NOW() WHERE id = ?')
+                ->execute([$srOrderId, (string)$shipmentId, $orderId]);
         }
 
         // 2. Assign AWB in Shiprocket
@@ -2101,8 +2183,31 @@ try {
         $courierName = $awbData['courier_name'] ?? 'Shiprocket Logistics Partner';
 
         if (!$trackingNumber) {
-            $err = $awbJson['message'] ?? $awbJson['response']['data']['error'] ?? 'Shiprocket could not assign AWB for this shipment.';
-            return ['success' => false, 'error' => $err, 'shipment_id' => $shipmentId, 'raw' => $awbJson];
+            $awbError = $awbJson['response']['data']['awb_assign_error']
+                ?? $awbJson['response']['data']['error']
+                ?? $awbJson['message']
+                ?? (!empty($awbJson['errors']) ? (is_array($awbJson['errors']) ? json_encode($awbJson['errors']) : (string)$awbJson['errors']) : null)
+                ?? 'Shiprocket could not assign AWB for this shipment.';
+
+            $isWalletError = preg_match('/recharge|wallet|insufficient|balance|minimum.*required/i', $awbError);
+            if ($isWalletError) {
+                $descriptiveError = "Shiprocket order created successfully (Order #{$srOrderId}), but AWB generation failed due to insufficient wallet balance: \"{$awbError}\". Please recharge your Shiprocket wallet (minimum balance required in Shiprocket dashboard) and click 'Assign AWB / Retry'.";
+                return [
+                    'success' => false,
+                    'wallet_recharge_required' => true,
+                    'shiprocket_order_id' => $srOrderId,
+                    'shiprocket_shipment_id' => (string)$shipmentId,
+                    'error' => $descriptiveError,
+                    'raw' => $awbJson
+                ];
+            }
+            return [
+                'success' => false,
+                'error' => $awbError,
+                'shiprocket_order_id' => $srOrderId,
+                'shiprocket_shipment_id' => (string)$shipmentId,
+                'raw' => $awbJson
+            ];
         }
 
         // 3. Generate Label in Shiprocket
@@ -2124,7 +2229,7 @@ try {
         $trackUrl = "https://shiprocket.co/tracking/" . $trackingNumber;
 
         // 4. Update Database
-        $pdo->prepare('UPDATE orders SET courier_name = ?, tracking_number = ?, tracking_url = ?, label_url = ?, status = "Dispatched", dispatched_at = NOW(), updated_at = NOW() WHERE id = ?')
+        $pdo->prepare('UPDATE orders SET courier_name = ?, tracking_number = ?, tracking_url = ?, label_url = ?, status = "Dispatched", shiprocket_status = "DISPATCHED", dispatched_at = NOW(), updated_at = NOW() WHERE id = ?')
             ->execute([$courierName, $trackingNumber, $trackUrl, $labelUrl, $orderId]);
 
         // 5. Send dispatch notification email
@@ -2142,6 +2247,8 @@ try {
             'tracking_url' => $trackUrl,
             'carrier' => $courierName,
             'courier_name' => $courierName,
+            'shiprocket_order_id' => $srOrderId,
+            'shiprocket_shipment_id' => (string)$shipmentId,
             'message' => "Shiprocket label generated with {$courierName}! AWB: {$trackingNumber}"
         ];
     }
@@ -2761,7 +2868,7 @@ try {
 
         // 3. Dispatch Email via Hostinger Authenticated SMTP (with native fallback)
         $smtpConfig = getEffectiveSmtpConfig($pdo);
-        $targetMailbox = $smtpConfig['fromEmail'] ?: 'hello@oddperfume.com';
+        $targetMailbox = !empty($smtpConfig['fromEmail']) ? $smtpConfig['fromEmail'] : (defined('SMTP_FROM') ? SMTP_FROM : (getenv('SMTP_FROM') ?: 'hello@oddperfume.com'));
 
         $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
         $safeEmail = htmlspecialchars($email, ENT_QUOTES, 'UTF-8');
@@ -2794,7 +2901,7 @@ try {
       </div>
     </div>
     <div style='background:#f9fafb; border-top:1px solid #e5e7eb; padding:14px; text-align:center; font-size:11px; color:#9ca3af;'>
-      Recorded in ODD Perfumes Studio Database &middot; hello@oddperfume.com
+      Recorded in ODD Perfumes Studio Database &middot; {$targetMailbox}
     </div>
   </div>
 </body>
@@ -2811,6 +2918,10 @@ HTML;
             $smtpConfig,
             ['email' => $email, 'name' => $name]
         );
+
+        if (function_exists('logMailOperation')) {
+            logMailOperation(!empty($mailResult['success']) ? 'info' : 'error', "Contact inquiry #{$inquiryId} mail dispatch to {$targetMailbox}: " . (!empty($mailResult['success']) ? 'dispatched' : ($mailResult['error'] ?? 'failed')));
+        }
 
         sendJson(200, [
             'success' => true,

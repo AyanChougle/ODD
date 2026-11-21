@@ -35,6 +35,9 @@ function logMailOperation(string $level, string $message, array $context = []): 
  */
 function getEffectiveSmtpConfig(?PDO $pdo = null): array {
     $cfg = [];
+    if ($pdo === null && isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
+        $pdo = $GLOBALS['pdo'];
+    }
     if ($pdo !== null) {
         try {
             $stmt = $pdo->prepare('SELECT value_json FROM settings WHERE key_name = "smtp"');
@@ -49,14 +52,14 @@ function getEffectiveSmtpConfig(?PDO $pdo = null): array {
         }
     }
 
-    $host = !empty($cfg['host']) ? trim($cfg['host']) : (defined('SMTP_HOST') ? SMTP_HOST : 'smtp.hostinger.com');
-    $port = !empty($cfg['port']) ? (int)$cfg['port'] : (defined('SMTP_PORT') ? (int)SMTP_PORT : 465);
-    $user = !empty($cfg['username']) ? trim($cfg['username']) : (defined('SMTP_USER') ? SMTP_USER : 'hello@oddperfume.com');
+    $host = !empty($cfg['host']) ? trim($cfg['host']) : (defined('SMTP_HOST') ? SMTP_HOST : (getenv('SMTP_HOST') ?: 'smtp.hostinger.com'));
+    $port = !empty($cfg['port']) ? (int)$cfg['port'] : (defined('SMTP_PORT') ? (int)SMTP_PORT : (int)(getenv('SMTP_PORT') ?: 465));
+    $user = !empty($cfg['username']) ? trim($cfg['username']) : (defined('SMTP_USER') ? SMTP_USER : (getenv('SMTP_USER') ?: 'hello@oddperfume.com'));
     $pass = !empty($cfg['password']) && !str_contains($cfg['password'], '••••')
         ? trim($cfg['password'])
-        : (defined('SMTP_PASS') ? SMTP_PASS : '');
-    $fromEmail = !empty($cfg['fromEmail']) ? trim($cfg['fromEmail']) : (defined('SMTP_FROM') ? SMTP_FROM : 'hello@oddperfume.com');
-    $fromName = !empty($cfg['fromName']) ? trim($cfg['fromName']) : (defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : 'ODD Perfume Studio');
+        : (defined('SMTP_PASS') ? SMTP_PASS : (getenv('SMTP_PASS') ?: ''));
+    $fromEmail = !empty($cfg['fromEmail']) ? trim($cfg['fromEmail']) : (defined('SMTP_FROM') ? SMTP_FROM : (getenv('SMTP_FROM') ?: 'hello@oddperfume.com'));
+    $fromName = !empty($cfg['fromName']) ? trim($cfg['fromName']) : (defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : (getenv('SMTP_FROM_NAME') ?: 'ODD Perfume Studio'));
 
     return [
         'host' => $host,
@@ -192,7 +195,9 @@ function sendSmtpEmail(
         return sendViaNativeMail($to, $subject, $htmlBody, $textBody, $fromEmail, $fromName, $replyTo);
     }
 
-    $write("EHLO oddperfume.com");
+    $fromDomain = (strpos($fromEmail, '@') !== false) ? substr(strrchr($fromEmail, '@'), 1) : 'oddperfume.com';
+
+    $write("EHLO {$fromDomain}");
     $ehlo = $read();
 
     if ($port === 587) {
@@ -200,7 +205,7 @@ function sendSmtpEmail(
         $tls = $read();
         if (str_starts_with($tls, '220')) {
             stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
-            $write("EHLO oddperfume.com");
+            $write("EHLO {$fromDomain}");
             $ehlo = $read();
         }
     }
@@ -257,7 +262,7 @@ function sendSmtpEmail(
 
     // Assemble MIME multipart message
     $boundary = 'bnd_odd_' . md5(uniqid((string)mt_rand(), true));
-    $msgId = '<' . time() . '.' . md5(uniqid((string)mt_rand(), true)) . '@oddperfume.com>';
+    $msgId = '<' . time() . '.' . md5(uniqid((string)mt_rand(), true)) . "@{$fromDomain}>";
 
     $headers = [
         "From: =?UTF-8?B?" . base64_encode($fromName) . "?= <{$fromEmail}>",

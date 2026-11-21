@@ -224,9 +224,23 @@ function normalizeOrder(o) {
     razorpayPaymentId: o.razorpayPaymentId || (isRzp ? (String(o.paymentMethod || '').match(/pay_[a-zA-Z0-9]+/)?.[0] || null) : null),
     status: o.status || 'Confirmed',
     stockDeducted: stockDeducted,
-    dispatchedAt: o.dispatchedAt || null,
-    deliveredAt: o.deliveredAt || null,
-    cancelledAt: o.cancelledAt || null,
+    dispatchedAt: o.dispatchedAt || o.dispatched_at || null,
+    deliveredAt: o.deliveredAt || o.delivered_at || null,
+    cancelledAt: o.cancelledAt || o.cancelled_at || null,
+    courier: o.courier || o.courier_name || null,
+    courier_name: o.courier_name || o.courier || null,
+    trackingNumber: o.trackingNumber || o.tracking_number || null,
+    tracking_number: o.tracking_number || o.trackingNumber || null,
+    trackingUrl: o.trackingUrl || o.tracking_url || null,
+    tracking_url: o.tracking_url || o.trackingUrl || null,
+    labelUrl: o.labelUrl || o.label_url || null,
+    label_url: o.label_url || o.label_url || null,
+    shiprocket_order_id: o.shiprocket_order_id || o.shiprocketOrderId || null,
+    shiprocketOrderId: o.shiprocketOrderId || o.shiprocket_order_id || null,
+    shiprocket_shipment_id: o.shiprocket_shipment_id || o.shiprocketShipmentId || null,
+    shiprocketShipmentId: o.shiprocketShipmentId || o.shiprocket_shipment_id || null,
+    shiprocket_status: o.shiprocket_status || o.shiprocketStatus || null,
+    shiprocketStatus: o.shiprocketStatus || o.shiprocket_status || null,
     items: items
   };
 }
@@ -655,17 +669,34 @@ function renderOrdersTable() {
           </div>
         `;
       } else if (order.status !== 'Cancelled' && order.status !== 'Delivered') {
-        shippingCell = `
-          <div style="display:flex; flex-direction:column; gap:4px;">
-            ${(hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
-              ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithShiprocket('${escapeHtml(order.id)}', this)" style="font-size:0.72rem; padding:5px 10px; white-space:nowrap;">Ship with Shiprocket</button>`
-              : '<span style="color:var(--admin-text-muted); font-size:0.75rem;">Ready to Ship</span>'}
-            <button type="button" class="admin-btn admin-btn-xs" onclick="printOrderInvoice('${escapeHtml(order.id)}')" style="display:inline-flex; align-items:center; gap:4px; padding:3px 7px; font-size:0.72rem;" title="Print customer tax invoice / bill">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-              Print Bill
-            </button>
-          </div>
-        `;
+        const srId = order.shiprocket_order_id || order.shiprocketOrderId;
+        if (srId) {
+          shippingCell = `
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <span class="badge-status warning" style="font-size:0.7rem; padding:2px 6px;">Shiprocket #${escapeHtml(srId)}</span>
+              <small style="color:#d97706; font-size:0.72rem; font-weight:600;">AWB Pending (Recharge Wallet)</small>
+              ${(hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
+                ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithShiprocket('${escapeHtml(order.id)}', this)" style="font-size:0.72rem; padding:4px 8px; white-space:nowrap; background:#d97706; border-color:#d97706;">Assign AWB / Retry</button>`
+                : ''}
+              <button type="button" class="admin-btn admin-btn-xs" onclick="printOrderInvoice('${escapeHtml(order.id)}')" style="display:inline-flex; align-items:center; gap:4px; padding:3px 7px; font-size:0.72rem;" title="Print customer tax invoice / bill">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                Print Bill
+              </button>
+            </div>
+          `;
+        } else {
+          shippingCell = `
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              ${(hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
+                ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithShiprocket('${escapeHtml(order.id)}', this)" style="font-size:0.72rem; padding:5px 10px; white-space:nowrap;">Ship with Shiprocket</button>`
+                : '<span style="color:var(--admin-text-muted); font-size:0.75rem;">Ready to Ship</span>'}
+              <button type="button" class="admin-btn admin-btn-xs" onclick="printOrderInvoice('${escapeHtml(order.id)}')" style="display:inline-flex; align-items:center; gap:4px; padding:3px 7px; font-size:0.72rem;" title="Print customer tax invoice / bill">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                Print Bill
+              </button>
+            </div>
+          `;
+        }
       }
 
       const rawMethod = order.paymentMethod || order.method || order.gateway || (order.paymentStatus === 'Paid' ? 'Razorpay' : 'COD');
@@ -743,17 +774,36 @@ function renderOrdersTable() {
           </div>
         `;
       } else if (order.status !== 'Cancelled' && order.status !== 'Delivered') {
-        shippingAction = `
-          <div style="display:flex; gap:4px; flex-wrap:wrap;">
-            ${(hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
-              ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithShiprocket('${escapeHtml(order.id)}', this)" style="white-space:nowrap;">Ship with Shiprocket</button>`
-              : '<span style="color:var(--admin-text-muted); font-size:0.75rem;">Ready to Ship</span>'}
-            <button type="button" class="admin-btn admin-btn-xs" onclick="printOrderInvoice('${escapeHtml(order.id)}')" style="display:inline-flex; align-items:center; gap:4px; padding:3px 7px; font-size:0.72rem;" title="Print customer tax invoice / bill">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-              Print Bill
-            </button>
-          </div>
-        `;
+        const srId = order.shiprocket_order_id || order.shiprocketOrderId;
+        if (srId) {
+          shippingAction = `
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <span class="badge-status warning" style="font-size:0.68rem; padding:2px 6px;">Shiprocket #${escapeHtml(srId)}</span>
+              <small style="color:#d97706; font-size:0.72rem; font-weight:600;">AWB Pending (Recharge Wallet)</small>
+              <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                ${(hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
+                  ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithShiprocket('${escapeHtml(order.id)}', this)" style="white-space:nowrap; background:#d97706; border-color:#d97706;">Assign AWB / Retry</button>`
+                  : ''}
+                <button type="button" class="admin-btn admin-btn-xs" onclick="printOrderInvoice('${escapeHtml(order.id)}')" style="display:inline-flex; align-items:center; gap:4px; padding:3px 7px; font-size:0.72rem;" title="Print customer tax invoice / bill">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                  Print Bill
+                </button>
+              </div>
+            </div>
+          `;
+        } else {
+          shippingAction = `
+            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+              ${(hasPermission('shipping:write') || hasPermission('orders:write') || hasPermission('*'))
+                ? `<button type="button" class="admin-btn admin-btn-xs admin-btn-primary" onclick="shipWithShiprocket('${escapeHtml(order.id)}', this)" style="white-space:nowrap;">Ship with Shiprocket</button>`
+                : '<span style="color:var(--admin-text-muted); font-size:0.75rem;">Ready to Ship</span>'}
+              <button type="button" class="admin-btn admin-btn-xs" onclick="printOrderInvoice('${escapeHtml(order.id)}')" style="display:inline-flex; align-items:center; gap:4px; padding:3px 7px; font-size:0.72rem;" title="Print customer tax invoice / bill">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                Print Bill
+              </button>
+            </div>
+          `;
+        }
       }
 
       const rawMethod = order.paymentMethod || order.method || order.gateway || (order.paymentStatus === 'Paid' ? 'Razorpay' : 'COD');
@@ -2188,6 +2238,7 @@ async function handleShipWithShiprocket(orderId, btn) {
     if (!err.toastShown) {
       showAdminToast(`Shipping error: ${err.message}`, true);
     }
+    await loadOrders();
     if (btn) {
       btn.disabled = false;
       btn.textContent = 'Ship with Shiprocket';
