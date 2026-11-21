@@ -68,6 +68,33 @@ CREATE TABLE IF NOT EXISTS `scans` (
   INDEX `idx_scans_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 4B. Customer Accounts & Registered Customers
+CREATE TABLE IF NOT EXISTS `customer_accounts` (
+  `id` VARCHAR(64) PRIMARY KEY,
+  `name` VARCHAR(191) NOT NULL,
+  `email` VARCHAR(191) NOT NULL UNIQUE,
+  `phone` VARCHAR(32) NOT NULL DEFAULT '',
+  `password_hash` VARCHAR(255) NOT NULL,
+  `status` ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+  `last_login_at` DATETIME NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_cust_acc_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `customers` (
+  `id` VARCHAR(64) PRIMARY KEY,
+  `name` VARCHAR(191) NOT NULL,
+  `email` VARCHAR(191) NOT NULL UNIQUE,
+  `phone` VARCHAR(32) NOT NULL DEFAULT '',
+  `password_hash` VARCHAR(255) NOT NULL,
+  `status` ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+  `last_login_at` DATETIME NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_customers_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 5. Customer Saved Addresses
 CREATE TABLE IF NOT EXISTS `customer_addresses` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
