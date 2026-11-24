@@ -2046,6 +2046,7 @@ function checkAdminAccountRole() {
 document.addEventListener("DOMContentLoaded", () => {
   checkAdminAccountRole();
   initProductGallerySwipe();
+  initProductImageLightbox();
 });
 
 let currentProductSlide = 0;
@@ -2180,6 +2181,165 @@ function initProductGallerySwipe() {
   );
 }
 window.initProductGallerySwipe = initProductGallerySwipe;
+
+/* ==========================================================================
+   PRODUCT IMAGE DETAIL LIGHTBOX & ZOOM ENGINE
+   ========================================================================== */
+let activeLightboxIndex = 0;
+let lightboxImages = [];
+
+function openProductImageModal(index = 0) {
+  const slides = document.querySelectorAll(".product-gallery-slide img");
+  if (!slides.length) return;
+
+  lightboxImages = Array.from(slides).map((img, i) => {
+    return {
+      src: img.currentSrc || img.src,
+      alt: img.alt || `ODD Perfume View ${i + 1}`,
+      title: img.closest(".product-gallery-slide")?.id === "slide-lifestyle"
+        ? "Scent Atmosphere & Lifestyle"
+        : "Luxury Bottle & Packaging",
+    };
+  });
+
+  let modal = document.getElementById("product-image-lightbox");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "product-image-lightbox";
+    modal.className = "product-lightbox-backdrop";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-label", "Product Image Detail View");
+    modal.innerHTML = `
+      <div class="product-lightbox-content">
+        <button type="button" class="product-lightbox-close" aria-label="Close detail view" onclick="closeProductImageModal()">&times;</button>
+        <div class="product-lightbox-stage" id="lightbox-stage">
+          <img id="lightbox-main-img" src="" alt="ODD Perfume Detail View" class="product-lightbox-main-img">
+          <div class="product-lightbox-hint">Click image to toggle 2× zoom</div>
+        </div>
+        <div class="product-lightbox-footer">
+          <div class="product-lightbox-caption" id="lightbox-caption">ODD Perfume</div>
+          <div class="product-lightbox-nav">
+            <button type="button" class="product-lightbox-btn" onclick="stepLightboxImage(-1)" aria-label="Previous image">&larr;</button>
+            <span class="product-lightbox-counter" id="lightbox-counter">1 / 2</span>
+            <button type="button" class="product-lightbox-btn" onclick="stepLightboxImage(1)" aria-label="Next image">&rarr;</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeProductImageModal();
+    });
+
+    const stage = modal.querySelector("#lightbox-stage");
+    stage.addEventListener("click", () => {
+      stage.classList.toggle("is-zoomed");
+      if (!stage.classList.contains("is-zoomed")) {
+        const img = modal.querySelector("#lightbox-main-img");
+        if (img) img.style.transformOrigin = "center center";
+      }
+    });
+
+    stage.addEventListener("mousemove", (e) => {
+      if (!stage.classList.contains("is-zoomed")) return;
+      const rect = stage.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      const img = modal.querySelector("#lightbox-main-img");
+      if (img) img.style.transformOrigin = `${x}% ${y}%`;
+    });
+  }
+
+  activeLightboxIndex = Math.max(0, Math.min(lightboxImages.length - 1, index));
+  updateLightboxView();
+
+  modal.classList.add("is-open");
+  document.body.classList.add("drawer-open");
+}
+
+function updateLightboxView() {
+  const modal = document.getElementById("product-image-lightbox");
+  if (!modal || !lightboxImages.length) return;
+
+  const item = lightboxImages[activeLightboxIndex];
+  const imgEl = modal.querySelector("#lightbox-main-img");
+  const captionEl = modal.querySelector("#lightbox-caption");
+  const counterEl = modal.querySelector("#lightbox-counter");
+  const stage = modal.querySelector("#lightbox-stage");
+
+  if (stage) stage.classList.remove("is-zoomed");
+  if (imgEl) {
+    imgEl.src = item.src;
+    imgEl.alt = item.alt;
+    imgEl.style.transformOrigin = "center center";
+  }
+
+  const prodTitle =
+    document.querySelector(".product-detail-title")?.textContent?.trim() ||
+    "ODD Perfume";
+  if (captionEl) {
+    captionEl.innerHTML = `<strong>${escapeHtml(prodTitle)}</strong> &mdash; <span style="font-size:0.9rem; color:rgba(255,255,255,0.75);">${escapeHtml(item.title)}</span>`;
+  }
+  if (counterEl) {
+    counterEl.textContent = `${activeLightboxIndex + 1} / ${lightboxImages.length}`;
+  }
+}
+
+function stepLightboxImage(delta) {
+  if (!lightboxImages.length) return;
+  activeLightboxIndex =
+    (activeLightboxIndex + delta + lightboxImages.length) % lightboxImages.length;
+  updateLightboxView();
+}
+
+function closeProductImageModal() {
+  const modal = document.getElementById("product-image-lightbox");
+  if (modal) {
+    modal.classList.remove("is-open");
+    const stage = modal.querySelector("#lightbox-stage");
+    if (stage) stage.classList.remove("is-zoomed");
+  }
+  document.body.classList.remove("drawer-open");
+}
+
+window.openProductImageModal = openProductImageModal;
+window.closeProductImageModal = closeProductImageModal;
+window.stepLightboxImage = stepLightboxImage;
+
+window.addEventListener("keydown", (e) => {
+  const modal = document.getElementById("product-image-lightbox");
+  if (!modal || !modal.classList.contains("is-open")) return;
+  if (e.key === "Escape") closeProductImageModal();
+  if (e.key === "ArrowLeft") stepLightboxImage(-1);
+  if (e.key === "ArrowRight") stepLightboxImage(1);
+});
+
+function initProductImageLightbox() {
+  const slides = document.querySelectorAll(".product-gallery-slide");
+  if (!slides.length) return;
+
+  slides.forEach((slide, idx) => {
+    slide.style.cursor = "zoom-in";
+    slide.setAttribute("title", "Click to inspect product details");
+
+    if (!slide.querySelector(".gallery-zoom-badge")) {
+      const badge = document.createElement("span");
+      badge.className = "gallery-zoom-badge";
+      badge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg> Inspect`;
+      slide.appendChild(badge);
+    }
+
+    slide.addEventListener("click", (e) => {
+      if (e.target.closest(".gallery-dots") || e.target.closest(".gallery-dot")) {
+        return;
+      }
+      openProductImageModal(idx);
+    });
+  });
+}
+window.initProductImageLightbox = initProductImageLightbox;
 
 // Global Resilient Image Extension Fallback (webp <-> jpeg)
 if (typeof window !== "undefined" && typeof document !== "undefined") {

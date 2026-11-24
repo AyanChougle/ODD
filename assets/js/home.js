@@ -44,12 +44,25 @@ function rotateShowcase(direction) {
   updateShowcaseCarousel();
 }
 
+const SHOWCASE_PRODUCTS = ['phantom', 'lucid', 'first-move', 'hamper'];
+
 function selectShowcaseSlide(index) {
   if (Date.now() < suppressSlideClickUntil) return;
   const parsed = Number(index);
   if (!Number.isFinite(parsed)) return;
   const total = getShowcaseTotal();
-  activeShowcaseIndex = ((Math.round(parsed) % total) + total) % total;
+  const targetIdx = ((Math.round(parsed) % total) + total) % total;
+
+  // If clicked slide is already active in center, clicking it goes into product details!
+  if (targetIdx === activeShowcaseIndex) {
+    const prod = SHOWCASE_PRODUCTS[targetIdx];
+    if (prod) {
+      window.location.href = `products-odd-${prod}.html`;
+      return;
+    }
+  }
+
+  activeShowcaseIndex = targetIdx;
   updateShowcaseCarousel();
 }
 
