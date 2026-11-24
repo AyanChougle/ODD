@@ -234,6 +234,8 @@
     let reviews = await fetchProductReviews(productId);
     let selectedRating = 5;
     let activeFilter = 'all';
+    let currentPage = 1;
+    const REVIEWS_PER_PAGE = 5;
 
     function buildReviewsFeedHtml() {
       const totalCount = reviews.length;
@@ -241,8 +243,16 @@
         ? reviews
         : reviews.filter((r) => r.rating === Number(activeFilter));
 
-      const reviewsListHtml = filtered.length
-        ? filtered.map((r) => `
+      const totalFiltered = filtered.length;
+      const totalPages = Math.ceil(totalFiltered / REVIEWS_PER_PAGE) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const startIndex = (currentPage - 1) * REVIEWS_PER_PAGE;
+      const paginatedReviews = filtered.slice(startIndex, startIndex + REVIEWS_PER_PAGE);
+
+      const reviewsListHtml = paginatedReviews.length
+        ? paginatedReviews.map((r) => `
           <article class="product-review-card">
             <div class="product-review-card-top">
               <div>
@@ -288,11 +298,44 @@
         </div>
       ` : '';
 
+      let paginationHtml = '';
+      if (totalPages > 1) {
+        const fromItem = startIndex + 1;
+        const toItem = Math.min(startIndex + REVIEWS_PER_PAGE, totalFiltered);
+
+        let pageButtons = '';
+        for (let p = 1; p <= totalPages; p++) {
+          pageButtons += `
+            <button type="button" class="review-page-btn ${p === currentPage ? 'is-active' : ''}" data-page="${p}" aria-label="Page ${p}">
+              ${p}
+            </button>
+          `;
+        }
+
+        paginationHtml = `
+          <nav class="product-reviews-pagination" aria-label="Customer reviews pagination">
+            <span class="product-reviews-pagination-info">
+              Showing ${fromItem}&ndash;${toItem} of ${totalFiltered} reviews
+            </span>
+            <div class="product-reviews-pagination-nav">
+              <button type="button" class="review-page-btn review-page-nav-btn" data-page="${currentPage - 1}" ${currentPage <= 1 ? 'disabled' : ''} aria-label="Previous page">
+                &larr; Prev
+              </button>
+              ${pageButtons}
+              <button type="button" class="review-page-btn review-page-nav-btn" data-page="${currentPage + 1}" ${currentPage >= totalPages ? 'disabled' : ''} aria-label="Next page">
+                Next &rarr;
+              </button>
+            </div>
+          </nav>
+        `;
+      }
+
       return `
         ${filterBarHtml}
         <div class="product-reviews-list">
           ${reviewsListHtml}
         </div>
+        ${paginationHtml}
       `;
     }
 
@@ -311,7 +354,7 @@
       }
     }
 
-    function renderFeedColumn() {
+    function renderFeedColumn(scrollIntoView = false) {
       const col = root.querySelector('.product-reviews-feed-col');
       if (!col) return;
       col.innerHTML = buildReviewsFeedHtml();
@@ -320,9 +363,25 @@
       col.querySelectorAll('.review-filter-pill').forEach((pill) => {
         pill.addEventListener('click', () => {
           activeFilter = pill.getAttribute('data-filter') || 'all';
-          renderFeedColumn();
+          currentPage = 1;
+          renderFeedColumn(false);
         });
       });
+
+      col.querySelectorAll('.review-page-btn[data-page]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const targetPage = Number(btn.getAttribute('data-page'));
+          if (targetPage && targetPage !== currentPage && targetPage >= 1 && targetPage <= Math.ceil(reviews.length / REVIEWS_PER_PAGE)) {
+            currentPage = targetPage;
+            renderFeedColumn(true);
+          }
+        });
+      });
+
+      if (scrollIntoView) {
+        const feedTop = root.querySelector('.product-reviews-header') || col;
+        feedTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
 
     function renderAuthSlot() {
@@ -471,12 +530,13 @@
 
         reviews = mergeReviews([created], reviews);
         activeFilter = 'all';
+        currentPage = 1;
 
         // Clear comment and occasion, keep name pre-filled
         if (commentInput) commentInput.value = '';
         if (occasionInput) occasionInput.value = '';
 
-        renderFeedColumn();
+        renderFeedColumn(true);
 
         if (submitBtn) {
           submitBtn.disabled = false;
