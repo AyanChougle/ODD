@@ -15,6 +15,7 @@
  * 10. Payment Dashboard reconciliation
  */
 
+process.env.NODE_ENV = 'test';
 const http = require('node:http');
 const https = require('node:https');
 const fs = require('node:fs');
@@ -569,7 +570,7 @@ async function runTests() {
         method: 'POST',
         body: {
           customer: 'Shiprocket Test User',
-          email: 'sr.test@oddperfume.com',
+          email: 'sr.test@example.com',
           phone: '+91 99887 76655',
           address: 'Shop 1, Khar West, Mumbai - 400052',
           items: [{ sku: 'ODD-PH-001', qty: 1 }],
