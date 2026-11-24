@@ -1685,13 +1685,9 @@ async function generateBarcodeSheet(event) {
         <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
           <button type="button" class="wp-btn-print" onclick="printBarcodeSheet()">Print This Sheet</button>
           <button type="button" class="wp-btn-back" onclick="backToBarcodeSelection()">Back to Selection</button>
-          <a href="https://barcode.tec-it.com/en/Code128?data=${encodeURIComponent(labels[0]?.barcode || 'ODD0001-FM')}" target="_blank" rel="noopener" class="admin-btn admin-btn-xs" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.35rem; color:#f0ece1; background:#1C1F28; border:1px solid #2E3342;">
-            <span>Open in TEC-IT Generator</span>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-          </a>
         </div>
         <div class="wp-barcode-meta-summary">
-          <span>${labels.length} labels</span> · Format: <strong>Code 128 (TEC-IT)</strong> · Size: <strong>${width} × ${height} mm</strong> (${cols} col${cols > 1 ? 's' : ''}) · Batch: <strong>${escapeHtml(lot)}</strong> · Sample: <strong>${labels[0]?.barcode ? escapeHtml(labels[0].barcode) : 'ODD0001-FM'}</strong> · Exp: <strong>${escapeHtml(expiry)}</strong>
+          <span>${labels.length} labels</span> · Format: <strong>Code 128</strong> · Size: <strong>${width} × ${height} mm</strong> (${cols} col${cols > 1 ? 's' : ''}) · Batch: <strong>${escapeHtml(lot)}</strong> · Sample: <strong>${labels[0]?.barcode ? escapeHtml(labels[0].barcode) : 'ODD0001-FM'}</strong> · Exp: <strong>${escapeHtml(expiry)}</strong>
         </div>
       </div>
       <div class="${gridClasses}" style="grid-template-columns: repeat(${cols}, minmax(0, 1fr)) !important;">
