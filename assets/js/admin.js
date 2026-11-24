@@ -7,10 +7,10 @@
 
 const ADMIN_ROLE_PERMISSIONS = {
   admin: ['*'],
-  warehouse: ['inventory:read', 'inventory:write', 'barcodes:write', 'scans:read', 'shipping:read', 'shipping:write'],
+  warehouse: ['inventory:read', 'inventory:write', 'barcodes:write', 'scans:read'],
   orders: ['orders:read', 'orders:write'],
   finance: ['payments:read', 'orders:read'],
-  marketing: ['coupons:read', 'coupons:write', 'banner:read', 'banner:write']
+  marketing: ['coupons:read', 'coupons:write']
 };
 
 let adminSession = null;
@@ -387,11 +387,11 @@ function initTabNavigation() {
   const isAdmin = role === 'admin';
 
   // Strict role-based page allowances:
-  // Admin: all tabs
+  // Admin: all tabs (including Staff Access and all Settings & Marketing)
   // Warehouse: stock inventory, scanner, barcode generator (strictly warehouse & inventory only)
-  // Marketing: launch offers & banner
+  // Marketing: coupons
   // Finance: payment dashboard & orders
-  // Orders: orders
+  // Orders: orders, inquiries
   const access = {
     payments: isAdmin || role === 'finance',
     orders: isAdmin || role === 'finance' || role === 'orders',
@@ -401,7 +401,7 @@ function initTabNavigation() {
     barcodes: isAdmin || role === 'warehouse',
     shipping: isAdmin,
     'access-links': isAdmin,
-    'launch-offer': isAdmin || role === 'marketing',
+    'launch-offer': isAdmin,
     razorpay: isAdmin,
     smtp: isAdmin
   };
@@ -2260,7 +2260,7 @@ async function handleTestShiprocketConnection() {
 }
 function testShiprocketConnection() { return handleTestShiprocketConnection(); }
 
-async function handleShipWithShiprocket(orderId, btn) {
+async function handleShipWithShiprocket(orderId, btn, forceFresh = false) {
   if (!confirm(`Generate official Shiprocket courier shipping label & AWB for order ${orderId}?`)) return;
 
   if (btn) {
@@ -2271,7 +2271,7 @@ async function handleShipWithShiprocket(orderId, btn) {
   try {
     const res = await adminApi('/api/shipping/shiprocket/create-label', {
       method: 'POST',
-      body: { orderId }
+      body: { orderId, forceFresh }
     });
 
     if (res.success) {
@@ -2285,17 +2285,20 @@ async function handleShipWithShiprocket(orderId, btn) {
       throw new Error(res.error || 'Failed to generate shipment label');
     }
   } catch (err) {
+    if (!forceFresh && /cancel/i.test(err.message || '')) {
+      return handleShipWithShiprocket(orderId, btn, true);
+    }
     if (!err.toastShown) {
       showAdminToast(`Shipping error: ${err.message}`, true);
     }
     await loadOrders();
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Ship with Shiprocket';
+      btn.textContent = 'Assign AWB / Retry';
     }
   }
 }
-function shipWithShiprocket(orderId, btn) { return handleShipWithShiprocket(orderId, btn); }
+function shipWithShiprocket(orderId, btn, forceFresh = false) { return handleShipWithShiprocket(orderId, btn, forceFresh); }
 
 /* ==========================================================================
    Tab 8: Customer Coupon Usages Log

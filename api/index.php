@@ -529,10 +529,10 @@ function getCustomerSession(): ?array {
 
 const ROLE_PERMISSIONS = [
     'admin'     => ['*'],
-    'warehouse' => ['inventory', 'scans', 'barcodes', 'shipping'],
-    'orders'    => ['orders', 'shipping'],
+    'warehouse' => ['inventory', 'scans', 'barcodes'],
+    'orders'    => ['orders'],
     'finance'   => ['payments', 'orders'],
-    'marketing' => ['coupons', 'banner']
+    'marketing' => ['coupons']
 ];
 
 function requireStaffAuth(?string $perm = null): array {
@@ -2428,7 +2428,7 @@ try {
         return @mail($to, $subject, $html, $headers);
     }
 
-    function dispatchOrderWithShiprocket(PDO $pdo, string $orderId): array {
+    function dispatchOrderWithShiprocket(PDO $pdo, string $orderId, bool $forceFresh = false): array {
         $stmt = $pdo->prepare('SELECT * FROM orders WHERE id = ?');
         $stmt->execute([$orderId]);
         $order = $stmt->fetch();
@@ -2641,8 +2641,8 @@ try {
             'weight' => $parcelWeight
         ];
 
-        $shipmentId = !empty($order['shiprocket_shipment_id']) ? (string)$order['shiprocket_shipment_id'] : null;
-        $srOrderId = !empty($order['shiprocket_order_id']) ? (string)$order['shiprocket_order_id'] : '';
+        $shipmentId = (!$forceFresh && !empty($order['shiprocket_shipment_id'])) ? (string)$order['shiprocket_shipment_id'] : null;
+        $srOrderId = (!$forceFresh && !empty($order['shiprocket_order_id'])) ? (string)$order['shiprocket_order_id'] : '';
 
         // 1. Create Adhoc Order in Shiprocket (if shipment_id not already generated)
         if (!$shipmentId) {
@@ -2701,6 +2701,68 @@ try {
                 ?? (!empty($awbJson['errors']) ? (is_array($awbJson['errors']) ? json_encode($awbJson['errors']) : (string)$awbJson['errors']) : null)
                 ?? 'Shiprocket could not assign AWB for this shipment.';
 
+            // Auto-recovery: If Shiprocket voided/cancelled the previous attempt (e.g. earlier zero-wallet attempt), recreate fresh shipment dynamically
+            if (preg_match('/cancel/i', $awbError)) {
+                $retrySuffix = '-R' . substr((string)time(), -4);
+                $retryPayload = $srOrderPayload;
+                $retryPayload['order_id'] = $orderId . $retrySuffix;
+
+                $chRetry = curl_init('https://apiv2.shiprocket.in/v1/external/orders/create/adhoc');
+                curl_setopt($chRetry, CURLOPT_HTTPHEADER, [
+                    "Authorization: Bearer {$token}",
+                    "Content-Type: application/json"
+                ]);
+                curl_setopt($chRetry, CURLOPT_POST, true);
+                curl_setopt($chRetry, CURLOPT_POSTFIELDS, json_encode($retryPayload));
+                curl_setopt($chRetry, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($chRetry, CURLOPT_TIMEOUT, 15);
+                $retryResp = curl_exec($chRetry);
+                curl_close($chRetry);
+
+                $retryJson = json_decode((string)$retryResp, true);
+                $newShipmentId = $retryJson['shipment_id'] ?? null;
+                $newSrOrderId = (string)($retryJson['order_id'] ?? '');
+
+                if ($newShipmentId) {
+                    $shipmentId = (string)$newShipmentId;
+                    $srOrderId = $newSrOrderId;
+
+                    $pdo->prepare('UPDATE orders SET shiprocket_order_id = ?, shiprocket_shipment_id = ?, shiprocket_status = "AWB_PENDING", updated_at = NOW() WHERE id = ?')
+                        ->execute([$srOrderId, (string)$shipmentId, $orderId]);
+
+                    // Second attempt: Assign AWB to the fresh active shipment
+                    $chAwb2 = curl_init('https://apiv2.shiprocket.in/v1/external/courier/assign/awb');
+                    curl_setopt($chAwb2, CURLOPT_HTTPHEADER, [
+                        "Authorization: Bearer {$token}",
+                        "Content-Type: application/json"
+                    ]);
+                    curl_setopt($chAwb2, CURLOPT_POST, true);
+                    curl_setopt($chAwb2, CURLOPT_POSTFIELDS, json_encode(['shipment_id' => $shipmentId]));
+                    curl_setopt($chAwb2, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($chAwb2, CURLOPT_TIMEOUT, 15);
+                    $awbResp2 = curl_exec($chAwb2);
+                    curl_close($chAwb2);
+
+                    $awbJson2 = json_decode((string)$awbResp2, true);
+                    $awbData2 = $awbJson2['response']['data'] ?? $awbJson2['data'] ?? [];
+                    $trackingNumber2 = $awbData2['awb_code'] ?? null;
+
+                    if ($trackingNumber2) {
+                        $trackingNumber = $trackingNumber2;
+                        $courierName = $awbData2['courier_name'] ?? 'Shiprocket Logistics Partner';
+                    } else {
+                        $awbError = $awbJson2['response']['data']['awb_assign_error']
+                            ?? $awbJson2['response']['data']['error']
+                            ?? $awbJson2['message']
+                            ?? (!empty($awbJson2['errors']) ? (is_array($awbJson2['errors']) ? json_encode($awbJson2['errors']) : (string)$awbJson2['errors']) : null)
+                            ?? 'Shiprocket could not assign AWB for the recreated shipment.';
+                        $awbJson = $awbJson2;
+                    }
+                }
+            }
+        }
+
+        if (!$trackingNumber) {
             $isWalletError = preg_match('/recharge|wallet|insufficient|balance|minimum.*required/i', $awbError);
             if ($isWalletError) {
                 $descriptiveError = "Shiprocket order created successfully (Order #{$srOrderId}), but AWB generation failed due to insufficient wallet balance: \"{$awbError}\". Please recharge your Shiprocket wallet (minimum balance required in Shiprocket dashboard) and click 'Assign AWB / Retry'.";
@@ -2766,12 +2828,13 @@ try {
     }
 
     if ($route === 'shipping/shiprocket/create-label' && $method === 'POST') {
-        requireStaffAuth('shipping');
+        requireStaffAuth('admin');
         $body = getJsonBody();
         $orderId = trim((string)($body['orderId'] ?? ''));
         if (!$orderId) sendJson(400, ['error' => 'Order ID is required.']);
 
-        $res = dispatchOrderWithShiprocket($pdo, $orderId);
+        $forceFresh = !empty($body['forceFresh']) || !empty($body['force_fresh']);
+        $res = dispatchOrderWithShiprocket($pdo, $orderId, $forceFresh);
         sendJson(!empty($res['success']) ? 200 : 400, $res);
     }
 
@@ -3321,7 +3384,7 @@ try {
 
     if (strpos($route, 'settings/') === 0 && ($method === 'POST' || $method === 'PUT')) {
         $key = substr($route, strlen('settings/'));
-        requireStaffAuth($key === 'banner' ? 'marketing' : 'admin');
+        requireStaffAuth('admin');
         $body = getJsonBody();
 
         if ($key === 'razorpay' && (empty($body['keySecret']) || str_contains($body['keySecret'], '••••'))) {

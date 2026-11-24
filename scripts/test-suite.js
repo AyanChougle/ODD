@@ -127,6 +127,61 @@ async function runTests() {
     const unauthInventory = await request('/api/inventory');
     assert(unauthInventory.status === 401, 'Unauthenticated access to /api/inventory rejected with HTTP 401');
 
+    // Test Warehouse role isolation: settings and shipping APIs are strictly admin-only
+    const crypto = require('node:crypto');
+    const whSalt = crypto.randomBytes(16).toString('hex');
+    const whScrypt = crypto.scryptSync('WarehousePass123!', whSalt, 64).toString('hex');
+    const warehouseHash = `${whSalt}:${whScrypt}`;
+    try {
+      db.prepare(`
+        INSERT INTO staff (name, email, password_hash, role, active)
+        VALUES ('Warehouse Operator', 'warehouse.tester@oddperfume.com', ?, 'warehouse', 1)
+        ON CONFLICT(email) DO UPDATE SET password_hash = excluded.password_hash, role = 'warehouse', active = 1
+      `).run(warehouseHash);
+    } catch (_) {}
+
+    const whLogin = await request('/api/auth/login', {
+      method: 'POST',
+      body: { email: 'warehouse.tester@oddperfume.com', password: 'WarehousePass123!' }
+    });
+    assert(whLogin.status === 200, 'Warehouse staff authenticates with HTTP 200');
+    const whCookie = whLogin.headers['set-cookie'] ? whLogin.headers['set-cookie'][0].split(';')[0] : '';
+    const whCsrf = whLogin.data.csrfToken;
+
+    const whInventory = await request('/api/inventory', {
+      headers: { Cookie: whCookie }
+    });
+    assert(whInventory.status === 200, 'Warehouse staff role can read inventory (HTTP 200)');
+
+    const whSettingsShiprocket = await request('/api/settings/shiprocket', {
+      headers: { Cookie: whCookie }
+    });
+    assert(whSettingsShiprocket.status === 403, 'Warehouse staff blocked from reading Shiprocket settings (HTTP 403)');
+
+    const whSettingsSmtp = await request('/api/settings/smtp', {
+      headers: { Cookie: whCookie }
+    });
+    assert(whSettingsSmtp.status === 403, 'Warehouse staff blocked from reading SMTP settings (HTTP 403)');
+
+    const whSettingsRazorpay = await request('/api/settings/razorpay', {
+      headers: { Cookie: whCookie }
+    });
+    assert(whSettingsRazorpay.status === 403, 'Warehouse staff blocked from reading Razorpay settings (HTTP 403)');
+
+    const whCreateLabel = await request('/api/shipping/shiprocket/create-label', {
+      method: 'POST',
+      headers: { Cookie: whCookie, 'X-CSRF-Token': whCsrf },
+      body: { orderId: 'ODD-00001' }
+    });
+    assert(whCreateLabel.status === 403, 'Warehouse staff blocked from Shiprocket label creation API (HTTP 403)');
+
+    const whSaveBanner = await request('/api/settings/banner', {
+      method: 'POST',
+      headers: { Cookie: whCookie, 'X-CSRF-Token': whCsrf },
+      body: { active: true, text: 'Hacked' }
+    });
+    assert(whSaveBanner.status === 403, 'Warehouse staff blocked from modifying Settings & Marketing banner (HTTP 403)');
+
     // 4. Coupon Validation & Checkout Calculation
     console.log('\n[4] Testing Coupon Validation & Server-Side Calculations:');
     const couponVal = await request('/api/coupons/validate', {

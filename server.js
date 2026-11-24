@@ -967,10 +967,10 @@ function getCustomerSession(req) {
 
 const ROLE_PERMISSIONS = {
   admin: ['*'],
-  warehouse: ['inventory', 'scans', 'barcodes', 'shipping'],
-  orders: ['orders', 'shipping'],
+  warehouse: ['inventory', 'scans', 'barcodes'],
+  orders: ['orders'],
   finance: ['payments', 'orders'],
-  marketing: ['coupons', 'banner']
+  marketing: ['coupons']
 };
 
 function requireStaffAuth(req, res, requiredPerm = null) {
@@ -2231,7 +2231,7 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      async function dispatchOrderWithShiprocket(orderId) {
+      async function dispatchOrderWithShiprocket(orderId, forceFresh = false) {
         const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
         if (!order) return { success: false, error: `Order ${orderId} not found.` };
 
@@ -2394,8 +2394,8 @@ const server = http.createServer(async (req, res) => {
         });
 
         try {
-          let shipmentId = order.shiprocket_shipment_id ? String(order.shiprocket_shipment_id) : null;
-          let srOrderId = order.shiprocket_order_id ? String(order.shiprocket_order_id) : '';
+          let shipmentId = (!forceFresh && order.shiprocket_shipment_id) ? String(order.shiprocket_shipment_id) : null;
+          let srOrderId = (!forceFresh && order.shiprocket_order_id) ? String(order.shiprocket_order_id) : '';
 
           // Step 1: Create Adhoc Order (if shipment_id not already generated)
           if (!shipmentId) {
@@ -2468,31 +2468,117 @@ const server = http.createServer(async (req, res) => {
           const courierName = awbData.courier_name || 'Shiprocket Logistics Partner';
 
           if (!trackingNumber) {
-            const awbError = awbJson.response?.data?.awb_assign_error
+            let awbError = awbJson.response?.data?.awb_assign_error
               || awbJson.response?.data?.error
               || awbJson.message
               || (awbJson.errors ? (typeof awbJson.errors === 'string' ? awbJson.errors : JSON.stringify(awbJson.errors)) : null)
               || 'Shiprocket could not assign AWB for this shipment.';
 
-            const isWalletError = /recharge|wallet|insufficient|balance|minimum.*required/i.test(awbError);
-            if (isWalletError) {
-              const descriptiveError = `Shiprocket order created successfully (Order #${srOrderId || orderId}), but AWB generation failed due to insufficient wallet balance: "${awbError}". Please recharge your Shiprocket wallet (minimum balance required in Shiprocket dashboard) and click 'Assign AWB / Retry'.`;
+            // Auto-recovery: If Shiprocket voided/cancelled the previous attempt, recreate fresh shipment dynamically
+            if (/cancel/i.test(awbError)) {
+              const retrySuffix = '-R' + String(Date.now()).slice(-4);
+              const retryPayload = JSON.parse(srOrderPayload);
+              retryPayload.order_id = orderId + retrySuffix;
+              const retryBody = JSON.stringify(retryPayload);
+
+              const retryOrderRes = await new Promise((resolve, reject) => {
+                const r = https.request({
+                  hostname: 'apiv2.shiprocket.in',
+                  path: '/v1/external/orders/create/adhoc',
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(retryBody)
+                  },
+                  timeout: 15000
+                }, (resp) => {
+                  let d = '';
+                  resp.on('data', chunk => d += chunk);
+                  resp.on('end', () => resolve({ statusCode: resp.statusCode, body: d }));
+                });
+                r.on('error', reject);
+                r.on('timeout', () => { r.destroy(); reject(new Error('Shiprocket order retry timed out')); });
+                r.write(retryBody);
+                r.end();
+              });
+
+              const retryOrderJson = JSON.parse(retryOrderRes.body || '{}');
+              const newShipmentId = retryOrderJson.shipment_id ? String(retryOrderJson.shipment_id) : null;
+              const newSrOrderId = retryOrderJson.order_id ? String(retryOrderJson.order_id) : '';
+
+              if (newShipmentId) {
+                shipmentId = newShipmentId;
+                srOrderId = newSrOrderId;
+
+                db.prepare(`
+                  UPDATE orders
+                  SET shiprocket_order_id = ?, shiprocket_shipment_id = ?, shiprocket_status = 'AWB_PENDING', updated_at = datetime('now')
+                  WHERE id = ?
+                `).run(srOrderId, shipmentId, orderId);
+
+                // Re-attempt AWB on the fresh shipment
+                const awbRetryPayload = JSON.stringify({ shipment_id: shipmentId });
+                const awbRetryRes = await new Promise((resolve, reject) => {
+                  const r = https.request({
+                    hostname: 'apiv2.shiprocket.in',
+                    path: '/v1/external/courier/assign/awb',
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json',
+                      'Content-Length': Buffer.byteLength(awbRetryPayload)
+                    },
+                    timeout: 15000
+                  }, (resp) => {
+                    let d = '';
+                    resp.on('data', chunk => d += chunk);
+                    resp.on('end', () => resolve({ statusCode: resp.statusCode, body: d }));
+                  });
+                  r.on('error', reject);
+                  r.on('timeout', () => { r.destroy(); reject(new Error('Shiprocket AWB retry timed out')); });
+                  r.write(awbRetryPayload);
+                  r.end();
+                });
+
+                const awbJson2 = JSON.parse(awbRetryRes.body || '{}');
+                const awbData2 = awbJson2.response?.data || awbJson2.data || {};
+                const trackingNumber2 = awbData2.awb_code || null;
+
+                if (trackingNumber2) {
+                  trackingNumber = trackingNumber2;
+                  courierName = awbData2.courier_name || 'Shiprocket Logistics Partner';
+                } else {
+                  awbError = awbJson2.response?.data?.awb_assign_error
+                    || awbJson2.response?.data?.error
+                    || awbJson2.message
+                    || (awbJson2.errors ? (typeof awbJson2.errors === 'string' ? awbJson2.errors : JSON.stringify(awbJson2.errors)) : null)
+                    || 'Shiprocket could not assign AWB for the recreated shipment.';
+                }
+              }
+            }
+
+            if (!trackingNumber) {
+              const isWalletError = /recharge|wallet|insufficient|balance|minimum.*required/i.test(awbError);
+              if (isWalletError) {
+                const descriptiveError = `Shiprocket order created successfully (Order #${srOrderId || orderId}), but AWB generation failed due to insufficient wallet balance: "${awbError}". Please recharge your Shiprocket wallet (minimum balance required in Shiprocket dashboard) and click 'Assign AWB / Retry'.`;
+                return {
+                  success: false,
+                  wallet_recharge_required: true,
+                  shiprocket_order_id: srOrderId,
+                  shiprocket_shipment_id: shipmentId,
+                  error: descriptiveError,
+                  raw: awbJson
+                };
+              }
               return {
                 success: false,
-                wallet_recharge_required: true,
+                error: awbError,
                 shiprocket_order_id: srOrderId,
                 shiprocket_shipment_id: shipmentId,
-                error: descriptiveError,
                 raw: awbJson
               };
             }
-            return {
-              success: false,
-              error: awbError,
-              shiprocket_order_id: srOrderId,
-              shiprocket_shipment_id: shipmentId,
-              raw: awbJson
-            };
           }
 
           // Step 3: Generate Label
@@ -2550,14 +2636,15 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (pathname === '/api/shipping/shiprocket/create-label' && method === 'POST') {
-        const session = requireStaffAuth(req, res, 'shipping');
+        const session = requireStaffAuth(req, res, 'admin');
         if (!session) return;
 
         const body = await parseJsonBody(req);
         const orderId = String(body.orderId || '').trim();
         if (!orderId) return sendJson(res, 400, { error: 'Order ID is required.' });
 
-        const result = await dispatchOrderWithShiprocket(orderId);
+        const forceFresh = !!(body.forceFresh || body.force_fresh);
+        const result = await dispatchOrderWithShiprocket(orderId, forceFresh);
         return sendJson(res, result.success ? 200 : 400, result);
       }
 
@@ -3166,8 +3253,7 @@ const server = http.createServer(async (req, res) => {
 
       if (pathname.startsWith('/api/settings/') && (method === 'POST' || method === 'PUT')) {
         const key = pathname.replace('/api/settings/', '');
-        const requiredPermission = key === 'banner' ? 'marketing' : 'admin';
-        const session = requireStaffAuth(req, res, requiredPermission);
+        const session = requireStaffAuth(req, res, 'admin');
         if (!session) return;
 
         const body = await parseJsonBody(req);
