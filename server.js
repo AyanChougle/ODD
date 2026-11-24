@@ -34,7 +34,7 @@ if (fs.existsSync(envPath)) {
 }
 
 // --- Configuration ---
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 5502;
 const HOST = process.env.HOST || '127.0.0.1';
 const NODE_ENV = process.env.NODE_ENV || 'production';
 const ROOT_DIR = __dirname;
