@@ -1013,6 +1013,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+  min-height: 420px;
 }
 .product-review-card {
   padding: 1.2rem 1.3rem;
@@ -1171,6 +1172,18 @@ main {
   font-size: 0.72rem;
   padding: 0 0.65rem;
   font-weight: 600;
+}
+.review-page-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 32px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  user-select: none;
+  letter-spacing: 0.05em;
 }
 @media (max-width: 900px) {
   .product-reviews-header {

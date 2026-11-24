@@ -303,14 +303,33 @@
         const fromItem = startIndex + 1;
         const toItem = Math.min(startIndex + REVIEWS_PER_PAGE, totalFiltered);
 
-        let pageButtons = '';
-        for (let p = 1; p <= totalPages; p++) {
-          pageButtons += `
-            <button type="button" class="review-page-btn ${p === currentPage ? 'is-active' : ''}" data-page="${p}" aria-label="Page ${p}">
-              ${p}
-            </button>
-          `;
+        // Fixed-window pagination (max 5 items, e.g. 1 2 3 ... 9)
+        function getPaginationWindow(curr, total) {
+          if (total <= 5) {
+            return Array.from({ length: total }, (_, i) => i + 1);
+          }
+          if (curr <= 3) {
+            return [1, 2, 3, '...', total];
+          }
+          if (curr >= total - 2) {
+            return [1, '...', total - 2, total - 1, total];
+          }
+          return [1, '...', curr, '...', total];
         }
+
+        const paginationItems = getPaginationWindow(currentPage, totalPages);
+        let pageButtons = '';
+        paginationItems.forEach((item) => {
+          if (item === '...') {
+            pageButtons += `<span class="review-page-ellipsis" aria-hidden="true">&hellip;</span>`;
+          } else {
+            pageButtons += `
+              <button type="button" class="review-page-btn ${item === currentPage ? 'is-active' : ''}" data-page="${item}" aria-label="Page ${item}">
+                ${item}
+              </button>
+            `;
+          }
+        });
 
         paginationHtml = `
           <nav class="product-reviews-pagination" aria-label="Customer reviews pagination">
