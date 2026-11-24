@@ -646,96 +646,72 @@
               </div>
 
               <div>
-                <h4 style="margin:0 0 0.8rem; font-size:0.9rem; color:var(--admin-accent);">2. Label Dimensions &amp;
-                  Sheet Layout</h4>
+                <h4 style="margin:0 0 0.8rem; font-size:0.9rem; color:var(--admin-accent);">2. Custom Sticker Sizing &amp; Layout</h4>
                 <div style="background:#0E1015; border:1px solid var(--admin-border); border-radius:6px; padding:1rem;">
-                  <div class="admin-form-group" style="margin-bottom:0.9rem;">
-                    <label class="admin-label">Preset Label Dimension</label>
-                    <select name="batch_label_preset"  id="batch-label-preset" class="admin-input" onchange="applyLabelPreset(this.value)">
-                      <option value="50x25" selected>50 × 25 mm (Standard Perfume Bottle Label - Recommended)</option>
-                      <option value="60x25">60 × 25 mm (Retail Perfume Box Label - 3 Columns)</option>
-                      <option value="70x25">70 × 25 mm (Classic Packaging Label - 3 Columns)</option>
-                      <option value="40x25">40 × 25 mm (Compact Bottle Sticker - 4 Columns)</option>
-                      <option value="30x25">30 × 25 mm (30mm Width × 2.5cm Height - 4 Columns)</option>
-                      <option value="50x15">50 × 15 mm (Slim 15mm Perfume Sticker - 3 Columns)</option>
-                      <option value="60x20">60 × 20 mm (Standard 20mm Perfume Box - 3 Columns)</option>
-                      <option value="custom">Custom Dimensions (Enter below)</option>
-                    </select>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.4rem;">
+                    <span style="font-size:0.75rem; color:var(--admin-text-muted);">Quick Sizing (mm):</span>
+                    <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+                      <button type="button" class="admin-btn admin-btn-xs" onclick="setQuickLabelSize(50, 25, 3)">50 × 25 mm</button>
+                      <button type="button" class="admin-btn admin-btn-xs" onclick="setQuickLabelSize(60, 25, 3)">60 × 25 mm</button>
+                      <button type="button" class="admin-btn admin-btn-xs" onclick="setQuickLabelSize(40, 20, 4)">40 × 20 mm</button>
+                      <button type="button" class="admin-btn admin-btn-xs" onclick="setQuickLabelSize(50, 25, 1)">Thermal Roll (1 Col)</button>
+                    </div>
                   </div>
                   <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.8rem;">
                     <div class="admin-form-group" style="margin:0;">
                       <label class="admin-label">Width (mm)</label>
-                      <input name="batch_label_width"  type="number" id="batch-label-width" class="admin-input" value="50" min="15" max="250"
-                        step="1" oninput="onCustomDimensionInput()">
+                      <input name="batch_label_width" type="number" id="batch-label-width" class="admin-input" value="50" min="15" max="250" step="1">
                     </div>
                     <div class="admin-form-group" style="margin:0;">
                       <label class="admin-label">Height (mm)</label>
-                      <input name="batch_label_height"  type="number" id="batch-label-height" class="admin-input" value="25" min="10" max="200"
-                        step="1" oninput="onCustomDimensionInput()">
+                      <input name="batch_label_height" type="number" id="batch-label-height" class="admin-input" value="25" min="10" max="200" step="1">
                     </div>
                     <div class="admin-form-group" style="margin:0;">
                       <label class="admin-label">Sheet Grid</label>
-                      <select name="batch_label_cols"  id="batch-label-cols" class="admin-input">
-                        <option value="3" selected>3 Columns (Recommended)</option>
-                        <option value="2">2 Columns (Wide)</option>
-                        <option value="4">4 Columns (Compact)</option>
-                        <option value="1">1 Column (Single Strip)</option>
+                      <select name="batch_label_cols" id="batch-label-cols" class="admin-input">
+                        <option value="3" selected>3 Columns (Standard Sheet)</option>
+                        <option value="4">4 Columns (Compact Sheet)</option>
+                        <option value="2">2 Columns (Wide Sheet)</option>
+                        <option value="1">1 Column (Single Sticker / Thermal Roll)</option>
                       </select>
                     </div>
                   </div>
-                  <div class="admin-form-group" style="margin-top:0.85rem; margin-bottom:0.5rem;">
-                    <label class="admin-label">Code Format &amp; Symbology</label>
-                    <select name="batch_code_format"  id="batch-code-format" class="admin-input">
-                      <option value="barcode" selected>1D Barcode (Code 128 - Crisp High-Density Vectors with Text Below)</option>
-                    </select>
-                  </div>
-                  <div class="admin-form-group" style="margin:0.5rem 0 0; display:flex; align-items:center;">
-                    <label
-                      style="display:flex; align-items:center; gap:0.5rem; font-size:0.8rem; cursor:pointer; color:var(--admin-text-muted);">
-                      <input name="batch_print_border"  type="checkbox" id="batch-print-border"> Print Border Outline (Default: Off for clean
-                      borderless stickers)
+                  <div class="admin-form-group" style="margin:0.75rem 0 0; display:flex; align-items:center;">
+                    <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.8rem; cursor:pointer; color:var(--admin-text-muted);">
+                      <input name="batch_print_border" type="checkbox" id="batch-print-border"> Print Cutting Guide Border (Default: Off for clean peel-and-stick stickers)
                     </label>
                   </div>
+                  <small style="color:var(--admin-text-muted); font-size:0.72rem; display:block; margin-top:0.5rem;">Custom mm sizing. Pre-formatted to print and stick directly on perfume bottles and boxes.</small>
                 </div>
               </div>
             </div>
 
             <div>
-              <h4 style="margin:0 0 0.8rem; font-size:0.9rem; color:var(--admin-accent);">3. Batch &amp; Regulatory
-                Compliance Info</h4>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-                <div class="admin-form-group">
-                  <label class="admin-label">Lot &amp; Control No.</label>
-                  <input name="batch_lot_no"  type="text" id="batch-lot-no" class="admin-input" value="01" placeholder="e.g. 01">
+              <h4 style="margin:0 0 0.8rem; font-size:0.9rem; color:var(--admin-accent);">3. ODD Batch &amp; Regulatory Compliance Info</h4>
+              <div style="margin-bottom:0.75rem; background:#080A0E; padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--admin-border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                <div>
+                  <div style="font-size:0.82rem; font-weight:700; color:#FFFFFF;">TEC-IT Code 128 Engine (<a href="https://barcode.tec-it.com/en" target="_blank" rel="noopener" style="color:var(--brand-orange); text-decoration:none;">barcode.tec-it.com</a>)</div>
+                  <div style="font-size:0.72rem; color:var(--admin-text-muted); margin-top:2px;">Format: <code style="color:var(--brand-orange); font-weight:700;">ODD{BATCH}-{SKU}</code> &rarr; e.g. <b>ODD0001-FM</b></div>
                 </div>
-                <div class="admin-form-group">
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
-                    <label class="admin-label" style="margin:0;">Start Series No.</label>
-                    <div style="display:flex; gap:0.25rem;">
-                      <button type="button" class="admin-btn admin-btn-xs" onclick="setStartSerial(1)"
-                        style="font-size:0.65rem; padding:1px 6px;" title="Reset counter back to 01">Reset to 1</button>
-                      <button type="button" class="admin-btn admin-btn-xs" onclick="setStartSerial('')"
-                        style="font-size:0.65rem; padding:1px 6px;" title="Auto resume from DB count">Auto (DB)</button>
-                    </div>
-                  </div>
-                  <input name="batch_start_serial"  type="number" id="batch-start-serial" class="admin-input" value="1" min="1" max="999999"
-                    placeholder="e.g. 1 (starts at 01)">
-                  <small
-                    style="color:var(--admin-text-muted); font-size:0.72rem; display:block; margin-top:2px;">Sequence
-                    counter (e.g. 1 &rarr; ODD-LC-01-01)</small>
+                <a href="https://barcode.tec-it.com/en" target="_blank" rel="noopener" class="admin-btn admin-btn-xs" style="text-decoration:none;">TEC-IT Website</a>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                <div class="admin-form-group" style="grid-column: span 2;">
+                  <label class="admin-label">ODD Batch Number (4 Digits)</label>
+                  <input name="batch_lot_no" type="text" id="batch-lot-no" class="admin-input" value="0001" placeholder="e.g. 0001" style="font-size:1.05rem; font-weight:700; font-family:monospace; letter-spacing:1px;">
+                  <small style="color:var(--admin-text-muted); font-size:0.72rem; display:block; margin-top:3px;">Batch 0001 creates scannable barcodes: <b>ODD0001-FM</b> (First Move), <b>ODD0001-LC</b> (Lucid), <b>ODD0001-PH</b> (Phantom), <b>ODD0001-HM</b> (Hamper)</small>
                 </div>
                 <div class="admin-form-group">
                   <label class="admin-label">Manufacturing Date</label>
-                  <input name="batch_mfg_date"  type="date" id="batch-mfg-date" class="admin-input">
+                  <input name="batch_mfg_date" type="date" id="batch-mfg-date" class="admin-input">
                 </div>
                 <div class="admin-form-group">
                   <label class="admin-label">Shelf Life (Months)</label>
-                  <input name="batch_shelf_life"  type="number" id="batch-shelf-life" class="admin-input" placeholder="e.g. 36" min="1"
-                    max="120">
+                  <input name="batch_shelf_life" type="number" id="batch-shelf-life" class="admin-input" placeholder="e.g. 36" min="1" max="120">
                 </div>
                 <div class="admin-form-group" style="grid-column: span 2;">
                   <label class="admin-label">Retail MRP (₹)</label>
-                  <input name="batch_mrp"  type="number" id="batch-mrp" class="admin-input" placeholder="e.g. 1599" min="1">
+                  <input name="batch_mrp" type="number" id="batch-mrp" class="admin-input" placeholder="e.g. 1599" min="1">
                 </div>
               </div>
               <button class="admin-btn admin-btn-primary full-width" data-generate-barcode

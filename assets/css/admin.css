@@ -1447,16 +1447,17 @@ body.admin-body {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
-  justify-content: space-between !important;
+  justify-content: center !important;
   background: #FFFFFF !important;
   color: #000000 !important;
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
   border-radius: 0 !important;
-  padding: 1.5mm 2mm 1mm 2mm !important;
+  padding: 1mm 1.5mm !important;
   box-sizing: border-box !important;
   width: 100% !important;
+  height: var(--label-height, 25mm) !important;
   position: relative !important;
   overflow: hidden !important;
   transition: none !important;
@@ -1485,7 +1486,7 @@ body.admin-body {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
-  justify-content: space-between !important;
+  justify-content: center !important;
   min-width: 0 !important;
   overflow: hidden !important;
   padding: 0 !important;
@@ -1495,26 +1496,37 @@ body.admin-body {
   width: 100% !important;
 }
 
+.sticker-barcode-img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  display: block !important;
+  image-rendering: -webkit-optimize-contrast !important;
+  image-rendering: crisp-edges !important;
+}
+
 .sticker-barcode-svg {
   display: block !important;
   width: 100% !important;
   max-width: 100% !important;
   flex: 1 1 auto !important;
-  height: calc(100% - 15px) !important;
-  max-height: calc(100% - 15px) !important;
+  height: 100% !important;
+  max-height: 100% !important;
   margin: 0 auto !important;
   shape-rendering: crispEdges !important;
 }
 
 .sticker-code-text {
   flex: 0 0 auto !important;
-  font-family: var(--font-mono, 'IBM Plex Mono', monospace) !important;
-  font-size: 8.5px !important;
+  font-family: var(--font-mono, 'IBM Plex Mono', 'Courier New', monospace) !important;
+  font-size: 10pt !important;
   font-weight: 700 !important;
   color: #000000 !important;
   text-align: center !important;
   margin: 1px 0 0 0 !important;
-  letter-spacing: 0.6px !important;
+  letter-spacing: 1.2px !important;
   white-space: nowrap !important;
   width: 100% !important;
   line-height: 1.1 !important;
@@ -1900,12 +1912,13 @@ body.admin-body {
     border: none !important;
     padding: 0 !important;
     margin: 0 !important;
+    width: 100% !important;
   }
 
   .barcode-label-grid {
     display: grid !important;
     grid-template-columns: repeat(var(--label-cols, 3), minmax(0, 1fr)) !important;
-    gap: 3mm 4mm !important;
+    gap: 2mm 3mm !important;
     justify-content: stretch !important;
     align-content: flex-start !important;
     width: 100% !important;
@@ -1914,12 +1927,29 @@ body.admin-body {
     box-sizing: border-box !important;
   }
 
+  /* Single-column thermal roll printing */
+  .barcode-label-grid.single-roll {
+    display: block !important;
+    width: var(--label-width, 50mm) !important;
+    margin: 0 auto !important;
+    gap: 0 !important;
+  }
+
+  .barcode-label-grid.single-roll .barcode-sticker {
+    width: var(--label-width, 50mm) !important;
+    height: var(--label-height, 25mm) !important;
+    max-height: var(--label-height, 25mm) !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    margin-bottom: 0 !important;
+  }
+
   .barcode-sticker {
     box-sizing: border-box !important;
     width: 100% !important;
     height: var(--label-height, 25mm) !important;
     max-height: var(--label-height, 25mm) !important;
-    padding: 1.5mm 2mm 1mm 2mm !important;
+    padding: 1mm 1.5mm !important;
     border: none !important;
     border-radius: 0 !important;
     background: #FFFFFF !important;
@@ -1927,15 +1957,14 @@ body.admin-body {
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
-    justify-content: space-between !important;
+    justify-content: center !important;
     overflow: hidden !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
   .has-print-borders .barcode-sticker {
-    border: 0.5pt solid #888888 !important;
-    border-radius: 2px !important;
+    border: 0.5pt dashed #888888 !important;
   }
 
   .sticker-header,
@@ -1949,7 +1978,7 @@ body.admin-body {
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
-    justify-content: space-between !important;
+    justify-content: center !important;
     min-width: 0 !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -1960,36 +1989,48 @@ body.admin-body {
     width: 100% !important;
   }
 
-  /* 1D Barcode: Prominent vector bars occupying vertical label height */
+  /* High-DPI TEC-IT Barcode Image */
+  .sticker-barcode-img {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+    image-rendering: -webkit-optimize-contrast !important;
+    image-rendering: crisp-edges !important;
+  }
+
+  /* 1D Barcode SVG fallback */
   .sticker-barcode-svg {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     flex: 1 1 auto !important;
-    height: calc(var(--label-height, 25mm) - 5.5mm) !important;
-    max-height: calc(var(--label-height, 25mm) - 5.5mm) !important;
+    height: 100% !important;
+    max-height: 100% !important;
     margin: 0 auto !important;
     shape-rendering: crispEdges !important;
   }
 
-  /* Human-readable serial text: neat, small, and proportional to barcode */
+  /* Readable OCR text centered under barcode */
   .sticker-code-text {
     flex: 0 0 auto !important;
-    font-family: var(--font-mono, monospace) !important;
-    font-size: 6.5pt !important;
+    font-family: var(--font-mono, 'IBM Plex Mono', 'Courier New', monospace) !important;
+    font-size: 10pt !important;
     font-weight: 700 !important;
     color: #000000 !important;
     text-align: center !important;
     white-space: nowrap !important;
-    letter-spacing: 0.5pt !important;
+    letter-spacing: 1.2px !important;
     margin: 0.5mm 0 0 0 !important;
     padding: 0 !important;
     width: 100% !important;
-    line-height: 1 !important;
+    line-height: 1.1 !important;
   }
 }
 
 @page {
   size: A4 portrait;
-  margin: 6mm 6mm;
+  margin: 5mm 5mm;
 }

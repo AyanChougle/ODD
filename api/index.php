@@ -2924,13 +2924,12 @@ try {
                 expiry_date = VALUES(expiry_date),
                 mrp = VALUES(mrp)
         ');
-        $countStmt = $pdo->prepare('SELECT COUNT(*) as c FROM barcodes WHERE sku = ? AND lot_number = ?');
 
-        $skuCodes = [
-            'ODD-FM-002' => 'ODD-FM',
-            'ODD-LC-003' => 'ODD-LC',
-            'ODD-PH-001' => 'ODD-PH',
-            'ODD-HM-004' => 'ODD-HM'
+        $skuProductCodes = [
+            'ODD-FM-002' => 'FM',
+            'ODD-LC-003' => 'LC',
+            'ODD-PH-001' => 'PH',
+            'ODD-HM-004' => 'HM'
         ];
         $skuNames = [
             'ODD-FM-002' => 'ODD FIRST MOVE',
@@ -2939,27 +2938,37 @@ try {
             'ODD-HM-004' => 'ODD TRIO HAMPER'
         ];
 
+        // Format 4-digit batch number (e.g. 0001)
+        $batchNum = preg_match('/(\d{1,4})$/', $lot, $m) ? str_pad($m[1], 4, '0', STR_PAD_LEFT) : '0001';
+
         foreach ($prods as $p) {
             $sku = $p['sku'];
             $pName = $skuNames[$sku] ?? $sku;
-            $prefix = $skuCodes[$sku] ?? (strpos($sku, 'ODD-') === 0 ? substr($sku, 0, 6) : "ODD-{$sku}");
+            $prodCode = $skuProductCodes[$sku] ?? (strpos($sku, 'ODD-') === 0 ? substr($sku, 4, 2) : $sku);
             $qty = min(5000, max(1, (int)($p['qty'] ?? 1)));
-            $countStmt->execute([$sku, $lot]);
-            $existing = (int)$countStmt->fetch()['c'];
 
-            $batchNum = preg_match('/(\d{1,2})$/', $lot, $m) ? str_pad($m[1], 2, '0', STR_PAD_LEFT) : '01';
-            $startIdx = $startSerialParam !== null ? $startSerialParam : ($existing + 1);
+            // Standard TEC-IT Barcode format: ODD{BATCH}-{PRODUCT} (e.g. ODD0001-FM)
+            $barcode = "ODD{$batchNum}-{$prodCode}";
+
+            // Register / update in database
+            $bStmt->execute([$barcode, $sku, $pName, $batchNum, $mfg, $expiry, $mrp]);
 
             for ($i = 0; $i < $qty; $i++) {
-                $cur = $startIdx + $i;
-                $idx = str_pad((string)$cur, 2, '0', STR_PAD_LEFT);
-                $serial = "{$prefix}-{$batchNum}-{$idx}";
-                $bStmt->execute([$serial, $sku, $pName, $lot, $mfg, $expiry, $mrp]);
-                $labels[] = ['sku' => $sku, 'name' => $pName, 'barcode' => $serial, 'serial' => $serial, 'lot' => $lot, 'mfg' => $mfg, 'expiry' => $expiry, 'mrp' => $mrp];
+                $labels[] = [
+                    'sku' => $sku,
+                    'name' => $pName,
+                    'barcode' => $barcode,
+                    'serial' => $barcode,
+                    'batch' => $batchNum,
+                    'lot' => $batchNum,
+                    'mfg' => $mfg,
+                    'expiry' => $expiry,
+                    'mrp' => $mrp
+                ];
             }
         }
         $pdo->commit();
-        sendJson(200, ['success' => true, 'labels' => $labels, 'expiry' => $expiry]);
+        sendJson(200, ['success' => true, 'labels' => $labels, 'expiry' => $expiry, 'batch' => $batchNum]);
     }
 
     if ($route === 'barcodes' && $method === 'GET') {

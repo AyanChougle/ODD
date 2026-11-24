@@ -211,7 +211,7 @@ async function runTests() {
 
     // 9. Barcode Batch & Warehouse Scans
     console.log('\n[9] Testing Barcode Serials & Warehouse Scanner:');
-    const testLot = 'L' + Math.floor(Math.random() * 89999 + 10000);
+    const testLot = '0001';
     const barcodeBatch = await request('/api/barcodes/batch', {
       method: 'POST',
       headers: {
@@ -221,15 +221,14 @@ async function runTests() {
       body: {
         products: [{ sku: 'ODD-LC-003', qty: 3 }],
         lot: testLot,
-        mfg: '2026-10-14',
-        startSerial: 1
+        mfg: '2026-10-14'
       }
     });
     assert(barcodeBatch.status === 200, 'Barcode batch generation succeeds');
     assert(barcodeBatch.data.labels.length === 3, 'Generates exactly requested 3 labels');
     const firstBarcode = barcodeBatch.data.labels[0].barcode;
-    const expectedBatch = (testLot.match(/(\d{1,2})$/) || [null, '01'])[1].padStart(2, '0');
-    assert(firstBarcode === `ODD-LC-${expectedBatch}-01`, 'Formatted to specification: ' + firstBarcode);
+    const expectedBatch = (testLot.match(/(\d{1,4})$/) || [null, '0001'])[1].padStart(4, '0');
+    assert(firstBarcode === `ODD${expectedBatch}-LC`, 'Formatted to specification: ' + firstBarcode);
 
     // Test warehouse scan in receive mode (+1)
     const initialLucidStock = db.prepare("SELECT stock FROM products WHERE sku = 'ODD-LC-003'").get().stock;

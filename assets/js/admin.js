@@ -1548,18 +1548,63 @@ function applyLabelPreset(preset) {
     '60x25': { w: 60, h: 25, cols: 3 },
     '70x25': { w: 70, h: 25, cols: 3 },
     '40x25': { w: 40, h: 25, cols: 4 },
+    '40x20': { w: 40, h: 20, cols: 4 },
     '30x25': { w: 30, h: 25, cols: 4 },
     '50x15': { w: 50, h: 15, cols: 3 },
     '60x20': { w: 60, h: 20, cols: 3 },
-    '70x35': { w: 70, h: 35, cols: 3 },
-    '80x40': { w: 80, h: 40, cols: 2 },
-    '100x50': { w: 100, h: 50, cols: 2 }
+    'single': { w: 50, h: 25, cols: 1 }
   };
 
   if (presets[preset]) {
     widthInput.value = presets[preset].w;
     heightInput.value = presets[preset].h;
     if (colsSelect) colsSelect.value = presets[preset].cols;
+  }
+}
+
+function setQuickLabelSize(w, h, cols) {
+  const wEl = document.getElementById('batch-label-width');
+  const hEl = document.getElementById('batch-label-height');
+  const cEl = document.getElementById('batch-label-cols');
+  if (wEl) wEl.value = w;
+  if (hEl) hEl.value = h;
+  if (cEl) cEl.value = cols;
+  showAdminToast(`Label dimensions set to ${w} × ${h} mm (${cols} col${cols > 1 ? 's' : ''}).`);
+}
+
+function handleBarcodeImgError(imgEl, code) {
+  const container = imgEl.parentElement;
+  if (!container) return;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.className = 'sticker-barcode-svg';
+  container.replaceChild(svg, imgEl);
+  let rendered = false;
+  if (typeof window.JsBarcode === 'function') {
+    try {
+      window.JsBarcode(svg, code, {
+        format: 'CODE128',
+        width: 1.8,
+        height: 48,
+        displayValue: true,
+        font: 'monospace',
+        fontSize: 13,
+        fontOptions: 'bold',
+        textMargin: 3,
+        margin: 6,
+        background: '#FFFFFF',
+        lineColor: '#000000',
+        flat: true
+      });
+      svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      svg.style.width = '100%';
+      svg.style.height = '100%';
+      rendered = true;
+    } catch (e) {
+      rendered = false;
+    }
+  }
+  if (!rendered) {
+    svg.outerHTML = code128Svg(code, 48);
   }
 }
 
@@ -1585,16 +1630,7 @@ function setAllCopies(qty) {
 
 function setStartSerial(val) {
   const el = document.getElementById('batch-start-serial');
-  if (el) {
-    el.value = val;
-    if (val === 1 || val === '1') {
-      showAdminToast('Series counter reset to 01.');
-    } else if (val === '') {
-      showAdminToast('Series counter set to Auto (DB resume).');
-    } else {
-      showAdminToast(`Series start counter set to ${val}.`);
-    }
-  }
+  if (el) el.value = val;
 }
 
 async function generateBarcodeSheet(event) {
@@ -1620,19 +1656,17 @@ async function generateBarcodeSheet(event) {
   }
 
   try {
-    const width = Number(document.getElementById('batch-label-width')?.value || 30);
+    const width = Number(document.getElementById('batch-label-width')?.value || 50);
     const height = Number(document.getElementById('batch-label-height')?.value || 25);
     const cols = Number(document.getElementById('batch-label-cols')?.value || 3);
-    const lot = document.getElementById('batch-lot-no')?.value.trim() || '01';
+    const lot = document.getElementById('batch-lot-no')?.value.trim() || '0001';
     const mfg = document.getElementById('batch-mfg-date')?.value || new Date().toISOString().slice(0, 10);
     const shelfLife = Number(document.getElementById('batch-shelf-life')?.value || 36);
     const mrp = Number(document.getElementById('batch-mrp')?.value || 1599);
-    const startSerialVal = document.getElementById('batch-start-serial')?.value.trim();
-    const startSerial = (startSerialVal !== '' && startSerialVal != null) ? Number(startSerialVal) : null;
 
     const result = await adminApi('/api/barcodes/batch', {
       method: 'POST',
-      body: { products: selected, lot, mfg, shelfLife, mrp, startSerial }
+      body: { products: selected, lot, mfg, shelfLife, mrp }
     });
 
     const labels = result.labels || [];
@@ -1642,67 +1676,47 @@ async function generateBarcodeSheet(event) {
     preview.style.setProperty('--label-height', `${height}mm`);
     preview.style.setProperty('--label-cols', cols);
 
+    const isSingleRoll = (cols === 1);
+    const gridClasses = `barcode-label-grid${isSingleRoll ? ' single-roll' : ''}`;
+
+    // TEC-IT Code 128 Image Generation (High-DPI 300 DPI, crisp bold bars with OCR-B text)
     preview.innerHTML = `
       <div class="wp-barcode-actions-bar">
         <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
           <button type="button" class="wp-btn-print" onclick="printBarcodeSheet()">Print This Sheet</button>
           <button type="button" class="wp-btn-back" onclick="backToBarcodeSelection()">Back to Selection</button>
+          <a href="https://barcode.tec-it.com/en/Code128?data=${encodeURIComponent(labels[0]?.barcode || 'ODD0001-FM')}" target="_blank" rel="noopener" class="admin-btn admin-btn-xs" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.35rem; color:#f0ece1; background:#1C1F28; border:1px solid #2E3342;">
+            <span>Open in TEC-IT Generator</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </a>
         </div>
         <div class="wp-barcode-meta-summary">
-          <span>${labels.length} labels</span> · Format: <strong>1D Barcode (Code 128)</strong> · Size: <strong>${width} × ${height} mm</strong> (${cols} cols) · Series: <strong>${labels[0]?.serial ? escapeHtml(labels[0].serial) + ' … ' + escapeHtml(labels[labels.length - 1].serial) : 'Generated'}</strong> · Lot: <strong>${escapeHtml(lot)}</strong> · Exp: <strong>${escapeHtml(expiry)}</strong>
+          <span>${labels.length} labels</span> · Format: <strong>Code 128 (TEC-IT)</strong> · Size: <strong>${width} × ${height} mm</strong> (${cols} col${cols > 1 ? 's' : ''}) · Batch: <strong>${escapeHtml(lot)}</strong> · Sample: <strong>${labels[0]?.barcode ? escapeHtml(labels[0].barcode) : 'ODD0001-FM'}</strong> · Exp: <strong>${escapeHtml(expiry)}</strong>
         </div>
       </div>
-      <div class="barcode-label-grid" style="grid-template-columns: repeat(${cols}, minmax(0, 1fr)) !important;">
-        ${labels.map(label => `
-          <article class="barcode-sticker sticker-format-barcode" style="height:${height}mm; border:0 !important; outline:0 !important; box-shadow:none !important; border-radius:0 !important; background:#ffffff !important; padding:1.5mm !important;">
-            <div class="sticker-barcode-pane full-width">
-              <svg class="sticker-barcode-svg" data-barcode="${escapeHtml(label.barcode)}"></svg>
-              <div class="sticker-code-text">${escapeHtml(label.barcode)}</div>
-            </div>
-          </article>
-        `).join('')}
+      <div class="${gridClasses}" style="grid-template-columns: repeat(${cols}, minmax(0, 1fr)) !important;">
+        ${labels.map(label => {
+          const barcodeVal = label.barcode || label.serial || `ODD${lot}-FM`;
+          const tecItUrl = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(barcodeVal)}&code=Code128&dpi=300`;
+          return `
+            <article class="barcode-sticker sticker-format-barcode" style="height:${height}mm; width:100%;">
+              <div class="sticker-barcode-pane full-width">
+                <img src="${tecItUrl}"
+                     alt="${escapeHtml(barcodeVal)}"
+                     class="sticker-barcode-img"
+                     loading="eager"
+                     onerror="handleBarcodeImgError(this, '${escapeHtml(barcodeVal)}')">
+              </div>
+            </article>
+          `;
+        }).join('')}
       </div>
     `;
 
     const printBorder = document.getElementById('batch-print-border')?.checked ?? false;
     preview.classList.toggle('has-print-borders', printBorder);
 
-    // 1. Render Barcodes (Crisp High-Density Code 128 Bars with Visible Bold Text Below)
-    const stickerSvgs = preview.querySelectorAll('svg.sticker-barcode-svg[data-barcode]');
-    const targetBarHeight = Math.max(24, Math.round((height - 7) * 3.78));
-    const barWidth = width <= 35 ? 1.2 : (width <= 45 ? 1.5 : 1.9);
-    const barMargin = width <= 35 ? 6 : 10;
-    const barHeight = targetBarHeight;
-    stickerSvgs.forEach(svgEl => {
-      const code = svgEl.dataset.barcode;
-      let rendered = false;
-      if (typeof window.JsBarcode === 'function') {
-        try {
-          window.JsBarcode(svgEl, code, {
-            format: 'CODE128',
-            width: barWidth,
-            height: barHeight,
-            displayValue: false, // Clean bold HTML text below ensures 100% visibility!
-            margin: barMargin, // ISO Quiet Zone for 100% hardware laser & camera decodability
-            background: '#FFFFFF',
-            lineColor: '#000000',
-            flat: true
-          });
-          svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-          svgEl.style.width = '100%';
-          svgEl.style.height = 'auto';
-          svgEl.style.maxHeight = `${height - 6}mm`;
-          rendered = true;
-        } catch (e) {
-          rendered = false;
-        }
-      }
-      if (!rendered) {
-        svgEl.outerHTML = code128Svg(code, barHeight);
-      }
-    });
-
-    showAdminToast(`${labels.length} barcode labels generated (${width} × ${height} mm).`);
+    showAdminToast(`${labels.length} scannable barcode labels generated (${width} × ${height} mm).`);
   } catch (error) {
     showAdminToast(error.message, true);
   } finally {
@@ -1714,8 +1728,27 @@ async function generateBarcodeSheet(event) {
 }
 
 function printBarcodeSheet() {
-  if (!document.querySelector('.barcode-sticker')) {
+  const stickers = document.querySelectorAll('.barcode-sticker');
+  if (!stickers.length) {
     return showAdminToast('Generate labels before printing.', true);
+  }
+  const imgs = Array.from(document.querySelectorAll('.sticker-barcode-img'));
+  const pending = imgs.filter(img => !img.complete);
+  if (pending.length > 0) {
+    showAdminToast('Preparing barcode stickers for printing…');
+    let loaded = 0;
+    const checkAll = () => {
+      loaded++;
+      if (loaded === pending.length) {
+        window.print();
+      }
+    };
+    pending.forEach(img => {
+      img.onload = checkAll;
+      img.onerror = checkAll;
+    });
+    setTimeout(() => { window.print(); }, 1200);
+    return;
   }
   window.print();
 }
@@ -2653,6 +2686,8 @@ window.saveRazorpaySettings = saveRazorpaySettings;
 window.saveBannerSettings = saveBannerSettings;
 window.clearCouponUsages = clearCouponUsages;
 window.applyLabelPreset = applyLabelPreset;
+window.setQuickLabelSize = setQuickLabelSize;
+window.handleBarcodeImgError = handleBarcodeImgError;
 window.onCustomDimensionInput = onCustomDimensionInput;
 window.backToBarcodeSelection = backToBarcodeSelection;
 window.printBarcodeSheet = printBarcodeSheet;

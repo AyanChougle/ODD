@@ -2726,36 +2726,33 @@ const server = http.createServer(async (req, res) => {
               mrp = excluded.mrp
           `);
 
-          const SHORT_SKUS = {
-            'ODD-FM-002': 'ODD-FM',
-            'ODD-LC-003': 'ODD-LC',
-            'ODD-PH-001': 'ODD-PH',
-            'ODD-HM-004': 'ODD-HM'
+          const PRODUCT_CODES = {
+            'ODD-FM-002': 'FM',
+            'ODD-LC-003': 'LC',
+            'ODD-PH-001': 'PH',
+            'ODD-HM-004': 'HM'
           };
+
+          // Format 4-digit batch number (e.g. 0001)
+          const batchNum = (String(lot).match(/(\d{1,4})$/) || [null, '0001'])[1].padStart(4, '0');
 
           for (const item of productsList) {
             const sku = item.sku;
             const count = Math.min(5000, Math.max(1, Number(item.qty) || 1));
             const name = SKU_NAMES[sku] || sku;
-            const prefix = SHORT_SKUS[sku] || (sku.startsWith('ODD-') ? sku.slice(0, 6) : `ODD-${sku}`);
-            const batchNum = (lot.match(/(\d{1,2})$/) || [null, '01'])[1].padStart(2, '0');
+            const prodCode = PRODUCT_CODES[sku] || (sku.startsWith('ODD-') ? sku.slice(4, 6) : sku);
+            const barcode = `ODD${batchNum}-${prodCode}`;
 
-            // Find current highest index for this lot
-            const existingCount = db.prepare('SELECT COUNT(*) as c FROM barcodes WHERE sku = ? AND lot_number = ?').get(sku, lot).c;
-            const startIdx = startSerialParam !== null ? startSerialParam : (existingCount + 1);
+            insertBarcode.run(barcode, sku, name, batchNum, mfg, expiry, mrp);
 
             for (let i = 0; i < count; i++) {
-              const currentNum = startIdx + i;
-              const serialIndex = String(currentNum).padStart(2, '0');
-              const serial = `${prefix}-${batchNum}-${serialIndex}`;
-
-              insertBarcode.run(serial, sku, name, lot, mfg, expiry, mrp);
               generatedLabels.push({
                 sku,
                 name,
-                barcode: serial,
-                serial,
-                lot,
+                barcode,
+                serial: barcode,
+                batch: batchNum,
+                lot: batchNum,
                 mfg,
                 expiry,
                 mrp
@@ -2763,6 +2760,7 @@ const server = http.createServer(async (req, res) => {
             }
           }
           db.exec('COMMIT;');
+          return sendJson(res, 200, { success: true, labels: generatedLabels, expiry, batch: batchNum });
         } catch (err) {
           db.exec('ROLLBACK;');
           throw err;
