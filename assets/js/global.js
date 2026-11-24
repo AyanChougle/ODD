@@ -1868,7 +1868,7 @@ function openQuickView(productId) {
   }
 
   const img = modal.querySelector(".quick-view-bottle-img");
-  if (img) img.src = "assets/images/" + prod.bottleImage + "?v=8.3";
+  if (img) img.src = "assets/images/" + prod.bottleImage + "?v=11.0";
 
   const brand = modal.querySelector(".qv-brand");
   if (brand) brand.innerText = "ODD PERFUME · " + (prod.notes || "");
