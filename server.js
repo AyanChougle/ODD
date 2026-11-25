@@ -1681,6 +1681,25 @@ const server = http.createServer(async (req, res) => {
             }
           } catch (_) {}
 
+          // Server-side Meta Conversions API (CAPI) Purchase event with deduplication
+          sendMetaCapiEvent(req, 'Purchase', String(body.metaEventId || `purchase_${orderId}`), {
+            email,
+            phone,
+            name: customer
+          }, {
+            currency: 'INR',
+            value: Number(totalAmount) || 0,
+            order_id: orderId,
+            content_type: 'product',
+            content_ids: orderItemsData.map(it => String(it.sku || it.name || 'ODD')),
+            contents: orderItemsData.map(it => ({
+              id: String(it.sku || it.name || 'ODD'),
+              quantity: Math.max(1, Number(it.quantity) || 1),
+              item_price: Number(it.price) || 0
+            })),
+            num_items: orderItemsData.reduce((s, it) => s + Math.max(1, Number(it.quantity) || 1), 0)
+          }, String(body.eventSourceUrl || '')).catch(() => {});
+
           return sendJson(res, 201, {
             success: true,
             orderId,
@@ -3823,6 +3842,30 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
+      if (pathname === '/api/meta/capi/event' && method === 'POST') {
+        const body = await parseJsonBody(req);
+        const eventName = String(body.eventName || '').trim();
+        const allowedEvents = ['PageView', 'ViewContent', 'AddToCart', 'InitiateCheckout', 'Purchase'];
+        if (!eventName || !allowedEvents.includes(eventName)) {
+          return sendJson(res, 400, { error: 'Invalid Meta CAPI event name.' });
+        }
+        const eventId = String(body.eventId || `odd_${crypto.randomBytes(8).toString('hex')}`).trim();
+        const customData = (body.customData && typeof body.customData === 'object') ? body.customData : {};
+        const eventSourceUrl = String(body.eventSourceUrl || '').trim();
+
+        const userInfo = {};
+        try {
+          const cust = typeof getCustomerSession === 'function' ? getCustomerSession(req) : null;
+          if (cust && cust.email) {
+            userInfo.email = cust.email;
+            if (cust.name) userInfo.name = cust.name;
+          }
+        } catch (_) {}
+
+        const capiRes = await sendMetaCapiEvent(req, eventName, eventId, userInfo, customData, eventSourceUrl);
+        return sendJson(res, 200, { success: Boolean(capiRes && capiRes.success), eventId });
+      }
+
       // Route not found
       return sendJson(res, 404, { error: `Endpoint not found: ${pathname}` });
     }
@@ -3873,6 +3916,78 @@ const server = http.createServer(async (req, res) => {
     sendJson(res, 500, { error: 'Internal Server Error', message: error.message });
   }
 });
+
+// Meta Conversions API (CAPI) Server-Side Event Dispatch
+async function sendMetaCapiEvent(req, eventName, eventId, userInfo = {}, customData = {}, eventSourceUrl = '') {
+  const pixelId = process.env.META_PIXEL_ID || '1432208055303221';
+  const token = process.env.META_CAPI_ACCESS_TOKEN || '';
+  if (!pixelId || !token || NODE_ENV === 'test') {
+    return { success: false, simulated: NODE_ENV === 'test' };
+  }
+  const emailRaw = String(userInfo.email || '').trim().toLowerCase();
+  if (emailRaw && (emailRaw.endsWith('@example.com') || emailRaw.endsWith('@test.local'))) {
+    return { success: true, simulated: true };
+  }
+
+  const sha256 = (val) => crypto.createHash('sha256').update(String(val)).digest('hex');
+  const userData = {};
+  if (emailRaw) userData.em = [sha256(emailRaw)];
+  let phoneDigits = String(userInfo.phone || '').replace(/\D+/g, '');
+  if (phoneDigits) {
+    if (phoneDigits.length === 10) phoneDigits = '91' + phoneDigits;
+    userData.ph = [sha256(phoneDigits)];
+  }
+  const fullName = String(userInfo.name || '').trim();
+  if (fullName) {
+    const parts = fullName.split(/\s+/);
+    if (parts[0]) userData.fn = [sha256(parts[0].toLowerCase())];
+    if (parts.length > 1) userData.ln = [sha256(parts[parts.length - 1].toLowerCase())];
+  }
+  userData.country = [sha256('in')];
+
+  const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
+  if (ip) userData.client_ip_address = ip;
+  if (req.headers['user-agent']) userData.client_user_agent = req.headers['user-agent'];
+
+  const cookies = parseCookies(req);
+  if (cookies._fbp) userData.fbp = cookies._fbp;
+  if (cookies._fbc) userData.fbc = cookies._fbc;
+
+  const sourceUrl = eventSourceUrl || (req.headers.host ? `https://${req.headers.host}${req.url || '/'}` : 'https://oddperfume.com/');
+  const eventObj = {
+    event_name: eventName,
+    event_time: Math.floor(Date.now() / 1000),
+    event_id: eventId,
+    action_source: 'website',
+    event_source_url: sourceUrl,
+    user_data: userData
+  };
+  if (customData && Object.keys(customData).length > 0) {
+    eventObj.custom_data = customData;
+  }
+
+  const payload = JSON.stringify({ data: [eventObj] });
+  return new Promise((resolve) => {
+    const r = https.request({
+      hostname: 'graph.facebook.com',
+      path: `/v21.0/${encodeURIComponent(pixelId)}/events?access_token=${encodeURIComponent(token)}`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      },
+      timeout: 5000
+    }, (resp) => {
+      let data = '';
+      resp.on('data', (c) => data += c);
+      resp.on('end', () => resolve({ success: resp.statusCode >= 200 && resp.statusCode < 300, statusCode: resp.statusCode, body: data }));
+    });
+    r.on('error', (err) => resolve({ success: false, error: err.message }));
+    r.on('timeout', () => { r.destroy(); resolve({ success: false, error: 'Meta CAPI timeout' }); });
+    r.write(payload);
+    r.end();
+  });
+}
 
 // Start Server
 if (require.main === module) {

@@ -781,6 +781,33 @@ function getProductAvailability(productId) {
   return { stock: s, price: p, available: s > 0 };
 }
 
+function trackMetaFunnelEvent(eventName, customData = {}, eventIdOverride = "") {
+  const eventId =
+    eventIdOverride ||
+    `odd_${eventName}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+  if (typeof window.fbq === "function") {
+    window.fbq("track", eventName, customData, { eventID: eventId });
+  }
+
+  try {
+    fetch("/api/meta/capi/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
+        eventName,
+        eventId,
+        customData,
+        eventSourceUrl: window.location.href,
+      }),
+    }).catch(() => {});
+  } catch (_) {}
+
+  return eventId;
+}
+window.trackMetaFunnelEvent = trackMetaFunnelEvent;
+
 function addToCart(productId) {
   const prod = PRODUCTS[productId];
   if (!prod) return;
@@ -813,31 +840,29 @@ function addToCart(productId) {
   updateCartUI();
   showToast(`Added ${prod.name} to your Cart.`);
 
-  if (typeof window.fbq === "function") {
-    const addedItem = cartState.find((i) => i.id === productId);
-    const cartValue = cartState.reduce((sum, i) => {
-      const itemPrice =
-        getProductAvailability(i.id).price ||
-        (PRODUCTS[i.id] ? PRODUCTS[i.id].price : 0);
-      return sum + Number(itemPrice) * (Number(i.qty) || 1);
-    }, 0);
-    const numItems = cartState.reduce((sum, i) => sum + (Number(i.qty) || 1), 0);
-    window.fbq("track", "AddToCart", {
-      content_ids: [productId],
-      content_name: prod.fullName || prod.name,
-      content_type: "product",
-      contents: [
-        {
-          id: productId,
-          quantity: addedItem ? Number(addedItem.qty) || 1 : 1,
-          item_price: Number(prod.price) || 0,
-        },
-      ],
-      num_items: numItems,
-      value: cartValue,
-      currency: "INR",
-    });
-  }
+  const addedItem = cartState.find((i) => i.id === productId);
+  const cartValue = cartState.reduce((sum, i) => {
+    const itemPrice =
+      getProductAvailability(i.id).price ||
+      (PRODUCTS[i.id] ? PRODUCTS[i.id].price : 0);
+    return sum + Number(itemPrice) * (Number(i.qty) || 1);
+  }, 0);
+  const numItems = cartState.reduce((sum, i) => sum + (Number(i.qty) || 1), 0);
+  trackMetaFunnelEvent("AddToCart", {
+    content_ids: [productId],
+    content_name: prod.fullName || prod.name,
+    content_type: "product",
+    contents: [
+      {
+        id: productId,
+        quantity: addedItem ? Number(addedItem.qty) || 1 : 1,
+        item_price: Number(prod.price) || 0,
+      },
+    ],
+    num_items: numItems,
+    value: cartValue,
+    currency: "INR",
+  });
 
   const drawer = document.getElementById("cart-drawer");
   if (drawer && !drawer.classList.contains("open")) {
@@ -2075,15 +2100,15 @@ document.addEventListener("DOMContentLoaded", () => {
   initProductImageLightbox();
   initProductCardInteractions();
 
-  // Meta Pixel ViewContent on product detail pages
+  // Meta Pixel + CAPI ViewContent on product detail pages
   const detailTitle = document.querySelector(".product-detail-title");
   const detailPriceEl = document.querySelector(".product-detail-price[data-product]");
-  if (detailTitle && detailPriceEl && typeof window.fbq === "function") {
+  if (detailTitle && detailPriceEl) {
     const pid = detailPriceEl.getAttribute("data-product");
     const prod = PRODUCTS[pid];
     if (prod) {
       const avail = getProductAvailability(pid);
-      window.fbq("track", "ViewContent", {
+      trackMetaFunnelEvent("ViewContent", {
         content_ids: [pid],
         content_name: prod.fullName || prod.name,
         content_type: "product",

@@ -102,3 +102,7 @@ define('SMTP_FROM_NAME', getEnvConfig('SMTP_FROM_NAME', 'ODD Perfume Studio'));
 // Hostinger Agentic Mail API Configuration
 define('HOSTINGER_MAIL_API_TOKEN', getEnvConfig('HOSTINGER_MAIL_API_TOKEN', '3526c9c0c3f0401c66105ded2a45c8f12f3899d1c7746f51a8519d24caf18341'));
 define('HOSTINGER_MAILBOX_ID', getEnvConfig('HOSTINGER_MAILBOX_ID', 'ACcc05778d784eac12b5a1cca1de23'));
+
+// Meta Conversions API (CAPI)
+define('META_PIXEL_ID', getEnvConfig('META_PIXEL_ID', '1432208055303221'));
+define('META_CAPI_ACCESS_TOKEN', getEnvConfig('META_CAPI_ACCESS_TOKEN', ''));

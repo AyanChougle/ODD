@@ -1183,6 +1183,34 @@ try {
                 }
             } catch (Throwable $e) {}
 
+            // Server-side Meta Conversions API (CAPI) Purchase event with deduplication
+            try {
+                $metaEventId = trim((string)($body['metaEventId'] ?? "purchase_{$orderId}"));
+                $capiContents = [];
+                $capiIds = [];
+                $capiNumItems = 0;
+                foreach ($itemsData as $it) {
+                    $pid = (string)($it['sku'] ?? $it['name'] ?? 'ODD');
+                    $qty = max(1, (int)($it['quantity'] ?? 1));
+                    $capiIds[] = $pid;
+                    $capiNumItems += $qty;
+                    $capiContents[] = ['id' => $pid, 'quantity' => $qty, 'item_price' => (float)($it['price'] ?? 0)];
+                }
+                sendMetaCapiEvent('Purchase', $metaEventId, [
+                    'email' => $email,
+                    'phone' => $phone,
+                    'name' => $customer,
+                ], [
+                    'currency' => 'INR',
+                    'value' => (float)$totalAmount,
+                    'order_id' => $orderId,
+                    'content_type' => 'product',
+                    'content_ids' => $capiIds,
+                    'contents' => $capiContents,
+                    'num_items' => $capiNumItems,
+                ], (string)($body['eventSourceUrl'] ?? ''));
+            } catch (Throwable $e) {}
+
             sendJson(201, ['success' => true, 'orderId' => $orderId, 'trackingToken' => $trackingToken, 'totalAmount' => $totalAmount, 'status' => 'Confirmed', 'mailDispatched' => $mailDispatched]);
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
@@ -3709,9 +3737,105 @@ HTML;
         ]);
     }
 
+    if ($route === 'meta/capi/event' && $method === 'POST') {
+        $body = getJsonBody();
+        $eventName = trim((string)($body['eventName'] ?? ''));
+        $allowedEvents = ['PageView', 'ViewContent', 'AddToCart', 'InitiateCheckout', 'Purchase'];
+        if (!$eventName || !in_array($eventName, $allowedEvents, true)) {
+            sendJson(400, ['error' => 'Invalid Meta CAPI event name.']);
+        }
+        $eventId = trim((string)($body['eventId'] ?? 'odd_' . bin2hex(random_bytes(8))));
+        $customData = is_array($body['customData'] ?? null) ? $body['customData'] : [];
+        $eventSourceUrl = trim((string)($body['eventSourceUrl'] ?? ''));
+
+        $userInfo = [];
+        try {
+            $cust = getCustomerSession();
+            if ($cust && !empty($cust['email'])) {
+                $userInfo['email'] = $cust['email'];
+                if (!empty($cust['name'])) $userInfo['name'] = $cust['name'];
+            }
+        } catch (Throwable $e) {}
+
+        $res = sendMetaCapiEvent($eventName, $eventId, $userInfo, $customData, $eventSourceUrl);
+        sendJson(200, ['success' => !empty($res['success']), 'eventId' => $eventId]);
+    }
+
     // Route not found
     sendJson(404, ['error' => "API route not found: /api/{$route}"]);
 
 } catch (Throwable $e) {
     sendJson(500, ['error' => 'Internal Server Error', 'details' => $e->getMessage()]);
+}
+
+function sendMetaCapiEvent(string $eventName, string $eventId, array $userInfo = [], array $customData = [], string $eventSourceUrl = ''): array {
+    $pixelId = defined('META_PIXEL_ID') ? META_PIXEL_ID : '1432208055303221';
+    $token = defined('META_CAPI_ACCESS_TOKEN') ? META_CAPI_ACCESS_TOKEN : '';
+    if (!$pixelId || !$token) {
+        return ['success' => false, 'error' => 'Meta CAPI token not configured.'];
+    }
+    $emailRaw = strtolower(trim((string)($userInfo['email'] ?? '')));
+    if ($emailRaw !== '' && (str_ends_with($emailRaw, '@example.com') || str_ends_with($emailRaw, '@test.local'))) {
+        return ['success' => true, 'simulated' => true];
+    }
+
+    $userData = [];
+    if ($emailRaw !== '') {
+        $userData['em'] = [hash('sha256', $emailRaw)];
+    }
+    $phoneDigits = preg_replace('/\D+/', '', (string)($userInfo['phone'] ?? ''));
+    if ($phoneDigits !== '') {
+        if (strlen($phoneDigits) === 10) $phoneDigits = '91' . $phoneDigits;
+        $userData['ph'] = [hash('sha256', $phoneDigits)];
+    }
+    $fullName = trim((string)($userInfo['name'] ?? ''));
+    if ($fullName !== '') {
+        $parts = preg_split('/\s+/', $fullName);
+        if (!empty($parts[0])) $userData['fn'] = [hash('sha256', strtolower($parts[0]))];
+        if (count($parts) > 1) $userData['ln'] = [hash('sha256', strtolower(end($parts)))];
+    }
+    $userData['country'] = [hash('sha256', 'in')];
+
+    if (!empty($_SERVER['REMOTE_ADDR'])) {
+        $userData['client_ip_address'] = $_SERVER['REMOTE_ADDR'];
+    }
+    if (!empty($_SERVER['HTTP_USER_AGENT'])) {
+        $userData['client_user_agent'] = $_SERVER['HTTP_USER_AGENT'];
+    }
+    if (!empty($_COOKIE['_fbp'])) {
+        $userData['fbp'] = (string)$_COOKIE['_fbp'];
+    }
+    if (!empty($_COOKIE['_fbc'])) {
+        $userData['fbc'] = (string)$_COOKIE['_fbc'];
+    }
+
+    $sourceUrl = $eventSourceUrl !== '' ? $eventSourceUrl : ((!empty($_SERVER['HTTP_HOST'])) ? ('https://' . $_SERVER['HTTP_HOST'] . ($_SERVER['REQUEST_URI'] ?? '/')) : 'https://oddperfume.com/');
+
+    $eventObj = [
+        'event_name' => $eventName,
+        'event_time' => time(),
+        'event_id' => $eventId,
+        'action_source' => 'website',
+        'event_source_url' => $sourceUrl,
+        'user_data' => $userData,
+    ];
+    if (!empty($customData)) {
+        $eventObj['custom_data'] = $customData;
+    }
+
+    $payload = json_encode(['data' => [$eventObj]]);
+    $url = "https://graph.facebook.com/v21.0/{$pixelId}/events?access_token=" . urlencode($token);
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $decoded = json_decode((string)$resp, true);
+    return ['success' => ($code >= 200 && $code < 300), 'httpCode' => $code, 'response' => $decoded];
 }

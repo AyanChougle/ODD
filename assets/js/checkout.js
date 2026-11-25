@@ -797,6 +797,7 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
   // 2. Persist order directly into backend database (/api/orders)
   let assignedOrderId = orderId;
   let serverTotal = finalTotal;
+  const purchaseMetaEventId = `odd_Purchase_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
   try {
     const serverPayload = {
@@ -812,7 +813,9 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
       paymentMethod: paymentMethod,
       couponCode: coupon ? coupon.code : null,
       razorpayOrderId: razorpayOrderId || null,
-      razorpayPaymentId: razorpayPaymentId || null
+      razorpayPaymentId: razorpayPaymentId || null,
+      metaEventId: purchaseMetaEventId,
+      eventSourceUrl: window.location.href
     };
 
     const res = await fetch('/api/orders', {
@@ -954,7 +957,7 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
       content_ids: cart.map(it => it.id),
       contents: purchaseContents,
       num_items: purchaseNumItems
-    });
+    }, { eventID: purchaseMetaEventId });
   }
   alert(`Order Confirmed! Order ID: ${assignedOrderId}\nPayment: ${paymentMethod}\nShipping: ₹${finalShipping}\nTotal Payable: ₹${serverTotal.toLocaleString('en-IN')}\nThank you for shopping with ODD Perfume.`);
   _orderInProgress = false;
@@ -965,10 +968,10 @@ document.addEventListener('DOMContentLoaded', () => {
   initCustomerCheckoutSession();
   renderCheckoutSummary();
 
-  // Meta Pixel InitiateCheckout event on checkout page load
+  // Meta Pixel + CAPI InitiateCheckout event on checkout page load
   try {
     const checkoutCart = JSON.parse(localStorage.getItem('odd_cart') || '[]');
-    if (typeof window.fbq === 'function' && Array.isArray(checkoutCart) && checkoutCart.length > 0) {
+    if (Array.isArray(checkoutCart) && checkoutCart.length > 0) {
       let checkoutVal = 0;
       let checkoutItems = 0;
       const checkoutContents = checkoutCart.map(it => {
@@ -980,13 +983,18 @@ document.addEventListener('DOMContentLoaded', () => {
         checkoutItems += qty;
         return { id: it.id, quantity: qty, item_price: unitPrice };
       });
-      window.fbq('track', 'InitiateCheckout', {
+      const icPayload = {
         content_ids: checkoutCart.map(it => it.id),
         contents: checkoutContents,
         num_items: checkoutItems,
         value: checkoutVal,
         currency: 'INR'
-      });
+      };
+      if (typeof window.trackMetaFunnelEvent === 'function') {
+        window.trackMetaFunnelEvent('InitiateCheckout', icPayload);
+      } else if (typeof window.fbq === 'function') {
+        window.fbq('track', 'InitiateCheckout', icPayload);
+      }
     }
   } catch (_) {}
 
