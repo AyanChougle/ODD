@@ -140,7 +140,6 @@
 .door-img-primary {
   z-index: 1;
   opacity: 1;
-  transform: scale(1);
 }
 
 .door-img-secondary {
@@ -149,7 +148,6 @@
   padding: 0;
   object-fit: cover;
   object-position: center bottom;
-  transform: scale(1.02);
 }
 
 .door-img-secondary.hamper-box-img {
@@ -161,22 +159,18 @@
 /* Mobile / programmatic secondary image state */
 .product-card.is-secondary .door-img-primary {
   opacity: 0;
-  transform: scale(0.97);
 }
 .product-card.is-secondary .door-img-secondary {
   opacity: 1;
-  transform: scale(1);
 }
 
-/* Desktop hover swaps cleanly to secondary image without interfering with touch devices */
+/* Desktop hover swaps cleanly to secondary image without zoom */
 @media (hover: hover) and (pointer: fine) {
   .product-card:hover .door-img-primary {
     opacity: 0;
-    transform: scale(0.97);
   }
   .product-card:hover .door-img-secondary {
     opacity: 1;
-    transform: scale(1.04);
   }
 }
 
