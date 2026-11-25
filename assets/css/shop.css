@@ -73,6 +73,7 @@
   transition: var(--transition);
   display: flex;
   flex-direction: column;
+  cursor: pointer;
 }
 
 .product-card:hover {
@@ -86,18 +87,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.45rem 1.25rem;
-  min-height: 215px;
+  height: 245px;
+  min-height: 245px;
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .phantom-door { background: linear-gradient(180deg, #F9F4EE 0%, #FFFFFF 100%); }
 .lucid-door { background: linear-gradient(180deg, #EAF3EF 0%, #FFFFFF 100%); }
 .move-door { background: linear-gradient(180deg, #F5EEF0 0%, #FFFFFF 100%); }
 .hamper-door { background: linear-gradient(180deg, #F6EFE6 0%, #FFFFFF 100%); }
-.hamper-door .door-product-img {
-  height: 178px;
-  max-height: 178px;
-  aspect-ratio: 1 / 1;
+.hamper-door .door-img-primary {
+  padding: 1.15rem;
 }
 .hamper-door .badge-tag {
   background: #1C1815;
@@ -122,17 +125,91 @@
 }
 
 .door-product-img {
-  height: 170px;
-  max-height: 170px;
-  width: auto;
-  max-width: 100%;
-  aspect-ratio: 4 / 5;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 1.4rem 1.25rem;
+  -webkit-user-drag: none;
+  pointer-events: none;
+  transition: opacity 0.42s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
 }
 
-.product-card:hover .door-product-img {
-  transform: scale(1.06);
+.door-img-primary {
+  z-index: 1;
+  opacity: 1;
+  transform: scale(1);
+}
+
+.door-img-secondary {
+  z-index: 2;
+  opacity: 0;
+  padding: 0;
+  object-fit: cover;
+  object-position: center bottom;
+  transform: scale(1.02);
+}
+
+.door-img-secondary.hamper-box-img {
+  padding: 1.15rem;
+  object-fit: contain;
+  object-position: center center;
+}
+
+/* Mobile / programmatic secondary image state */
+.product-card.is-secondary .door-img-primary {
+  opacity: 0;
+  transform: scale(0.97);
+}
+.product-card.is-secondary .door-img-secondary {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Desktop hover swaps cleanly to secondary image without interfering with touch devices */
+@media (hover: hover) and (pointer: fine) {
+  .product-card:hover .door-img-primary {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  .product-card:hover .door-img-secondary {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+.card-media-dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.card-media-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(17, 17, 17, 0.25);
+  transition: width 0.25s ease, background-color 0.25s ease;
+  cursor: pointer;
+}
+
+.card-media-dot.active {
+  width: 14px;
+  border-radius: 999px;
+  background: var(--brand-orange, #E86B32);
 }
 
 .product-details {

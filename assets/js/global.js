@@ -2057,6 +2057,7 @@ document.addEventListener("DOMContentLoaded", () => {
   checkAdminAccountRole();
   initProductGallerySwipe();
   initProductImageLightbox();
+  initProductCardInteractions();
 });
 
 let currentProductSlide = 0;
@@ -2331,8 +2332,8 @@ function initProductImageLightbox() {
   if (!slides.length) return;
 
   slides.forEach((slide, idx) => {
-    slide.style.cursor = "zoom-in";
-    slide.setAttribute("title", "Click to inspect product details");
+    slide.style.cursor = "pointer";
+    slide.setAttribute("title", "Click to view product image");
 
     slide.addEventListener("click", (e) => {
       if (e.target.closest(".gallery-dots") || e.target.closest(".gallery-dot")) {
@@ -2343,6 +2344,125 @@ function initProductImageLightbox() {
   });
 }
 window.initProductImageLightbox = initProductImageLightbox;
+
+function initProductCardInteractions() {
+  const DETAIL_URLS = {
+    phantom: "products-odd-phantom.html",
+    lucid: "products-odd-lucid.html",
+    "first-move": "products-odd-first-move.html",
+    hamper: "products-odd-hamper.html",
+  };
+
+  const cards = document.querySelectorAll(".product-card[data-product]");
+  if (!cards.length) return;
+
+  cards.forEach((card) => {
+    const prodId = card.getAttribute("data-product");
+    const targetUrl = card.getAttribute("data-href") || DETAIL_URLS[prodId];
+    const mediaBox = card.querySelector(".product-door-container");
+    const dots = card.querySelectorAll(".card-media-dot");
+
+    const setImageIndex = (index) => {
+      const showSecondary = index === 1;
+      card.classList.toggle("is-secondary", showSecondary);
+      dots.forEach((d, idx) => d.classList.toggle("active", idx === (showSecondary ? 1 : 0)));
+    };
+
+    // Desktop hover syncs dots cleanly (CSS handles the crossfade under @media hover)
+    if (window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+      card.addEventListener("mouseenter", () => {
+        dots.forEach((d, idx) => d.classList.toggle("active", idx === 1));
+      });
+      card.addEventListener("mouseleave", () => {
+        if (!card.dataset.pinnedTouch) {
+          setImageIndex(0);
+        }
+      });
+    }
+
+    // Dot click switches image without triggering card navigation
+    dots.forEach((dot, idx) => {
+      dot.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setImageIndex(idx);
+      });
+    });
+
+    // Touch swipe on mobile to toggle between primary and secondary images
+    if (mediaBox) {
+      let startX = 0;
+      let startY = 0;
+      let isHorizontalSwipe = false;
+
+      mediaBox.addEventListener(
+        "touchstart",
+        (e) => {
+          if (!e.touches || !e.touches.length) return;
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          isHorizontalSwipe = false;
+        },
+        { passive: true },
+      );
+
+      mediaBox.addEventListener(
+        "touchmove",
+        (e) => {
+          if (!e.touches || !e.touches.length) return;
+          const dx = e.touches[0].clientX - startX;
+          const dy = e.touches[0].clientY - startY;
+          if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) {
+            isHorizontalSwipe = true;
+          }
+        },
+        { passive: true },
+      );
+
+      mediaBox.addEventListener(
+        "touchend",
+        (e) => {
+          if (!e.changedTouches || !e.changedTouches.length) return;
+          const dx = e.changedTouches[0].clientX - startX;
+          const dy = e.changedTouches[0].clientY - startY;
+          if (isHorizontalSwipe || (Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy))) {
+            card.dataset.justSwiped = String(Date.now());
+            const currentlySecondary = card.classList.contains("is-secondary");
+            if (dx < 0) {
+              setImageIndex(1);
+            } else if (dx > 0) {
+              setImageIndex(0);
+            } else {
+              setImageIndex(currentlySecondary ? 0 : 1);
+            }
+          }
+        },
+        { passive: true },
+      );
+    }
+
+    // Make the entire card clickable (excluding buttons, links, and recent swipes)
+    if (targetUrl) {
+      if (!card.hasAttribute("tabindex")) card.setAttribute("tabindex", "0");
+      card.addEventListener("click", (e) => {
+        if (e.target.closest("button, a, input, select, .card-actions, .card-media-dots")) {
+          return;
+        }
+        const lastSwipe = Number(card.dataset.justSwiped || 0);
+        if (Date.now() - lastSwipe < 450) {
+          return;
+        }
+        window.location.href = targetUrl;
+      });
+      card.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && e.target === card) {
+          window.location.href = targetUrl;
+        }
+      });
+    }
+  });
+}
+window.initProductCardInteractions = initProductCardInteractions;
 
 // Global Resilient Image Extension Fallback (webp <-> jpeg)
 if (typeof window !== "undefined" && typeof document !== "undefined") {
