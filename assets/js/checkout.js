@@ -935,6 +935,14 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
   if (typeof updateCartUI === 'function') updateCartUI();
 
   // 7. Success UI Feedback & Redirect
+  if (typeof window.fbq === 'function') {
+    window.fbq('track', 'Purchase', {
+      value: Number(serverTotal) || 0,
+      currency: 'INR',
+      content_type: 'product',
+      content_ids: cart.map(it => it.id)
+    });
+  }
   alert(`Order Confirmed! Order ID: ${assignedOrderId}\nPayment: ${paymentMethod}\nShipping: ₹${finalShipping}\nTotal Payable: ₹${serverTotal.toLocaleString('en-IN')}\nThank you for shopping with ODD Perfume.`);
   _orderInProgress = false;
   window.location.href = 'order-tracking.html?orderId=' + encodeURIComponent(assignedOrderId);

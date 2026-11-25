@@ -813,6 +813,16 @@ function addToCart(productId) {
   updateCartUI();
   showToast(`Added ${prod.name} to your Cart.`);
 
+  if (typeof window.fbq === "function") {
+    window.fbq("track", "AddToCart", {
+      content_ids: [productId],
+      content_name: prod.name,
+      content_type: "product",
+      value: Number(prod.price) || 0,
+      currency: "INR",
+    });
+  }
+
   const drawer = document.getElementById("cart-drawer");
   if (drawer && !drawer.classList.contains("open")) {
     toggleCartDrawer();

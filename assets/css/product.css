@@ -114,6 +114,9 @@
 }
 
 .product-gallery-slide.lifestyle-slide .product-lifestyle-img {
+  width: 100% !important;
+  max-width: 100% !important;
+  aspect-ratio: auto !important;
   object-fit: cover;
   object-position: center bottom !important;
   padding: 0 !important;
