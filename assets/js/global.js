@@ -2096,22 +2096,8 @@ function stepProductSlide(delta) {
 window.stepProductSlide = stepProductSlide;
 
 function initProductGallerySwipe() {
-  const galleryBox = document.getElementById("productGallery");
   const slider = document.getElementById("gallerySlider");
   if (!slider) return;
-
-  if (
-    galleryBox &&
-    window.matchMedia &&
-    window.matchMedia("(hover: hover) and (pointer: fine)").matches
-  ) {
-    galleryBox.addEventListener("mouseenter", () => {
-      switchProductSlide(1);
-    });
-    galleryBox.addEventListener("mouseleave", () => {
-      switchProductSlide(0);
-    });
-  }
 
   let startX = 0;
   let startY = 0;

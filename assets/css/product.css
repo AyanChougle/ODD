@@ -16,14 +16,13 @@
   align-items: start;
 }
 
-/* --- Image Panel & Gallery Slider --- */
+/* --- Image Panel & Gallery (Stacked Vertical on Desktop, Swipeable Carousel on Mobile) --- */
 .product-gallery-box {
-  position: sticky;
-  top: 130px;
-  border-radius: 20px;
-  overflow: hidden;
-  background: var(--bg-subtle);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  position: static;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  border: none;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -35,16 +34,9 @@
 
 .product-gallery-slider {
   display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  touch-action: pan-y;
-  cursor: grab;
-}
-
-.product-gallery-slider:active {
-  cursor: grabbing;
+  flex-direction: column;
+  gap: 1.5rem;
+  overflow: visible;
 }
 
 .product-gallery-slider::-webkit-scrollbar {
@@ -52,15 +44,16 @@
 }
 
 .product-gallery-slide {
-  flex: 0 0 100%;
+  flex: 0 0 auto;
   width: 100%;
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   background: var(--bg-subtle);
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.05);
   touch-action: pan-y;
   cursor: pointer;
 }
@@ -90,7 +83,7 @@
   bottom: 18px;
   left: 50%;
   transform: translateX(-50%);
-  display: flex;
+  display: none;
   align-items: center;
   gap: 8px;
   z-index: 10;
@@ -279,6 +272,32 @@
     gap: 2.5rem;
   }
   .product-gallery-box {
+    position: static;
+    border-radius: 20px;
+    overflow: hidden;
+    background: var(--bg-subtle);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+  .product-gallery-slider {
+    flex-direction: row;
+    gap: 0;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    touch-action: pan-y;
+  }
+  .product-gallery-slide {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    border-radius: 0;
+    border: none;
+  }
+  .gallery-dots {
+    display: flex;
+  }
+  .product-detail-section .product-info-col {
     position: static;
   }
   .product-lifestyle-img {
@@ -677,6 +696,9 @@ main {
   min-height: 0;
 }
 .product-detail-section .product-gallery-box {
+  position: static;
+}
+.product-detail-section .product-info-col {
   position: sticky;
   top: 115px;
 }
