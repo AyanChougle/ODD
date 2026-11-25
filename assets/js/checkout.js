@@ -936,11 +936,24 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
 
   // 7. Success UI Feedback & Redirect
   if (typeof window.fbq === 'function') {
+    const purchaseContents = cart.map(it => {
+      const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[it.id]) ? PRODUCTS[it.id] : null;
+      const itemPrice = prod ? Number(prod.price) : (Number(it.price) || 0);
+      return {
+        id: it.id,
+        quantity: Number(it.qty) || 1,
+        item_price: itemPrice
+      };
+    });
+    const purchaseNumItems = cart.reduce((sum, it) => sum + (Number(it.qty) || 1), 0);
     window.fbq('track', 'Purchase', {
+      transaction_id: assignedOrderId,
       value: Number(serverTotal) || 0,
       currency: 'INR',
       content_type: 'product',
-      content_ids: cart.map(it => it.id)
+      content_ids: cart.map(it => it.id),
+      contents: purchaseContents,
+      num_items: purchaseNumItems
     });
   }
   alert(`Order Confirmed! Order ID: ${assignedOrderId}\nPayment: ${paymentMethod}\nShipping: ₹${finalShipping}\nTotal Payable: ₹${serverTotal.toLocaleString('en-IN')}\nThank you for shopping with ODD Perfume.`);
@@ -951,6 +964,31 @@ async function completeOrderPlacement(orderId, firstName, lastName, phone, email
 document.addEventListener('DOMContentLoaded', () => {
   initCustomerCheckoutSession();
   renderCheckoutSummary();
+
+  // Meta Pixel InitiateCheckout event on checkout page load
+  try {
+    const checkoutCart = JSON.parse(localStorage.getItem('odd_cart') || '[]');
+    if (typeof window.fbq === 'function' && Array.isArray(checkoutCart) && checkoutCart.length > 0) {
+      let checkoutVal = 0;
+      let checkoutItems = 0;
+      const checkoutContents = checkoutCart.map(it => {
+        const prod = (typeof PRODUCTS !== 'undefined' && PRODUCTS[it.id]) ? PRODUCTS[it.id] : null;
+        const avail = (typeof getProductAvailability === 'function') ? getProductAvailability(it.id) : null;
+        const unitPrice = Number((avail && avail.price) || (prod && prod.price) || it.price || 0);
+        const qty = Number(it.qty) || 1;
+        checkoutVal += unitPrice * qty;
+        checkoutItems += qty;
+        return { id: it.id, quantity: qty, item_price: unitPrice };
+      });
+      window.fbq('track', 'InitiateCheckout', {
+        content_ids: checkoutCart.map(it => it.id),
+        contents: checkoutContents,
+        num_items: checkoutItems,
+        value: checkoutVal,
+        currency: 'INR'
+      });
+    }
+  } catch (_) {}
 
   // Form submission handled by inline onsubmit in checkout.html (no duplicate listener)
 });

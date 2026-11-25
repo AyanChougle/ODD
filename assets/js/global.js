@@ -814,11 +814,27 @@ function addToCart(productId) {
   showToast(`Added ${prod.name} to your Cart.`);
 
   if (typeof window.fbq === "function") {
+    const addedItem = cartState.find((i) => i.id === productId);
+    const cartValue = cartState.reduce((sum, i) => {
+      const itemPrice =
+        getProductAvailability(i.id).price ||
+        (PRODUCTS[i.id] ? PRODUCTS[i.id].price : 0);
+      return sum + Number(itemPrice) * (Number(i.qty) || 1);
+    }, 0);
+    const numItems = cartState.reduce((sum, i) => sum + (Number(i.qty) || 1), 0);
     window.fbq("track", "AddToCart", {
       content_ids: [productId],
-      content_name: prod.name,
+      content_name: prod.fullName || prod.name,
       content_type: "product",
-      value: Number(prod.price) || 0,
+      contents: [
+        {
+          id: productId,
+          quantity: addedItem ? Number(addedItem.qty) || 1 : 1,
+          item_price: Number(prod.price) || 0,
+        },
+      ],
+      num_items: numItems,
+      value: cartValue,
       currency: "INR",
     });
   }
@@ -2058,6 +2074,24 @@ document.addEventListener("DOMContentLoaded", () => {
   initProductGallerySwipe();
   initProductImageLightbox();
   initProductCardInteractions();
+
+  // Meta Pixel ViewContent on product detail pages
+  const detailTitle = document.querySelector(".product-detail-title");
+  const detailPriceEl = document.querySelector(".product-detail-price[data-product]");
+  if (detailTitle && detailPriceEl && typeof window.fbq === "function") {
+    const pid = detailPriceEl.getAttribute("data-product");
+    const prod = PRODUCTS[pid];
+    if (prod) {
+      const avail = getProductAvailability(pid);
+      window.fbq("track", "ViewContent", {
+        content_ids: [pid],
+        content_name: prod.fullName || prod.name,
+        content_type: "product",
+        value: Number(avail.price || prod.price) || 0,
+        currency: "INR",
+      });
+    }
+  }
 });
 
 let currentProductSlide = 0;
