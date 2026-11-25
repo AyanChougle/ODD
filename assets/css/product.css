@@ -16,13 +16,14 @@
   align-items: start;
 }
 
-/* --- Image Panel & Gallery (Stacked Vertical on Desktop, Swipeable Carousel on Mobile) --- */
+/* --- Image Panel & Gallery (Secondary Image Swap on Hover + Mobile Swipe) --- */
 .product-gallery-box {
-  position: static;
-  border-radius: 0;
-  overflow: visible;
-  background: transparent;
-  border: none;
+  position: sticky;
+  top: 115px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--bg-subtle);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   user-select: none;
   -webkit-user-select: none;
 }
@@ -33,10 +34,11 @@
 }
 
 .product-gallery-slider {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  overflow: visible;
+  position: relative;
+  width: 100%;
+  height: 600px;
+  overflow: hidden;
+  touch-action: pan-y;
 }
 
 .product-gallery-slider::-webkit-scrollbar {
@@ -44,34 +46,64 @@
 }
 
 .product-gallery-slide {
-  flex: 0 0 auto;
+  position: absolute;
+  inset: 0;
   width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
   background: var(--bg-subtle);
-  border-radius: 20px;
-  overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.05);
   touch-action: pan-y;
   cursor: pointer;
+  transition: opacity 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity;
+}
+
+.product-gallery-slide:first-child {
+  z-index: 1;
+  opacity: 1;
+}
+
+.product-gallery-slide.lifestyle-slide,
+.product-gallery-slide:nth-child(2) {
+  z-index: 2;
+  opacity: 0;
+}
+
+.product-gallery-box.is-secondary .product-gallery-slide:first-child {
+  opacity: 0;
+}
+
+.product-gallery-box.is-secondary .product-gallery-slide.lifestyle-slide,
+.product-gallery-box.is-secondary .product-gallery-slide:nth-child(2) {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .product-gallery-box:hover .product-gallery-slide:first-child {
+    opacity: 0;
+  }
+  .product-gallery-box:hover .product-gallery-slide.lifestyle-slide,
+  .product-gallery-box:hover .product-gallery-slide:nth-child(2) {
+    opacity: 1;
+  }
 }
 
 .product-lifestyle-img {
   width: 100%;
-  height: 600px;
+  height: 100%;
   object-fit: contain;
   display: block;
   -webkit-user-drag: none;
   pointer-events: auto;
   cursor: pointer;
-  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .product-gallery-slide.lifestyle-slide .product-lifestyle-img {
   width: 100% !important;
   max-width: 100% !important;
+  height: 100% !important;
   aspect-ratio: auto !important;
   object-fit: cover;
   object-position: center bottom !important;
@@ -83,7 +115,7 @@
   bottom: 18px;
   left: 50%;
   transform: translateX(-50%);
-  display: none;
+  display: flex;
   align-items: center;
   gap: 8px;
   z-index: 10;
@@ -273,34 +305,8 @@
   }
   .product-gallery-box {
     position: static;
-    border-radius: 20px;
-    overflow: hidden;
-    background: var(--bg-subtle);
-    border: 1px solid rgba(0, 0, 0, 0.05);
   }
   .product-gallery-slider {
-    flex-direction: row;
-    gap: 0;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    touch-action: pan-y;
-  }
-  .product-gallery-slide {
-    flex: 0 0 100%;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
-    border-radius: 0;
-    border: none;
-  }
-  .gallery-dots {
-    display: flex;
-  }
-  .product-detail-section .product-info-col {
-    position: static;
-  }
-  .product-lifestyle-img {
     height: clamp(340px, 80vw, 460px);
   }
   .product-detail-section {
@@ -309,7 +315,7 @@
 }
 
 @media (max-width: 480px) {
-  .product-lifestyle-img {
+  .product-gallery-slider {
     height: clamp(300px, 85vw, 380px);
   }
   .product-detail-title {
@@ -696,9 +702,6 @@ main {
   min-height: 0;
 }
 .product-detail-section .product-gallery-box {
-  position: static;
-}
-.product-detail-section .product-info-col {
   position: sticky;
   top: 115px;
 }

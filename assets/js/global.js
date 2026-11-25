@@ -2063,6 +2063,7 @@ document.addEventListener("DOMContentLoaded", () => {
 let currentProductSlide = 0;
 
 function switchProductSlide(index) {
+  const galleryBox = document.getElementById("productGallery");
   const slider = document.getElementById("gallerySlider");
   if (!slider) return;
   const slides = slider.querySelectorAll(".product-gallery-slide");
@@ -2070,12 +2071,8 @@ function switchProductSlide(index) {
   const targetIdx = Math.max(0, Math.min(slides.length - 1, index));
   currentProductSlide = targetIdx;
 
-  const targetSlide = slides[targetIdx];
-  if (targetSlide) {
-    slider.scrollTo({
-      left: targetSlide.offsetLeft,
-      behavior: "smooth",
-    });
+  if (galleryBox) {
+    galleryBox.classList.toggle("is-secondary", targetIdx === 1);
   }
 
   const dots = document.querySelectorAll(".gallery-dot");
@@ -2096,8 +2093,24 @@ function stepProductSlide(delta) {
 window.stepProductSlide = stepProductSlide;
 
 function initProductGallerySwipe() {
+  const galleryBox = document.getElementById("productGallery");
   const slider = document.getElementById("gallerySlider");
   if (!slider) return;
+
+  if (
+    galleryBox &&
+    window.matchMedia &&
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches
+  ) {
+    galleryBox.addEventListener("mouseenter", () => {
+      const dots = document.querySelectorAll(".gallery-dot");
+      dots.forEach((d, i) => d.classList.toggle("active", i === 1));
+      currentProductSlide = 1;
+    });
+    galleryBox.addEventListener("mouseleave", () => {
+      switchProductSlide(0);
+    });
+  }
 
   let startX = 0;
   let startY = 0;
